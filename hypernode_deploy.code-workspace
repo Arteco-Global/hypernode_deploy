@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../hypernode_server_gui"
+		},
+		{
+			"path": "../hypernode-server"
+		}
+	],
+	"settings": {}
+}
