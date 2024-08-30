@@ -35,6 +35,8 @@ services:
       # ports:
       #   - "8000:8000"
       #   - "5001:5001"
+      #   #debugging port
+      #   - 9229:9229
       networks:
         - hypernode-net
       environment:
@@ -42,78 +44,80 @@ services:
         - GATEWAY_WS_PORT=8000
         - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
         - DATABASE_URI=mongodb://mongoHypernode:27017/gateway-db
+        - DEFAULT_USER=dalpi
+        - DEFAULT_PASSWORD=061290
       container_name: gateway
 
-  storage-service:
-    build:
-      context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-      args:
-        SERVICE_NAME: "storage-service"  # Replace with the desired service name
-    networks:
-       - hypernode-net
-    environment:
-      - STORAGE_PORT=8081
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
-      - DATABASE_URI=mongodb://mongodb:27017/storage-db
-    container_name: storage
+  # storage-service:
+  #   build:
+  #     context: ../hypernode-server/
+  #     dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+  #     args:
+  #       SERVICE_NAME: "storage-service"  # Replace with the desired service name
+  #   networks:
+  #      - hypernode-net
+  #   environment:
+  #     - STORAGE_PORT=8081
+  #     - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+  #     - DATABASE_URI=mongodb://mongodb:27017/storage-db
+  #   container_name: storage
 
-  event-service:
-    build:
-      context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-      args:
-        SERVICE_NAME: "event-service"  # Replace with the desired service name
-    networks:
-       - hypernode-net
-    environment:
-      - EVENT_PORT=8082
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
-      - DATABASE_URI=mongodb://mongodb:27017/event-db
-    container_name: event
+  # event-service:
+  #   build:
+  #     context: ../hypernode-server/
+  #     dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+  #     args:
+  #       SERVICE_NAME: "event-service"  # Replace with the desired service name
+  #   networks:
+  #      - hypernode-net
+  #   environment:
+  #     - EVENT_PORT=8082
+  #     - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+  #     - DATABASE_URI=mongodb://mongodb:27017/event-db
+  #   container_name: event
 
-  camera-service:
-    build:
-      context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-      args:
-        SERVICE_NAME: "camera-service"  # Replace with the desired service name  
-    networks:
-       - hypernode-net
-    environment:
-      - CAMERA_PORT=5001
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
-      - DATABASE_URI=mongodb://mongodb:27017/camera-db
-    container_name: camera
+  # camera-service:
+  #   build:
+  #     context: ../hypernode-server/
+  #     dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+  #     args:
+  #       SERVICE_NAME: "camera-service"  # Replace with the desired service name  
+  #   networks:
+  #      - hypernode-net
+  #   environment:
+  #     - CAMERA_PORT=5001
+  #     - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+  #     - DATABASE_URI=mongodb://mongodb:27017/camera-db
+  #   container_name: camera
 
 
-  live-service:
-    build:
-      context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-      args:
-        SERVICE_NAME: "live-service"  # Replace with the desired service name
-    networks:
-       - hypernode-net
-    environment:
-      - LIVE-PORT=8084
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
-      - DATABASE_URI=mongodb://mongodb:27017/live-db
-    container_name: live
+  # live-service:
+  #   build:
+  #     context: ../hypernode-server/
+  #     dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+  #     args:
+  #       SERVICE_NAME: "live-service"  # Replace with the desired service name
+  #   networks:
+  #      - hypernode-net
+  #   environment:
+  #     - LIVE-PORT=8084
+  #     - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+  #     - DATABASE_URI=mongodb://mongodb:27017/live-db
+  #   container_name: live
 
-  auth-service:
-    build:
-      context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-      args:
-        SERVICE_NAME: "auth-service"  # Replace with the desired service name
-    networks:
-       - hypernode-net
-    environment:
-      - AUTH_PORT=8085
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
-      - DATABASE_URI=mongodb://mongodb:27017/auth-db
-    container_name: auth
+  # auth-service:
+  #   build:
+  #     context: ../hypernode-server/
+  #     dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+  #     args:
+  #       SERVICE_NAME: "auth-service"  # Replace with the desired service name
+  #   networks:
+  #      - hypernode-net
+  #   environment:
+  #     - AUTH_PORT=8085
+  #     - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+  #     - DATABASE_URI=mongodb://mongodb:27017/auth-db
+  #   container_name: auth
 
   nginx:
     build:
