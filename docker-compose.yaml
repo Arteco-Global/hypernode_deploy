@@ -1,4 +1,6 @@
 version: '3'
+name: arteco-hypernode-server
+
 services:
   rabbitmqHypernode:
     image: rabbitmq:3.8.17-management
@@ -26,12 +28,10 @@ services:
 
   gateway-service:
       build:
-        context: .
+        context: ../hypernode-server
         dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
         args:
           SERVICE_NAME: "gateway-service"  # Replace with the desired service name
-
-      # Other service configurations, such as ports, volumes, etc.
       # ports:
       #   - "8000:8000"
       #   - "5001:5001"
@@ -46,13 +46,10 @@ services:
 
   storage-service:
     build:
-      context: .
+      context: ../hypernode-server/
       dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
         SERVICE_NAME: "storage-service"  # Replace with the desired service name
-        SERVICE_PORT: 8081  # Replace with the desired port number or use the default value
-
-    # Other service configurations, such as ports, volumes, etc.
     networks:
        - hypernode-net
     environment:
@@ -61,16 +58,12 @@ services:
       - DATABASE_URI=mongodb://mongodb:27017/storage-db
     container_name: storage
 
-
   event-service:
     build:
-      context: .
+      context: ../hypernode-server/
       dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
         SERVICE_NAME: "event-service"  # Replace with the desired service name
-        SERVICE_PORT: 8082  # Replace with the desired port number or use the default value
-
-    # Other service configurations, such as ports, volumes, etc.
     networks:
        - hypernode-net
     environment:
@@ -81,13 +74,10 @@ services:
 
   camera-service:
     build:
-      context: .
+      context: ../hypernode-server/
       dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
-        SERVICE_NAME: "camera-service"  # Replace with the desired service name
-        SERVICE_PORT: 8083  # Replace with the desired port number or use the default value
-    # Other service configurations, such as ports, volumes, etc.
-  
+        SERVICE_NAME: "camera-service"  # Replace with the desired service name  
     networks:
        - hypernode-net
     environment:
@@ -99,13 +89,10 @@ services:
 
   live-service:
     build:
-      context: .
+      context: ../hypernode-server/
       dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
         SERVICE_NAME: "live-service"  # Replace with the desired service name
-        SERVICE_PORT: 8084  # Replace with the desired port number or use the default value
-
-    # Other service configurations, such as ports, volumes, etc.
     networks:
        - hypernode-net
     environment:
@@ -116,11 +103,10 @@ services:
 
   auth-service:
     build:
-      context: .
+      context: ../hypernode-server/
       dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
         SERVICE_NAME: "auth-service"  # Replace with the desired service name
-        SERVICE_PORT: 8085  # Replace with the desired port number or use the default value
     networks:
        - hypernode-net
     environment:
@@ -133,8 +119,6 @@ services:
     build:
       context: .
       dockerfile: nginx.dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-      args:
-        SERVICE_NAME: "nginx-server"  # Replace with the desired service name
     ports:
         - "80:80"
         - "443:443"
@@ -144,18 +128,15 @@ services:
 
   admin-gui:
     build:
-      context: .
+      context: ../hypernode_server_gui
       dockerfile: ../hypernode_server_gui/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-      args:
-        VITE_URL: "nginx"  # Replace with the desired service name
-    networks:
-       - hypernode-net
     environment:
-      - VITE_URL=nginx
+      - VITE_URL=nginx-server
     container_name: admin-gui
-
-       
-
+    ports:
+        - "8001:80"
+    networks:
+      - hypernode-net
 volumes:
   rabbitmq_data:
   mongodb_data:
