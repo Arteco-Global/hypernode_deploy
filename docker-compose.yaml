@@ -135,7 +135,7 @@ services:
       dockerfile: ../hypernode_server_gui/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
     container_name: adminHypernode
     ports:
-        - "${ADMIN_PORT:-8001}:443"
+        - "${ADMIN_PORT:-8001}:80"
     networks:
       - hypernode-net
 volumes:
@@ -148,4 +148,4 @@ networks:
 
 
 #USAGE
-# SERVER_PORT=80 SSL_PORT=80 ADMIN_PORT=8080 docker compose up
+# SERVER_PORT=80 SSL_PORT=443 ADMIN_PORT=8080 docker compose up -d
