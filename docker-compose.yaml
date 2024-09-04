@@ -134,8 +134,6 @@ services:
     build:
       context: ../hypernode_server_gui
       dockerfile: ../hypernode_server_gui/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-    environment:
-      - VITE_URL=localhost
     container_name: adminHypernode
     ports:
         - "8001:80"
