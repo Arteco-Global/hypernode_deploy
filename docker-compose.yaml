@@ -38,10 +38,11 @@ services:
       #   - 9229:9229
       networks:
         - hypernode-net
+
       environment:
         - GATEWAY_API_PORT=5001
         - GATEWAY_WS_PORT=8000
-        - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+        - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
         - DATABASE_URI=mongodb://mongoHypernode:27017/gateway-db
         - DEFAULT_USER=dalpi
         - DEFAULT_PASSWORD=061290
@@ -57,7 +58,7 @@ services:
        - hypernode-net
     environment:
       - STORAGE_PORT=8081
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/storage-db
     container_name: storage
 
@@ -71,7 +72,7 @@ services:
        - hypernode-net
     environment:
       - EVENT_PORT=8082
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/event-db
     container_name: event
 
@@ -85,7 +86,7 @@ services:
        - hypernode-net
     environment:
       - CAMERA_PORT=5001
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/camera-db
     container_name: camera
 
@@ -100,7 +101,7 @@ services:
        - hypernode-net
     environment:
       - LIVE-PORT=8084
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/live-db
     container_name: live
 
@@ -114,7 +115,7 @@ services:
        - hypernode-net
     environment:
       - AUTH_PORT=8085
-      - RABBITMQ_URI=amqp://hypernode:hypernode@rabbitmqHypernode:5672
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/auth-db
     container_name: auth
 
@@ -146,4 +147,4 @@ networks:
 
 
 #USAGE
-# SERVER_PORT=80 SSL_PORT=443 docker compose up -d
+# SERVER_PORT=80 SSL_PORT=443 RMQ=amqp://hypernode:hypernode@rabbitmqHypernode:5672  docker compose up -d
