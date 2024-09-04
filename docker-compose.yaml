@@ -124,7 +124,7 @@ services:
       context: .
       dockerfile: nginx.dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
     ports:
-        - "80:80"
+        # - "80:80"
         - "443:443"
     container_name: nginxHypernode
     networks:
