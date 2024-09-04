@@ -134,8 +134,8 @@ services:
       context: ../hypernode_server_gui
       dockerfile: ../hypernode_server_gui/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
     container_name: adminHypernode
-    ports:
-        - "${ADMIN_PORT:-8001}:80"
+    # ports:
+    #     - "${ADMIN_PORT:-8001}:80"
     networks:
       - hypernode-net
 volumes:
