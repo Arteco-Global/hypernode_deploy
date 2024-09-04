@@ -16,4 +16,4 @@ export SERVER_PORT=${SERVER_PORT:-80}
 export SSL_PORT=${SSL_PORT:-443}
 
 # Esegui docker compose up -d
-docker compose up -d
+docker compose up -d --build
