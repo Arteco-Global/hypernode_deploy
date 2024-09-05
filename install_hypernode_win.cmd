@@ -12,7 +12,7 @@ REM Chiedi all'utente di inserire la porta sicura
 set /p RMQ=Rabbit url: 
 
 REM Chiedi all'utente se è un aggiornamento
-set /p IS_UPDATE=Is this an update? [Y/N]: 
+set /p IS_UPDATE=Rebuil all the images? [Y/N]: 
 
 REM Attendi un invio
 pause
