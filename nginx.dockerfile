@@ -2,8 +2,10 @@
 FROM nginx
 
 # Copy custom configuration file to the container
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
-#COPY nginx/nginx_debug.conf /etc/nginx/nginx.conf SE SEI IN DEBUG, ABILIA QUESTA E COMMENTA QUELLA SOPRA !
+#COPY nginx/nginx.conf /etc/nginx/nginx.conf
+
+#SE SEI IN DEBUG, ABILIA QUESTA E COMMENTA QUELLA SOPRA !
+COPY nginx/nginx_debug.conf /etc/nginx/nginx.conf 
 
 COPY nginx/ssl/my.omniaweb.cloud.pem /etc/nginx/ssl/my.omniaweb.cloud.pem
 
