@@ -8,7 +8,7 @@ cd "$DIR"
 docker rm -f nginxForLocalPurpose
 
 # Costruisci l'immagine usando il Dockerfile un livello sopra
-sudo docker build -t nginx-local-purpose -f ../nginx.dockerfile ..
+sudo docker build -t nginx-local-purpose -f ../nginx.debug.dockerfile ..
 
 # Avvia il contenitore
 docker run -d --name nginxForLocalPurpose --network bridge -p 80:80 -p 443:443 nginx-local-purpose
