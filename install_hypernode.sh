@@ -12,7 +12,7 @@ read -p "HTTPS server port: " SSL_PORT
 read -p "Rabbit url: " RMQ
 
 # Chiedi all'utente se è un aggiornamento
-read -p "Is this an update? [Y/N]: " IS_UPDATE
+read -p "Rebuil all the images? [Y/N]: " IS_UPDATE
 
 # Attendi un invio
 read -p "Press Enter to continue with the installation..."

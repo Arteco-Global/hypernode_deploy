@@ -137,6 +137,8 @@ services:
     container_name: adminHypernode
     networks:
       - hypernode-net
+    environment:
+      - VITE_BASE_NAME=settings
 volumes:
   rabbitmq_data:
   mongodb_data:
