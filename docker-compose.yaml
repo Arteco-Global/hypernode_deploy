@@ -91,20 +91,6 @@ services:
     container_name: camera
 
 
-  live-service:
-    build:
-      context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-      args:
-        SERVICE_NAME: "live-service"  # Replace with the desired service name
-    networks:
-       - hypernode-net
-    environment:
-      - LIVE-PORT=8084
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
-      - DATABASE_URI=mongodb://mongodb:27017/live-db
-    container_name: live
-
   auth-service:
     build:
       context: ../hypernode-server/
