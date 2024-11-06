@@ -3,9 +3,9 @@ name: arteco-hypernode-server
 services:
   rabbitmqHypernode:
     image: rabbitmq:3.8.17-management
-    # ports:
-    #   - "5672:5672"
-    #   - "15672:15672"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     networks:
       - hypernode-net
     environment:
@@ -28,7 +28,7 @@ services:
   gateway-service:
       build:
         context: ../hypernode-server
-        dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+        dockerfile: ../hypernode-server/docker/gateway.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
         args:
           SERVICE_NAME: "gateway-service"  # Replace with the desired service name
       # ports:
@@ -44,20 +44,17 @@ services:
         - GATEWAY_WS_PORT=8000
         - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
         - DATABASE_URI=mongodb://mongoHypernode:27017/gateway-db
-        - DEFAULT_USER=dalpi
-        - DEFAULT_PASSWORD=061290
       container_name: gateway
 
   storage-service:
     build:
       context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+      dockerfile: ../hypernode-server/docker/storage.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
         SERVICE_NAME: "storage-service"  # Replace with the desired service name
     networks:
        - hypernode-net
     environment:
-      - STORAGE_PORT=8081
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/storage-db
     container_name: storage
@@ -65,13 +62,12 @@ services:
   event-service:
     build:
       context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+      dockerfile: ../hypernode-server/docker/event.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
         SERVICE_NAME: "event-service"  # Replace with the desired service name
     networks:
        - hypernode-net
     environment:
-      - EVENT_PORT=8082
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/event-db
     container_name: event
@@ -79,28 +75,35 @@ services:
   camera-service:
     build:
       context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+      dockerfile: ../hypernode-server/docker/camera.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
         SERVICE_NAME: "camera-service"  # Replace with the desired service name  
     networks:
        - hypernode-net
     environment:
-      - CAMERA_PORT=5001
+      - ENABLE_FFMPEG=true
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/camera-db
+      - FFMPEG_PATH=/usr/bin/ffmpeg
     container_name: camera
-
+  # deploy:
+  #   resources:
+  #     limits:
+  #       memory: 1G  # Limita a un massimo di 1 GB di RAM
+  #       cpus: '1.5'  # Limita a un massimo di 1.5 CPU
+  #     reservations:
+  #       memory: 512M  # Riserva almeno 512 MB di RAM
+  #       cpus: '0.5'  # Riserva almeno 0.5 CPU
 
   auth-service:
     build:
       context: ../hypernode-server/
-      dockerfile: ../hypernode-server/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+      dockerfile: ../hypernode-server/docker/auth.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
       args:
         SERVICE_NAME: "auth-service"  # Replace with the desired service name
     networks:
        - hypernode-net
     environment:
-      - AUTH_PORT=8085
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/auth-db
     container_name: auth
