@@ -1,7 +1,7 @@
-name: arteco-hypernode-server
+name: hypernode-server
 
 services:
-  rabbitmqHypernode:
+  messageBroker:
     image: rabbitmq:3.8.17-management
     # ports:
     #   - "5672:5672"
@@ -13,7 +13,7 @@ services:
       RABBITMQ_DEFAULT_PASS: hypernode
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-    container_name: rabbitmqHypernode
+    container_name: messageBroker
 
   mongodb:
     image: mongo:4.4
@@ -23,7 +23,7 @@ services:
       - hypernode-net
     volumes:
       - mongodb_data:/data/db
-    container_name: mongoHypernode
+    container_name: database
 
   gateway-service:
       build:
@@ -42,8 +42,8 @@ services:
       environment:
         - GATEWAY_API_PORT=5001
         - GATEWAY_WS_PORT=8000
-        - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
-        - DATABASE_URI=mongodb://mongoHypernode:27017/gateway-db
+        - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
+        - DATABASE_URI=mongodb://database:27017/gateway-db
       container_name: gateway
 
   storage-service:
@@ -55,7 +55,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
       - DATABASE_URI=mongodb://mongodb:27017/storage-db
     container_name: storage
 
@@ -68,7 +68,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
       - DATABASE_URI=mongodb://mongodb:27017/event-db
     container_name: event
 
@@ -81,7 +81,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
       - DATABASE_URI=mongodb://mongodb:27017/camera-db
 
     container_name: camera
@@ -103,7 +103,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
       - DATABASE_URI=mongodb://mongodb:27017/auth-db
     container_name: auth
 
@@ -114,7 +114,7 @@ services:
     ports:
         - "${SERVER_PORT:-80}:80"
         - "${SSL_PORT:-443}:443"
-    container_name: nginxHypernode
+    container_name: webserver
     networks:
        - hypernode-net
 
@@ -122,7 +122,7 @@ services:
     build:
       context: ../hypernode_server_gui
       dockerfile: ../hypernode_server_gui/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
-    container_name: adminHypernode
+    container_name: configurator
     networks:
       - hypernode-net
     environment:
@@ -137,7 +137,7 @@ networks:
 
 
 #USAGE
-# SERVER_PORT=80 SSL_PORT=443 RMQ=amqp://hypernode:hypernode@rabbitmqHypernode:5672  docker compose up -d
+# SERVER_PORT=80 SSL_PORT=443 RMQ=amqp://hypernode:hypernode@messageBroker:5672  docker compose up -d
 
 #sudo docker compose build camera-service && sudo docker compose up -d camera-service
 
