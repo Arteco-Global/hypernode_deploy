@@ -3,9 +3,9 @@ name: arteco-hypernode-server
 services:
   rabbitmqHypernode:
     image: rabbitmq:3.8.17-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+    # ports:
+    #   - "5672:5672"
+    #   - "15672:15672"
     networks:
       - hypernode-net
     environment:
@@ -18,7 +18,7 @@ services:
   mongodb:
     image: mongo:4.4
     # ports:
-    #   - 27017:27017
+    #   - 27050:27017
     networks:
       - hypernode-net
     volumes:
@@ -81,10 +81,9 @@ services:
     networks:
        - hypernode-net
     environment:
-      - ENABLE_FFMPEG=true
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@rabbitmqHypernode:5672}
       - DATABASE_URI=mongodb://mongodb:27017/camera-db
-      - FFMPEG_PATH=/usr/bin/ffmpeg
+
     container_name: camera
   # deploy:
   #   resources:
@@ -139,3 +138,7 @@ networks:
 
 #USAGE
 # SERVER_PORT=80 SSL_PORT=443 RMQ=amqp://hypernode:hypernode@rabbitmqHypernode:5672  docker compose up -d
+
+#sudo docker compose build camera-service && sudo docker compose up -d camera-service
+
+#sudo docker compose up -d camera-service
