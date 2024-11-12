@@ -17,10 +17,16 @@ read -p "Rabbit url (edit only if remote): " RMQ
 # Attendi un invio
 read -p "Press Enter to continue with the installation..."
 
+echo "Certificate file is NOT automatically generated. Please provide a valid certificate file in the /certs folder !!!!" 
+
 # Imposta le variabili d'ambiente
 export SERVER_PORT=${SERVER_PORT:-80}
 export SSL_PORT=${SSL_PORT:-443}
 export CONF_PORT=${CONF_PORT:-8080}
 export RMQ=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
 
- docker compose up -d --build
+echo "Dockerizing stuff ...."
+
+docker compose up -d --build
+
+echo "Done"
