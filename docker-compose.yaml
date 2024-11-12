@@ -15,7 +15,7 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     container_name: messageBroker
 
-  mongodb:
+  database:
     image: mongo:4.4
     # ports:
     #   - 27050:27017
@@ -25,7 +25,7 @@ services:
       - mongodb_data:/data/db
     container_name: database
 
-  gateway-service:
+  gateway:
       build:
         context: ../hypernode-server
         dockerfile: ../hypernode-server/docker/gateway.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
@@ -46,7 +46,7 @@ services:
         - DATABASE_URI=mongodb://database:27017/gateway-db
       container_name: gateway
 
-  storage-service:
+  storage:
     build:
       context: ../hypernode-server/
       dockerfile: ../hypernode-server/docker/storage.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
@@ -56,10 +56,10 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
-      - DATABASE_URI=mongodb://mongodb:27017/storage-db
+      - DATABASE_URI=mongodb://database:27017/storage-db
     container_name: storage
 
-  event-service:
+  event:
     build:
       context: ../hypernode-server/
       dockerfile: ../hypernode-server/docker/event.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
@@ -69,10 +69,10 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
-      - DATABASE_URI=mongodb://mongodb:27017/event-db
+      - DATABASE_URI=mongodb://database:27017/event-db
     container_name: event
 
-  camera-service:
+  camera:
     build:
       context: ../hypernode-server/
       dockerfile: ../hypernode-server/docker/camera.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
@@ -82,7 +82,7 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
-      - DATABASE_URI=mongodb://mongodb:27017/camera-db
+      - DATABASE_URI=mongodb://database:27017/camera-db
 
     container_name: camera
   # deploy:
@@ -94,7 +94,7 @@ services:
   #       memory: 512M  # Riserva almeno 512 MB di RAM
   #       cpus: '0.5'  # Riserva almeno 0.5 CPU
 
-  auth-service:
+  auth:
     build:
       context: ../hypernode-server/
       dockerfile: ../hypernode-server/docker/auth.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
@@ -104,10 +104,10 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
-      - DATABASE_URI=mongodb://mongodb:27017/auth-db
+      - DATABASE_URI=mongodb://database:27017/auth-db
     container_name: auth
 
-  nginx:
+  webserver:
     build:
       context: .
       dockerfile: nginx.prod.dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
@@ -118,19 +118,19 @@ services:
     networks:
        - hypernode-net
 
-  admin-gui:
+  configurator:
     build:
       context: ../hypernode_server_gui
       dockerfile: ../hypernode_server_gui/dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
     container_name: configurator
     networks:
       - hypernode-net
-    environment:
-      - VITE_BASE_NAME=settings
+    ports:
+      - "${CONF_PORT:-8080}:8080"
 volumes:
   rabbitmq_data:
   mongodb_data:
-
+   
 networks:
   hypernode-net:
       driver: bridge
