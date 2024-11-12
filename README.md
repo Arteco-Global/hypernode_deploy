@@ -43,3 +43,16 @@ You need to add to your sites, the server 'V12230451' in order to access it.
 Default users are located in the "/usr/src/app/users.json" (docker container -> gateway) and are fully editable.
 Default user/psw is 'admin'/'admin'.
 
+Cose da fare ---->
+
+Rabbit prima
+
+Aggiungere nome, seriale e timezone da script di installazione
+
+Poter aggiungere camera service su un altra macchina
+
+Demo bac-man
+
+*********** RIAVVIO *************
+-> riavvio ffmpeg se va giu telecamera !!!!
+
