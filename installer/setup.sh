@@ -16,8 +16,15 @@ if [ "$choice" == "y" ] || [ "$choice" == "Y" ]; then
 
     # Clonazione delle tre repository con autenticazione diretta
     git clone https://$usr:$psw@github.com/Arteco-Global/hypernode_deploy.git
-    git clone https://$usr:$psw@github.com/Arteco-Global/hypernode-server.git
     git clone https://$usr:$psw@github.com/Arteco-Global/hypernode_server_gui.git
+    git clone https://$usr:$psw@github.com/Arteco-Global/hypernode-server.git
+    # Vai nel repository appena clonato
+    cd hypernode-server
+
+    # Passa al ramo release_candidate
+    git checkout release_candidate
+
+    cd ..
 
     echo "Cloning procedure compleated"
 
