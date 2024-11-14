@@ -68,13 +68,13 @@ a questo punto è necessario entrare nella cartella 'hypernode_deploy'.
    ```bash
       sudo sh setup.sh
    ```
-Seguire l'installazzione del server passo passo indicando le porte necessarie per l'avvio e l'eventuale url del messagebroker.
+Seguire l'installazzione del server passo passo indicando le porte necessarie per l'avvio e l'eventuale url del messagebroker. Ovviamente scegliere di non scaricare i file dal web
 
 ## 2. Opzione 2 - usare lo script di download automatica (installazzione online)
 
  **Lanciare il downloader **:
    ```bash
-      sudo sh download_repo.sh
+      sudo sh setup.sh
    ```
 Seguire l'installazzione del server passo passo indicando le porte necessarie per l'avvio e l'eventuale url del messagebroker.
 
