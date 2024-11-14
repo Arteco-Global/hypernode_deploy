@@ -51,8 +51,8 @@
    ```
    Questo comando dovebbe tornare come ultima riga 'Started Docker Application Container Engine'
 
-
-## 2. Copia i file sorgente
+   
+## 2. Opzione 1 -Copia i file sorgente (installazione offline)
 
 Estrarre il file hypernode.zip fornito con questo file in una cartella sel sistema operativo.
 La struttura dovrà essere la seguente:
@@ -70,6 +70,14 @@ a questo punto è necessario provare entrare nella cartella 'hypernode_deploy'.
    ```
 Seguire l'installazzione del server passo passo indicando le porte necessarie per l'avvio e l'eventuale url del messagebroker.
 
+## 2. Opzione 2 - usare lo script di download automatica (installazzione online)
+
+ **Lanciare il downloader **:
+   ```bash
+      sudo sh download_repo.sh
+   ```
+Seguire l'installazzione del server passo passo indicando le porte necessarie per l'avvio e l'eventuale url del messagebroker.
+
 
 ## 5. Verifica che l'interfaccia funzioni correttamente
 Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il configuratore, di default la porta è la 8080.
@@ -83,3 +91,12 @@ Accedi ai servizi esposti tramite il browser utilizzando come porta quella indic
    http://localhost:80
    ```
 Se correttamente funzionante si dovrebbe vedere il testo '!!!!! HYPERNODE HOME PAGE DEBUG MODE !!!!!'
+
+## 5. Aggiungere un camera service aggiuntivo
+Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il server (HTTP), di default la porta è la 80.
+ **Lanciare l'installer complessivo**:
+   ```bash
+      sudo sh install_hypernode.sh
+   ```
+E scegliere l'opzione corrispondente per la scelta di un camera service aggiuntivo.
+NB: se il gateway è installato in un computer remoto è necessario inserire il suo ip/url, altrimenti selezionare la voce "locale".
