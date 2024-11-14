@@ -13,7 +13,7 @@
 2. **Installa Docker** eseguendo il file `.exe` scaricato. Durante l'installazione, potrebbe essere necessario abilitare la virtualizzazione BIOS.
 3. **Avvia Docker** dopo l'installazione.
 
-### Su Linux (Ubuntu come esempio):
+### Su Ubuntu (solo ubuntu è stato testato):
 1. **Aggiorna i pacchetti**:
    ```bash
    sudo apt-get update
@@ -62,7 +62,7 @@ La struttura dovrà essere la seguente:
       | - hypernode_deploy
       | - hypernode-server
 
-a questo punto è necessario provare entrare nella cartella 'hypernode_deploy'.
+a questo punto è necessario entrare nella cartella 'hypernode_deploy'.
 
  **Lanciare l'installer complessivo**:
    ```bash
@@ -80,7 +80,7 @@ Seguire l'installazzione del server passo passo indicando le porte necessarie pe
 
 
 ## 5. Verifica che l'interfaccia funzioni correttamente
-Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il configuratore, di default la porta è la 8080.
+Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il configurator, di default la porta è la 8080.
    ```
    http://localhost:8080
    ```
