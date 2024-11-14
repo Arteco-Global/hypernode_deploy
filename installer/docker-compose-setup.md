@@ -100,3 +100,18 @@ Accedi ai servizi esposti tramite il browser utilizzando come porta quella indic
    ```
 E scegliere l'opzione corrispondente per la scelta di un camera service aggiuntivo.
 NB: se il gateway è installato in un computer remoto è necessario inserire il suo ip/url, altrimenti selezionare la voce "locale".
+
+## 5. Per vederlo su USee
+
+esegui "sudo nano /etc/hosts"
+
+modifica il file aggiungendo sul tuo computer 
+
+    #hypernode setup
+
+    127.0.0.1 V12230451.lan.omniaweb.cloud
+    127.0.0.1 V12230451.my.omniaweb.cloud
+
+    #end hypernode setup
+
+Fine
