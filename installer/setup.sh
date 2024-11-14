@@ -17,5 +17,4 @@ git clone https://$usr:$psw@github.com/Arteco-Global/hypernode_server_gui.git
 
 echo "Cloning procedure compleated"
 
-
-source ./hypernode_deploy/installer/setup.sh
+source ./hypernode_deploy/installer/wizard.sh
