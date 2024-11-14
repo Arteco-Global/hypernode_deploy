@@ -56,3 +56,5 @@ Demo bac-man
 *********** RIAVVIO *************
 -> riavvio ffmpeg se va giu telecamera !!!!
 
+
+

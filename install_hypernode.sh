@@ -11,8 +11,8 @@ read -p "HTTPS server port (default 443): " SSL_PORT
 # Chiedi all'utente di inserire la porta sicura
 read -p "Configurator port (default 8080): " CONF_PORT
 
-# Chiedi all'utente di inserire la porta sicura
-read -p "Rabbit url (edit only if remote): " RMQ
+# # Chiedi all'utente di inserire la porta sicura
+# read -p "Message broker url (edit only if remote): " RMQ
 
 # Attendi un invio
 read -p "Press Enter to continue with the installation..."
