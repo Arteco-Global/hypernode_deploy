@@ -5,6 +5,9 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
+
+cd hypernode_deploy
+
 # Menu delle opzioni
 echo "What do you want to install:"
 echo "1. Stand alone server"
@@ -18,11 +21,11 @@ read -p "Enter the option: " option
 case $option in
   1)
     echo "Stand alone server"
-    bash ./hypernode/install_hypernode.sh
+    bash ./install_hypernode.sh
     ;;
   2)
     echo "Additional Camera Service"
-    bash ./hypernode/singleService/camera/install_camera.sh
+    bash ./singleService/camera/install_camera.sh
     ;;
   3)
     echo "Additional Storage Service"
