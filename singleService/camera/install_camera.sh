@@ -16,7 +16,7 @@ elif [ "$choice" == "r" ] || [ "$choice" == "R" ]; then
     RABBITMQ_HOST="$remote_host"
     echo "Gateway set as remote $RABBITMQ_HOST"
 else
-    echo "Scelta non valida. Uscita dallo script."
+    echo "Wrong choice mate."
     exit 1
 fi
 
@@ -42,6 +42,7 @@ export DATABASE_URI=mongodb://${DB_NAME}:27017/camera-service
 
 echo "Dockerizing stuff ...."
 
-docker compose up -d --build
+cd "$(dirname "$0")" && docker compose up -d --build
+
 
 echo "Done"

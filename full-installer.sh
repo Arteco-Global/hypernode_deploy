@@ -34,6 +34,6 @@ case $option in
     exit 0
     ;;
   *)
-    echo "Not valid, you idiot."
+    echo "Wrong choice mate."
     ;;
 esac
