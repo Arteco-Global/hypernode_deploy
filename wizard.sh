@@ -5,8 +5,6 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
-cd hypernode
-
 # Menu delle opzioni
 echo "What do you want to install:"
 echo "1. Stand alone server"
