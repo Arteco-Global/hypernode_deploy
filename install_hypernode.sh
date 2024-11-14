@@ -25,7 +25,7 @@ export SSL_PORT=${SSL_PORT:-443}
 export CONF_PORT=${CONF_PORT:-8080}
 export RMQ=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
 
-echo "Dockerizing stuff ...."
+echo "Installation in progress ........"
 
 docker compose up -d --build
 

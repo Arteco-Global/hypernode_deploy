@@ -18,11 +18,11 @@ read -p "Enter the option: " option
 case $option in
   1)
     echo "Stand alone server"
-    bash ./install_hypernode.sh
+    bash ../install_hypernode.sh
     ;;
   2)
     echo "Additional Camera Service"
-    bash ./singleService/camera/install_camera.sh
+    bash ../singleService/camera/install_camera.sh
     ;;
   3)
     echo "Additional Storage Service"

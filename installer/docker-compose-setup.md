@@ -66,7 +66,7 @@ a questo punto è necessario entrare nella cartella 'hypernode_deploy'.
 
  **Lanciare l'installer complessivo**:
    ```bash
-      sudo sh install_hypernode.sh
+      sudo sh setup.sh
    ```
 Seguire l'installazzione del server passo passo indicando le porte necessarie per l'avvio e l'eventuale url del messagebroker.
 
@@ -96,7 +96,7 @@ Se correttamente funzionante si dovrebbe vedere il testo '!!!!! HYPERNODE HOME P
 Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il server (HTTP), di default la porta è la 80.
  **Lanciare l'installer complessivo**:
    ```bash
-      sudo sh install_hypernode.sh
+      sudo sh setup.sh
    ```
 E scegliere l'opzione corrispondente per la scelta di un camera service aggiuntivo.
 NB: se il gateway è installato in un computer remoto è necessario inserire il suo ip/url, altrimenti selezionare la voce "locale".
