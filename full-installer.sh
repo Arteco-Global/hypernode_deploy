@@ -9,7 +9,6 @@ fi
 echo "What do you want to install:"
 echo "1. Stand alone server"
 echo "2. Additional Camera Service"
-echo "3. Additional Storage Service"
 echo "4. Esci"
 
 # Lettura della scelta dell'utente
