@@ -12,7 +12,7 @@ cd hypernode_deploy
 echo "What do you want to install:"
 echo "1. Stand alone server"
 echo "2. Additional Camera Service"
-echo "4. Esci"
+echo "4. Exit"
 
 # Lettura della scelta dell'utente
 read -p "Enter the option: " option
