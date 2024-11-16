@@ -12,7 +12,7 @@ read -p "Download code[y/n]: " choice
 if [ "$choice" == "y" ] || [ "$choice" == "Y" ]; then
     #scadono tra 60 giorni
     usr=mdalprato
-    psw=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
+    psw=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
 
     # Clonazione delle tre repository con autenticazione diretta
     git clone https://$usr:$psw@github.com/Arteco-Global/hypernode_deploy.git
