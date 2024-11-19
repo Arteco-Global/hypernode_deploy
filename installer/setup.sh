@@ -22,7 +22,7 @@ if [ "$choice" == "y" ] || [ "$choice" == "Y" ]; then
     cd hypernode-server
 
     # Passa al ramo release_candidate
-    git checkout release_candidate
+    git checkout release_candidate_2
 
     cd ..
 
