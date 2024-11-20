@@ -1,40 +1,34 @@
 #!/bin/bash
 
-# Creazione della cartella 'hypernode' se non esiste
-mkdir -p hypernode
+# File to transfer
+FILE="installer.sh"
 
-# Spostarsi dentro la cartella 'hypernode'
-cd hypernode
+# Ask for the server address
+read -p "Enter the server address (e.g., 192.168.10.31): " HOST
+HOST=${HOST:-192.168.10.31}
 
-read -p "Download code[y/n]: " choice
+# Ask for the username
+read -p "Enter the username (e.g., arteco): " USER
+USER=${USER:-arteco}
 
-# Imposta la variabile RABBITMQ_HOST in base alla scelta
-if [ "$choice" == "y" ] || [ "$choice" == "Y" ]; then
-    #scadono tra 60 giorni
-    usr=mdalprato
-    psw=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
+# # Ask for the password securely
+# echo -n "Enter the password: "
+# stty -echo
+# read PASSWORD
+# stty echo
+# echo
 
-    # Clonazione delle tre repository con autenticazione diretta
-    git clone https://$usr:$psw@github.com/Arteco-Global/hypernode_deploy.git
-    git clone https://$usr:$psw@github.com/Arteco-Global/hypernode_server_gui.git
-    git clone https://$usr:$psw@github.com/Arteco-Global/hypernode-server.git
-    # Vai nel repository appena clonato
-    cd hypernode-server
+# Transfer the file using scp with -o StrictHostKeyChecking=no to avoid the authenticity prompt
+echo "$PASSWORD" | scp -o StrictHostKeyChecking=no "$FILE" "$USER@$HOST:~"
 
-    # Passa al ramo release_candidate
-    git checkout release_candidate_2
+# Check if the transfer was successful
+if [ $? -eq 0 ]; then
+    echo "File successfully copied to $USER@$HOST:~"
 
-    cd ..
+    #   # Connect to the server and execute the file
+    # ssh -o StrictHostKeyChecking=no "$USER@$HOST" "bash ~/installer.sh"
+  
 
-    echo "Cloning procedure compleated"
-
-elif [ "$choice" == "n" ] || [ "$choice" == "N" ]; then
-     echo "Skipping cloning procedure"
 else
-    echo "Wrong choice mate."
-    exit 1
+    echo "Error: File transfer failed."
 fi
-
-pwd
-
-source ./hypernode_deploy/wizard.sh
