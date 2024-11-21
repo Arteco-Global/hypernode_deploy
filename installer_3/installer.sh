@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Global vars
-TOTAL_STEPS=10 #Steps for progressbar
+TOTAL_STEPS=13 #Steps for progressbar
 CURRENT_STEP=0 #Counter for progressbar
 SCRIPT_DIR=$(dirname "$0") #local path
 ABSOLUTE_PATH=$(realpath "$SCRIPT_DIR") #absolute path
