@@ -28,7 +28,7 @@ show_progress() {
 TOTAL_STEPS=100
 CURRENT_STEP=0
 
-serverSetup(){
+serverInstall(){
 
     # *****************************************************************
     # SERVER INSTALLATION
@@ -36,12 +36,61 @@ serverSetup(){
 
     # le variuabili sono state settate in get_config
 
-    echo "Installation in progress ........"
+    printf "Moving into folder ..>                  \r"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress $TOTAL_STEPS $CURRENT_STEP
+    cd ~/hypernode/hypernode_deploy/
 
+
+
+    printf "Installing server                   \r"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress $TOTAL_STEPS $CURRENT_STEP
+
+
+    # Esegui il comando docker compose e mostra l'output in tempo reale
     docker compose up -d --build
+
+    # Pulire lo schermo alla fine
+    clear
+
+    printf "Installation completed !                   \r"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress $TOTAL_STEPS $CURRENT_STEP
+
+
+    #!/bin/bash
 
 
 }
+
+cameraInstall() {
+
+    # *****************************************************************
+    # CAMERA INSTALLATION
+    # *****************************************************************
+
+    # le variuabili sono state settate in get_config
+
+    printf "Installing additional camera service                  \r"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress $TOTAL_STEPS $CURRENT_STEP
+
+    cd ~/hypernode/hypernode_deploy/singleService
+
+    docker compose -f camera/docker-compose.yaml up -d --build
+
+
+     # Pulire lo schermo alla fine
+    clear
+
+    printf "Installation completed !                   \r"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress $TOTAL_STEPS $CURRENT_STEP
+
+
+}
+
 
 dockerInstall(){
             
@@ -94,19 +143,19 @@ cloningCode(){
     # *****************************************************************
 
     usr=mdalprato
-    psw=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
+    psw=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
 
 
     # creating folder Add Docker GPG key
     printf "Creating folder ...                        \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    mkdir -p hypernode > /dev/null
+    mkdir -p ~/hypernode > /dev/null
 
     printf "Moving inside folder ...                  \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd hypernode > /dev/null
+    cd ~/hypernode > /dev/null
 
     printf "Installing git ...                          \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
@@ -125,61 +174,12 @@ cloningCode(){
     printf "Moving into folder ...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd hypernode-server  > /dev/null
+    cd ~/hypernode/hypernode-server  > /dev/null
     
     printf "Checkout branch...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
     git checkout "release_candidate_2" > /dev/null 2>&1
-
-    printf "Change folder...                         \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd ..  > /dev/null
-
-}
-
-installWizard() {
-
-    # *****************************************************************
-    # WIZARD **********************************************************
-    # *****************************************************************
-
-    cd hypernode_deploy
-
-    # Menu delle opzioni
-    echo "What do you want to install:"
-    echo "1. Stand alone server"
-    echo "2. Additional Camera Service"
-    echo "4. Exit"
-
-    # Lettura della scelta dell'utente
-    read -p "Enter the option: " option
-
-    # Esecuzione dell'azione in base alla option
-    case $option in
-    1)
-        echo "Stand alone server"
-        serverSetup
-        ;;
-    2)
-        echo "Additional Camera Service"
-        echo "NOT IMPLEMENTED YET"
-    # bash ./singleService/camera/install_camera.sh
-        ;;
-    3)
-        echo "Additional Storage Service"
-        echo "NOT IMPLEMENTED YET"
-        ;;
-    4)
-        echo "Exiting."
-        exit 0
-        ;;
-    *)
-        echo "Wrong choice mate."
-        ;;
-    esac
-
 }
 
 
@@ -193,8 +193,9 @@ get_config() {
 
    # Menu delle opzioni
     echo "What do you want to install (default is '1'):"
-    echo "1. Stand alone server"
+    echo "1. Full Server"
     echo "2. Additional Camera Service"
+    echo "3. Stand alone server"
     echo "4. Exit"
 
     # Lettura della scelta dell'utente
@@ -215,12 +216,22 @@ get_config() {
         CONF_PORT=${CONF_PORT:-8080}
 
         RMQ=amqp://hypernode:hypernode@messageBroker:5672
+
+        # Esporta le variabili per renderle accessibili ad altri script
+        export SERVER_PORT
+        export SSL_PORT
+        export CONF_PORT
+        export RMQ
+
+        # echo "SERVER_PORT: $SERVER_PORT"
+        # echo "SSL_PORT: $SSL_PORT"
+        # echo "CONF_PORT: $CONF_PORT"
+        # echo "RMQ: $RMQ"
+
         ;;
     2)
        
         read -p "Choose a unique name: " PROCESS_NAME
-
-        # Chiede all'utente se RabbitMQ deve essere locale o remoto
         read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_CAMERA_RMQ_LOCAL_OR_REMOTE
 
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
@@ -236,7 +247,18 @@ get_config() {
             exit 1
         fi
 
-         RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_CAMERA:5672"
+        RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_CAMERA:5672"
+
+     
+        export PROCESS_NAME=camera-${PROCESS_NAME}
+        export DB_NAME=database-for-${PROCESS_NAME}
+        export DATABASE_URI=mongodb://${DB_NAME}:27017/camera-service
+        export RMQ
+
+        # echo "PROCESS_NAME: $PROCESS_NAME"
+        # echo "DB_NAME: $DB_NAME"
+        # echo "DATABASE_URI: $DATABASE_URI"
+        # echo "RMQ: $RMQ"
 
         ;;
     4)
@@ -248,26 +270,12 @@ get_config() {
         ;;
     esac
 
-
-    
-   
-    # Esporta le variabili per renderle accessibili ad altri script
-    export SERVER_PORT
-    export SSL_PORT
-    export CONF_PORT
-    export RMQ
     export INSTALL_OPTION
 
-
-    echo "SERVER_PORT: $SERVER_PORT"
-    echo "SSL_PORT: $SSL_PORT"
-    echo "CONF_PORT: $CONF_PORT"
-    echo "RMQ: $RMQ"
-    echo "INSTALL_OPTION: $INSTALL_OPTION"
+    #echo "INSTALL_OPTION: $INSTALL_OPTION"
 
 
 }
-
 
 
 # *****************************************************************
@@ -277,10 +285,17 @@ get_config() {
 #a. Welcome step
 get_config 
 
-# #b. Docker installation
-# dockerInstall
+#b. Docker installation
+#dockerInstall
 
-# #c. Cloning code
-# cloningCode
+#c. Cloning code
+#cloningCode
 
 
+if [ "$INSTALL_OPTION" -eq 1 ]; then
+    # server installation
+    serverInstall
+elif [ "$INSTALL_OPTION" -eq 2 ]; then
+    # camera installation
+    cameraInstall
+fi
