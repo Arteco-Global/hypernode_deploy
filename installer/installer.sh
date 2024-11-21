@@ -28,6 +28,13 @@ show_progress() {
 TOTAL_STEPS=100
 CURRENT_STEP=0
 
+# Salva il percorso di esecuzione dello script
+SCRIPT_DIR=$(dirname "$0")
+
+# Ottieni il percorso assoluto
+ABSOLUTE_PATH=$(realpath "$SCRIPT_DIR")
+
+
 serverInstall(){
 
     # *****************************************************************
@@ -36,23 +43,13 @@ serverInstall(){
 
     # le variuabili sono state settate in get_config
 
-    printf "Moving into folder ..>                  \r"
+    printf "Installing server                  \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd ~/hypernode/hypernode_deploy/
-
-
-
-    printf "Installing server                   \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-
-
-    # Esegui il comando docker compose e mostra l'output in tempo reale
-    docker compose up -d --build
+    docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/docker-compose.yaml" up -d --build
 
     # Pulire lo schermo alla fine
-    clear
+    #clear
 
     printf "Installation completed !                   \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
@@ -75,10 +72,7 @@ cameraInstall() {
     printf "Installing additional camera service                  \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-
-    cd ~/hypernode/hypernode_deploy/singleService
-
-    docker compose -f camera/docker-compose.yaml up -d --build
+    docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/singleService/camera/docker-compose.yaml" up -d --build
 
 
      # Pulire lo schermo alla fine
@@ -136,6 +130,17 @@ dockerInstall(){
 
 }
 
+installGit(){
+
+    printf "Installing git ...                          \r"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress $TOTAL_STEPS $CURRENT_STEP
+    # Esegui i comandi in modo silenzioso e cattura i warning
+    sudo apt update > /dev/null 2>&1
+    sudo apt install -y git > /dev/null 2>&1
+
+}
+
 cloningCode(){
 
     # *****************************************************************
@@ -150,19 +155,12 @@ cloningCode(){
     printf "Creating folder ...                        \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    mkdir -p ~/hypernode > /dev/null
+    mkdir "$ABSOLUTE_PATH/hypernode" > /dev/null 2>&1
 
     printf "Moving inside folder ...                  \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd ~/hypernode > /dev/null
-
-    printf "Installing git ...                          \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-        # Esegui i comandi in modo silenzioso e cattura i warning
-    sudo apt update > /dev/null 2>&1
-    sudo apt install -y git > /dev/null 2>&1
+    cd "$ABSOLUTE_PATH/hypernode" > /dev/null
 
     printf "Cloning code (may take a while) ...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
@@ -174,12 +172,14 @@ cloningCode(){
     printf "Moving into folder ...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd ~/hypernode/hypernode-server  > /dev/null
+    cd "$ABSOLUTE_PATH/hypernode/hypernode-server"  > /dev/null
     
     printf "Checkout branch...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
     git checkout "release_candidate_2" > /dev/null 2>&1
+    
+
 }
 
 
@@ -285,11 +285,14 @@ get_config() {
 #a. Welcome step
 get_config 
 
-#b. Docker installation
+# b. Git installation
+#installGit
+
+# c. Docker installation
 #dockerInstall
 
-#c. Cloning code
-#cloningCode
+# d. Cloning code from github
+cloningCode
 
 
 if [ "$INSTALL_OPTION" -eq 1 ]; then
