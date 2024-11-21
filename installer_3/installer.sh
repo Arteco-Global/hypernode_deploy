@@ -10,7 +10,8 @@ SKIP_CLEAN="false"
 SKIP_DOKER_INSTALL="false"
 SKIP_GIT_INSTALL="false"
 SKIP_GIT_CLONE="false"
-
+SERVER_BRANCH="main"
+CONFIGURATOR_BRANCH="main"
 # Getting input parameters
 
 while [[ "$#" -gt 0 ]]; do
@@ -211,12 +212,22 @@ cloningCode(){
     printf "Moving into folder ...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
+    cd "$ABSOLUTE_PATH/hypernode/hypernode_server_gui"  > /dev/null
+    
+    printf "Checkout branch...                         \r"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress $TOTAL_STEPS $CURRENT_STEP
+    git checkout "${CONFIGURATOR_BRANCH}" > /dev/null 2>&1
+
+    printf "Moving into folder ...                         \r"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress $TOTAL_STEPS $CURRENT_STEP
     cd "$ABSOLUTE_PATH/hypernode/hypernode-server"  > /dev/null
     
     printf "Checkout branch...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    git checkout "release_candidate_2" > /dev/null 2>&1
+    git checkout "${SERVER_BRANCH}" > /dev/null 2>&1
     
 
 }
@@ -254,13 +265,22 @@ get_config() {
         read -p "Configurator port (default 8080): " CONF_PORT
         CONF_PORT=${CONF_PORT:-8080}
 
+        read -p "| --> Server branch (default is 'main') " SERVER_BRANCH
+        SERVER_BRANCH=${SERVER_BRANCH:main}
+
+        read -p "| --> Web Configurator branch (default is 'main') " CONFIGURATOR_BRANCH
+        CONFIGURATOR_BRANCH=${CONFIGURATOR_BRANCH:main}
+
         RMQ=amqp://hypernode:hypernode@messageBroker:5672
+
 
         # Esporta le variabili per renderle accessibili ad altri script
         export SERVER_PORT
         export SSL_PORT
         export CONF_PORT
         export RMQ
+        export SERVER_BRANCH
+        export CONFIGURATOR_BRANCH
 
         # echo "SERVER_PORT: $SERVER_PORT"
         # echo "SSL_PORT: $SSL_PORT"
@@ -271,6 +291,10 @@ get_config() {
     2)
        
         read -p "Choose a unique name: " PROCESS_NAME
+
+        read -p "| --> Camera branch (default is 'main') " SERVER_BRANCH
+        SERVER_BRANCH=${SERVER_BRANCH:main}
+
         read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_CAMERA_RMQ_LOCAL_OR_REMOTE
 
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
@@ -285,12 +309,12 @@ get_config() {
             echo "Wrong choice mate."
             exit 1
         fi
-
      
         export PROCESS_NAME=camera-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/camera-service
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_CAMERA:5672"
+        export SERVER_BRANCH
 
         # echo "PROCESS_NAME: $PROCESS_NAME"
         # echo "DB_NAME: $DB_NAME"
