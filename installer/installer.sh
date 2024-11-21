@@ -236,7 +236,7 @@ get_config() {
 
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
         if [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
-            RABBITMQ_HOST_FOR_CAMERA="host.docker.internal"
+            RABBITMQ_HOST_FOR_CAMERA="172.17.0.1"
             echo "Gateway set as local. Host: $RABBITMQ_HOST_FOR_CAMERA"
         elif [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
             read -p "Insert the ip/url: " remote_host
@@ -247,13 +247,11 @@ get_config() {
             exit 1
         fi
 
-        RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_CAMERA:5672"
-
      
         export PROCESS_NAME=camera-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/camera-service
-        export RMQ
+        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_CAMERA:5672"
 
         # echo "PROCESS_NAME: $PROCESS_NAME"
         # echo "DB_NAME: $DB_NAME"
