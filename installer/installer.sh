@@ -286,10 +286,10 @@ get_config() {
 get_config 
 
 # b. Git installation
-#installGit
+installGit
 
 # c. Docker installation
-#dockerInstall
+dockerInstall
 
 # d. Cloning code from github
 cloningCode
@@ -302,3 +302,9 @@ elif [ "$INSTALL_OPTION" -eq 2 ]; then
     # camera installation
     cameraInstall
 fi
+
+
+#to stop all sudo docker stop $(sudo docker ps -aq)
+# to remove all sudo docker rm $(sudo docker ps -aq)
+# to remove all images sudo docker rmi $(sudo docker images -q)
+# to remove volumes sudo docker volume prune -f
