@@ -112,7 +112,7 @@ cameraInstall() {
     printf "Installing additional camera service                  \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/singleService/camera/docker-compose.yaml" up -d --build
+    docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/camera/docker-compose.yaml" up -d --build
 
 
      # Pulire lo schermo alla fine

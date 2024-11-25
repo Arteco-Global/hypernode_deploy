@@ -76,40 +76,12 @@ show_progress() {
 }
 
 
-
-
-serverInstall(){
-
-    # *****************************************************************
-    # SERVER INSTALLATION
-    # *****************************************************************
-
-    # le variuabili sono state settate in get_config
-
-    printf "Installing server                  \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/docker-compose.yaml" up -d --build
-
-    # Pulire lo schermo alla fine
-    #clear
-
-    printf "Installation completed !                   \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-
-
-    #!/bin/bash
-
-
-}
-
-
 additionalServiceInstall() {
 
     SERVICE_NAME=$1  # Il primo parametro passato alla funzione
 
     echo "SERVICE_NAME: $SERVICE_NAME"
+
     # *****************************************************************
     # ADDITIONAL SERVICE INSTALLATION
     # *****************************************************************
@@ -122,7 +94,7 @@ additionalServiceInstall() {
     printf "Installing additional service: $SERVICE_NAME \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
-    docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/singleService/$SERVICE_NAME/docker-compose.yaml" up -d --build
+    docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml" up -d --build
 
 
     printf "Installation completed !                   \r"
@@ -273,16 +245,16 @@ get_config() {
     echo "|-- 4. Additional Event Service (To manage new/existing events)"
     echo "|-- 5. Additional Storage Service (To manage new/existing storage destinations)"
     echo ""
-    # echo "-------------------------------------:"
-    # echo "-------------- UPDATE  --------------:"
-    # echo "-------------------------------------:"
-    # echo ""
-    # echo "What do you want to update:"
-    # echo "|-- 1. Update all the server's servicies "    
-    # echo "|-- 2. Update Camera Service"
-    # echo "|-- 3. Update Auth Service"
-    # echo "|-- 4. Update Event Service"
-    # echo "|-- 5. Update Storage Service"
+    echo "-------------------------------------:"
+    echo "-------------- UPDATE  --------------:"
+    echo "-------------------------------------:"
+    echo ""
+    echo "What do you want to update:"
+    echo "|-- 6. Update all the server's servicies "    
+    echo "|-- 7. Update Camera Service"
+    echo "|-- 8. Update Auth Service"
+    echo "|-- 9. Update Event Service"
+    echo "|-- 10. Update Storage Service"
     echo ""
     echo "-------------------------------------:"
     echo "0. EXIT"
@@ -423,8 +395,14 @@ fi
 # echo "|-- 4. Additional Event Service"
 # echo "|-- 5. Additional Storage Service"
 
+# echo "|-- 6. Update all the server's servicies "    
+# echo "|-- 7. Update Camera Service"
+# echo "|-- 8. Update Auth Service"
+# echo "|-- 9. Update Event Service"
+# echo "|-- 10. Update Storage Service"
+
 if [ "$INSTALL_OPTION" -eq 1 ]; then
-    serverInstall
+    additionalServiceInstall "server"
 elif [ "$INSTALL_OPTION" -eq 2 ]; then
     additionalServiceInstall "camera"
 elif [ "$INSTALL_OPTION" -eq 3 ]; then
@@ -433,6 +411,16 @@ elif [ "$INSTALL_OPTION" -eq 4 ]; then
     additionalServiceInstall "event"
 elif [ "$INSTALL_OPTION" -eq 5 ]; then
     additionalServiceInstall "storage"
+elif [ "$INSTALL_OPTION" -eq 6 ]; then
+    additionalServiceInstall "server" "update"
+elif [ "$INSTALL_OPTION" -eq 7 ]; then
+    additionalServiceInstall "storage" "update"
+elif [ "$INSTALL_OPTION" -eq 8 ]; then
+    additionalServiceInstall "storage" "update"
+elif [ "$INSTALL_OPTION" -eq 9 ]; then
+    additionalServiceInstall "storage" "update"
+elif [ "$INSTALL_OPTION" -eq 10 ]; then
+    additionalServiceInstall "storage" "update"
 fi
 
 if [ "$SKIP_CLEAN" != "true" ]; then

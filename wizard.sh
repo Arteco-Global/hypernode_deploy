@@ -25,7 +25,7 @@ case $option in
     ;;
   2)
     echo "Additional Camera Service"
-    bash ./singleService/camera/install_camera.sh
+    bash ./dockerService/camera/install_camera.sh
     ;;
   3)
     echo "Additional Storage Service"
