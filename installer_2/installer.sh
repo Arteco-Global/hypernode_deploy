@@ -236,22 +236,22 @@ get_config() {
 
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
         if [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
-            RABBITMQ_HOST_FOR_CAMERA="172.17.0.1"
-            echo "Gateway set as local. Host: $RABBITMQ_HOST_FOR_CAMERA"
+            RABBITMQ_HOST_FOR_CONTAINER="172.17.0.1"
+            echo "Gateway set as local. Host: $RABBITMQ_HOST_FOR_CONTAINER"
         elif [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
             read -p "Insert the ip/url: " remote_host
-            RABBITMQ_HOST_FOR_CAMERA="$remote_host"
-            echo "Gateway set as remote $RABBITMQ_HOST_FOR_CAMERA"
+            RABBITMQ_HOST_FOR_CONTAINER="$remote_host"
+            echo "Gateway set as remote $RABBITMQ_HOST_FOR_CONTAINER"
         else
             echo "Wrong choice mate."
             exit 1
         fi
 
      
-        export PROCESS_NAME=camera-${PROCESS_NAME}
+        export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
-        export DATABASE_URI=mongodb://${DB_NAME}:27017/camera-service
-        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_CAMERA:5672"
+        export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
+        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_CONTAINER:5672"
 
         # echo "PROCESS_NAME: $PROCESS_NAME"
         # echo "DB_NAME: $DB_NAME"

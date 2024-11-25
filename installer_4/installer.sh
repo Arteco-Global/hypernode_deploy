@@ -240,6 +240,7 @@ get_config() {
     printf "\n"
 
    # Menu delle opzioni
+    echo ""
     echo "-------------------------------------:"
     echo "-------------- INSTALL  -------------:"
     echo "-------------------------------------:"
@@ -264,6 +265,7 @@ get_config() {
     echo ""
     echo "-------------------------------------:"
     echo "0. EXIT"
+    echo ""
 
     # Lettura della scelta dell'utente
     read -p "Enter the option: " INSTALL_OPTION
@@ -312,13 +314,13 @@ get_config() {
         read -p "| --> branch (default is 'main') " SERVER_BRANCH
         SERVER_BRANCH=${SERVER_BRANCH:-main}
 
-        read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_CAMERA_RMQ_LOCAL_OR_REMOTE
+        read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
 
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
-        if [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
+        if [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
             RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
             echo "Gateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
-        elif [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_CAMERA_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
+        elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
             read -p "Insert the ip/url: " remote_host
             RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
             echo "Gateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
@@ -327,9 +329,9 @@ get_config() {
             exit 1
         fi
      
-        export PROCESS_NAME=camera-${PROCESS_NAME}
+        export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
-        export DATABASE_URI=mongodb://${DB_NAME}:27017/camera-service
+        export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5672"
         export SERVER_BRANCH
 
