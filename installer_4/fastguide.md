@@ -61,3 +61,7 @@ Fine
 
    sudo docker exec -it bdd8741f43d5 sh
    vi logs.txt
+
+## 6 Per distribuire il binario su ubunut
+
+Usare il file installer-bin

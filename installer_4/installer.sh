@@ -12,7 +12,10 @@ SKIP_GIT_INSTALL="false"
 SKIP_GIT_CLONE="false"
 SERVER_BRANCH="main"
 CONFIGURATOR_BRANCH="main"
-# Getting input parameters
+
+
+echo "Installer version v1.0.0"
+
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -270,16 +273,16 @@ get_config() {
     echo "|-- 4. Additional Event Service (To manage new/existing events)"
     echo "|-- 5. Additional Storage Service (To manage new/existing storage destinations)"
     echo ""
-    echo "-------------------------------------:"
-    echo "-------------- UPDATE  --------------:"
-    echo "-------------------------------------:"
-    echo ""
-    echo "What do you want to update:"
-    echo "|-- 1. Update all the server's servicies "    
-    echo "|-- 2. Update Camera Service"
-    echo "|-- 3. Update Auth Service"
-    echo "|-- 4. Update Event Service"
-    echo "|-- 5. Update Storage Service"
+    # echo "-------------------------------------:"
+    # echo "-------------- UPDATE  --------------:"
+    # echo "-------------------------------------:"
+    # echo ""
+    # echo "What do you want to update:"
+    # echo "|-- 1. Update all the server's servicies "    
+    # echo "|-- 2. Update Camera Service"
+    # echo "|-- 3. Update Auth Service"
+    # echo "|-- 4. Update Event Service"
+    # echo "|-- 5. Update Storage Service"
     echo ""
     echo "-------------------------------------:"
     echo "0. EXIT"
