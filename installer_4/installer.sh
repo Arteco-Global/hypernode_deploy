@@ -366,6 +366,7 @@ cleanProcedure(){
 #a. Welcome step
 get_config 
 
+clear
 
 if [ "$SKIP_GIT_INSTALL" != "true" ]; then
     # git installation

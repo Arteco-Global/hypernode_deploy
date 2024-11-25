@@ -116,7 +116,7 @@ services:
 
   webserver:
     build:
-      context: ../../../
+      context: ../../
       dockerfile: nginx.prod.dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
     ports:
         - "${SERVER_PORT:-80}:80"
