@@ -115,8 +115,6 @@ additionalServiceInstall() {
     #sudo bash installer.sh -skip-clean
     # le var sono state settate in get_config
 
-    echo "path is   $ABSOLUTE_PATH/hypernode/hypernode_deploy/singleService/$SERVICE_NAME/docker-compose.yaml"
-    read -p "Press [Enter] key to continue..."
 
     printf "Installing additional service: $SERVICE_NAME \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
