@@ -18,6 +18,8 @@ USER=${USER:-arteco}
 # stty echo
 # echo
 
+# where to copy the file
+
 # Transfer the file using scp with -o StrictHostKeyChecking=no to avoid the authenticity prompt
 echo "$PASSWORD" | scp -o StrictHostKeyChecking=no "$FILE" "$USER@$HOST:~"
 

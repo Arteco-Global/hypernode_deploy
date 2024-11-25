@@ -209,6 +209,8 @@ cloningCode(){
     git clone --quiet https://$usr:$psw@github.com/Arteco-Global/hypernode_server_gui.git > /dev/null 2>&1
     git clone --quiet https://$usr:$psw@github.com/Arteco-Global/hypernode-server.git > /dev/null 2>&1
 
+    # CONFIGURATOR BRANCH *********************************************************
+
     printf "Moving into folder ...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
@@ -218,6 +220,12 @@ cloningCode(){
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
     git checkout "${CONFIGURATOR_BRANCH}" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Error: Branch '${CONFIGURATOR_BRANCH}' not found or checkout failed."
+        exit 1
+    fi
+
+    # SERVER BRANCH *****************************************************************
 
     printf "Moving into folder ...                         \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
@@ -228,7 +236,11 @@ cloningCode(){
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
     git checkout "${SERVER_BRANCH}" > /dev/null 2>&1
-    
+    if [ $? -ne 0 ]; then
+        echo "Error: Branch '${SERVER_BRANCH}' not found or checkout failed."
+        exit 1
+    fi
+        
 
 }
 
