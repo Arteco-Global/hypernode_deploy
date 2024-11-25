@@ -15,7 +15,7 @@ services:
 
   auth:
     build:
-      context: ../hypernode-server/
+      context: ../../../hypernode-server/ 
       dockerfile: ../hypernode-server/docker/auth.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
     networks:
       - hypernode-net

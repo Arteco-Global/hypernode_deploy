@@ -111,16 +111,17 @@ additionalServiceInstall() {
     # ADDITIONAL SERVICE INSTALLATION
     # *****************************************************************
 
+    
+    #sudo bash installer.sh -skip-clean
     # le var sono state settate in get_config
 
+    echo "path is   $ABSOLUTE_PATH/hypernode/hypernode_deploy/singleService/$SERVICE_NAME/docker-compose.yaml"
     read -p "Press [Enter] key to continue..."
 
     printf "Installing additional service: $SERVICE_NAME \r"
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
     docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/singleService/$SERVICE_NAME/docker-compose.yaml" up -d --build
-
-
 
 
     printf "Installation completed !                   \r"
@@ -263,21 +264,26 @@ get_config() {
     echo "-------------------------------------:"
     echo "-------------- INSTALL  -------------:"
     echo "-------------------------------------:"
+    echo ""
     echo "What do you want to install:"
     echo "|-- 1. All Server servicies (full install) [auth,camera,storage,event,gateway] "    
     echo "|-- 2. Additional Camera Service (To manage new/existing cameras)"
     echo "|-- 3. Additional Auth Service (To manage new/existing users )"
     echo "|-- 4. Additional Event Service (To manage new/existing events)"
     echo "|-- 5. Additional Storage Service (To manage new/existing storage destinations)"
+    echo ""
     echo "-------------------------------------:"
     echo "-------------- UPDATE  --------------:"
     echo "-------------------------------------:"
+    echo ""
     echo "What do you want to update:"
     echo "|-- 1. Update all the server's servicies "    
     echo "|-- 2. Update Camera Service"
     echo "|-- 3. Update Auth Service"
     echo "|-- 4. Update Event Service"
     echo "|-- 5. Update Storage Service"
+    echo ""
+    echo "-------------------------------------:"
     echo "0. EXIT"
 
     # Lettura della scelta dell'utente
