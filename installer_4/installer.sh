@@ -359,6 +359,7 @@ get_config() {
         ;;
     *)
         echo "Wrong choice mate."
+        exit 1
         ;;
     esac
 
