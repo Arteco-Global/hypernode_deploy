@@ -79,8 +79,14 @@ show_progress() {
 additionalServiceInstall() {
 
     SERVICE_NAME=$1  # Il primo parametro passato alla funzione
+    TYPE_OF_INSTALL=$1  # Il primo parametro passato alla funzione
 
     echo "SERVICE_NAME: $SERVICE_NAME"
+
+    if [ "$TYPE_OF_INSTALL" == "update" ]; then
+        echo "update"
+    fi
+
 
     # *****************************************************************
     # ADDITIONAL SERVICE INSTALLATION
@@ -277,10 +283,10 @@ get_config() {
         CONF_PORT=${CONF_PORT:-8080}
 
         read -p "| --> Server branch (default is 'main') " SERVER_BRANCH
-        SERVER_BRANCH=${SERVER_BRANCH:main}
+        SERVER_BRANCH=${SERVER_BRANCH:-main}
 
         read -p "| --> Web Configurator branch (default is 'main') " CONFIGURATOR_BRANCH
-        CONFIGURATOR_BRANCH=${CONFIGURATOR_BRANCH:main}
+        CONFIGURATOR_BRANCH=${CONFIGURATOR_BRANCH:-main}
 
         RMQ=amqp://hypernode:hypernode@messageBroker:5672
 
@@ -304,7 +310,7 @@ get_config() {
         read -p "Choose a unique name: " PROCESS_NAME
 
         read -p "| --> branch (default is 'main') " SERVER_BRANCH
-        SERVER_BRANCH=${SERVER_BRANCH:main}
+        SERVER_BRANCH=${SERVER_BRANCH:-main}
 
         read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_CAMERA_RMQ_LOCAL_OR_REMOTE
 
