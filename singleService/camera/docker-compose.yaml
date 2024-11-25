@@ -18,7 +18,7 @@ services:
       context: ../../../hypernode-server/ 
       dockerfile: ../hypernode-server/docker/camera.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
     networks:
-       - hypernode-net
+      - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ}
       - DATABASE_URI=${DATABASE_URI}
