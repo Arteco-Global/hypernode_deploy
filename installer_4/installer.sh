@@ -239,11 +239,6 @@ cloningCode(){
 
 get_config() {
 
-    printf "\n"
-    printf "************************************************************* \n"
-    printf "Welcome to Hypernode installation process \n"
-    printf "************************************************************* \n"
-    printf "\n"
 
    # Menu delle opzioni
     echo ""
