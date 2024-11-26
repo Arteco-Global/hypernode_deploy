@@ -319,7 +319,7 @@ get_config() {
         ;;
     2 | 3 | 4 | 5 | 7 | 8 | 9 | 10)
        
-        read -p "Choose a unique name: " PROCESS_NAME
+        read -p "Choose a unique name (in case of update, type the current service name): " PROCESS_NAME
 
         read -p "| --> branch (default is 'main') " SERVER_BRANCH
         SERVER_BRANCH=${SERVER_BRANCH:-main}
