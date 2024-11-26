@@ -83,8 +83,14 @@ additionalServiceInstall() {
 
     echo "SERVICE_NAME: $SERVICE_NAME"
 
-    if [ "$TYPE_OF_INSTALL" == "update" ]; then
-        echo "update"
+   if [ "$TYPE_OF_INSTALL" == "update" ]; then
+        echo "Updating service: $SERVICE_NAME"
+
+        # Rimuovere eventuali container esistenti per il servizio
+        docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml" down
+
+        # Pulire eventuali immagini obsolete
+        docker image prune -f
     fi
 
 
@@ -264,6 +270,10 @@ get_config() {
     echo "|-- 10. Update Storage Service"
     echo ""
     echo "-------------------------------------:"
+    echo "-------------- UTILITIES  --------------:"
+    echo "-------------------------------------:"
+    echo "|-- 11. Clean everything (remove all containers and db)"
+    echo ""
     echo "0. EXIT"
     echo ""
 
@@ -274,7 +284,7 @@ get_config() {
 
      # Esecuzione dell'azione in base alla option
     case $INSTALL_OPTION in
-    1)
+    1 | 6)
         read -p "HTTP server port (default 80): " SERVER_PORT
         SERVER_PORT=${SERVER_PORT:-80}
 
@@ -307,7 +317,7 @@ get_config() {
         # echo "RMQ: $RMQ"
 
         ;;
-    2 | 3 | 4 | 5)
+    2 | 3 | 4 | 5 | 7 | 8 | 9 | 10)
        
         read -p "Choose a unique name: " PROCESS_NAME
 
@@ -365,6 +375,23 @@ cleanProcedure(){
     rm -rf "$ABSOLUTE_PATH/hypernode" > /dev/null
 
 }
+
+dockerNuke(){
+    echo "Are you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) [there's no going back]"
+    read -r confirmation
+
+    if [[ "$confirmation" == "y" || "$confirmation" == "Y" ]]; then
+        echo "Stopping and removing all containers..."
+
+        # Stoppa e rimuove tutti i container, immagini, volumi e network inutilizzati
+        sudo docker system prune -a --volumes -f
+
+        echo "All containers/images/networks/volumes have been removed."
+    else
+        echo "Operation canceled."
+    fi
+}
+
 
 
 # *****************************************************************
@@ -430,6 +457,8 @@ elif [ "$INSTALL_OPTION" -eq 9 ]; then
     additionalServiceInstall "storage" "update"
 elif [ "$INSTALL_OPTION" -eq 10 ]; then
     additionalServiceInstall "storage" "update"
+elif [ "$INSTALL_OPTION" -eq 11 ]; then
+    dockerNuke
 fi
 
 if [ "$SKIP_CLEAN" != "true" ]; then
