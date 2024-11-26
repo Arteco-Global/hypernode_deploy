@@ -83,7 +83,7 @@ additionalServiceInstall() {
 
     echo "SERVICE_NAME: $SERVICE_NAME"
 
-   if [ "$TYPE_OF_INSTALL" == "update" ]; then
+    if [ "$TYPE_OF_INSTALL" == "update" ]; then
         echo "Updating service: $SERVICE_NAME"
 
         # Rimuovere eventuali container esistenti per il servizio
@@ -91,8 +91,14 @@ additionalServiceInstall() {
 
         # Pulire eventuali immagini obsolete
         docker image prune -f
-    fi
 
+        # Rimuovere i container con il nome specificato se esistono
+        EXISTING_CONTAINER=$(docker ps -a -q --filter "name=$SERVICE_NAME")
+        if [ ! -z "$EXISTING_CONTAINER" ]; then
+            echo "Removing existing container: $SERVICE_NAME"
+            docker rm -f "$EXISTING_CONTAINER"
+        fi
+    fi
 
     # *****************************************************************
     # ADDITIONAL SERVICE INSTALLATION
