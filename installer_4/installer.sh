@@ -312,13 +312,8 @@ get_config() {
         export SERVER_BRANCH
         export CONFIGURATOR_BRANCH
 
-        # echo "SERVER_PORT: $SERVER_PORT"
-        # echo "SSL_PORT: $SSL_PORT"
-        # echo "CONF_PORT: $CONF_PORT"
-        # echo "RMQ: $RMQ"
-
         ;;
-    2 | 3 | 4 | 5 | 7 | 8 | 9 | 10)
+    2 | 3 | 4 | 5 )
        
         read -p "Choose a unique name (in case of update, type the current service name): " PROCESS_NAME
 
@@ -347,6 +342,36 @@ get_config() {
         export SERVER_BRANCH
 
         ;;
+
+     7 | 8 | 9 | 10)
+
+        read -p "Type the service name to update: " PROCESS_NAME
+
+        read -p "| --> branch (default is 'main') " SERVER_BRANCH
+        SERVER_BRANCH=${SERVER_BRANCH:-main}
+
+        read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
+
+        # Imposta la variabile RABBITMQ_HOST in base alla scelta
+        if [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
+            RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
+            echo "Gateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
+        elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
+            read -p "Insert the ip/url: " remote_host
+            RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
+            echo "Gateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
+        else
+            echo "Wrong choice mate."
+            exit 1
+        fi
+
+        export PROCESS_NAME=additional-${PROCESS_NAME}
+        export DB_NAME=database-for-${PROCESS_NAME}
+        export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
+        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5672"
+        export SERVER_BRANCH
+
+        ;;  
     0)
         echo "Exiting."
         exit 0
