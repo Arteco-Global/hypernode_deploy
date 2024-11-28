@@ -13,6 +13,9 @@ SKIP_GIT_CLONE="false"
 SERVER_BRANCH="main"
 CONFIGURATOR_BRANCH="main"
 
+HYPERNODE_ALREADY_INSTALLED="false"
+DOCKER_ALREADY_INSTALLED="false";
+
 
 echo "Installer version v1.0.0"
 
@@ -246,38 +249,72 @@ cloningCode(){
 get_config() {
 
 
-   # Menu delle opzioni
-    echo ""
-    echo "-------------------------------------:"
-    echo "-------------- INSTALL  -------------:"
-    echo "-------------------------------------:"
-    echo ""
-    echo "What do you want to install:"
-    echo "|-- 1. All Server servicies (full install) [auth,camera,storage,event,gateway] "    
-    echo "|-- 2. Additional Camera Service (To manage new/existing cameras)"
-    echo "|-- 3. Additional Auth Service (To manage new/existing users )"
-    echo "|-- 4. Additional Event Service (To manage new/existing events)"
-    echo "|-- 5. Additional Storage Service (To manage new/existing storage destinations)"
-    echo ""
-    echo "-------------------------------------:"
-    echo "-------------- UPDATE  --------------:"
-    echo "-------------------------------------:"
-    echo ""
-    echo "What do you want to update:"
-    echo "|-- 6. Update all the server's servicies "    
-    echo "|-- 7. Update Camera Service"
-    echo "|-- 8. Update Auth Service"
-    echo "|-- 9. Update Event Service"
-    echo "|-- 10. Update Storage Service"
-    echo ""
-    echo "-------------------------------------:"
-    echo "-------------- UTILITIES  --------------:"
-    echo "-------------------------------------:"
-    echo "|-- 11. Clean everything (remove all containers and db)"
-    echo ""
-    echo "0. EXIT"
-    echo ""
+    if [ "$HYPERNODE_ALREADY_INSTALLED" != "true" ]; then
+    
+        # Menu delle opzioni
+        echo ""
+        echo "-------------------------------------:"
+        echo "-------------- INSTALL  -------------:"
+        echo "-------------------------------------:"
+        echo ""
+        echo "What do you want to install:"
+        echo "|-- 2. Camera Service"
+        echo "|-- 3. Auth Service"
+        echo "|-- 4. Event Service"
+        echo "|-- 5. Storage Service"
+        echo ""
+        echo "-------------------------------------:"
+        echo "-------------- UPDATE  --------------:"
+        echo "-------------------------------------:"
+        echo ""
+        echo "What do you want to update:"
+        echo "|-- 6. Server "    
+        echo "|-- 7. Camera Service"
+        echo "|-- 8. Auth Service"
+        echo "|-- 9. Event Service"
+        echo "|-- 10. Storage Service"
+        echo ""
+        echo "0. EXIT"
+        echo ""
 
+    else
+
+        # Menu delle opzioni
+        echo ""
+        echo "-------------------------------------:"
+        echo "-------------- INSTALL  -------------:"
+        echo "-------------------------------------:"
+        echo ""
+        echo "What do you want to install:"
+        echo "|-- 1. Server [auth,camera,storage,event,gateway] "    
+        echo "|-- 2. Camera Service"
+        echo "|-- 3. Auth Service"
+        echo "|-- 4. Event Service"
+        echo "|-- 5. Storage Service"
+        echo ""
+        echo "-------------------------------------:"
+        echo "-------------- UPDATE  --------------:"
+        echo "-------------------------------------:"
+        echo ""
+        echo "What do you want to update:"
+        echo "|-- 6. Update all the server's servicies "    
+        echo "|-- 7. Update Camera Service"
+        echo "|-- 8. Update Auth Service"
+        echo "|-- 9. Update Event Service"
+        echo "|-- 10. Update Storage Service"
+        echo ""
+        echo "-------------------------------------:"
+        echo "-------------- UTILITIES  --------------:"
+        echo "-------------------------------------:"
+        echo "|-- 11. Clean everything (remove all containers and db)"
+        echo ""
+        echo "0. EXIT"
+        echo ""
+
+       
+    fi
+
+ 
     # Lettura della scelta dell'utente
     read -p "Enter the option: " INSTALL_OPTION
     INSTALL_OPTION=${INSTALL_OPTION:-1}
@@ -418,6 +455,31 @@ dockerNuke(){
     fi
 }
 
+checkIfHypernodeIsInstaller(){
+
+
+    # Check if the docker container is hypernode-installer
+    # Checking if gateway is there, if yes I assume that the server is installed
+
+    # Check if the container "hypernode-gateway" is running
+    if docker ps --filter "name=hypernode-server-gateway" --format '{{.Names}}' | grep -w "hypernode-server-gateway" > /dev/null; then
+        echo "Server already insalled."
+        HYPERNODE_ALREADY_INSTALLED="true"
+    else
+        echo "No server detected, You should install a new one (or some servicies)."
+        HYPERNODE_ALREADY_INSTALLED="false"
+    fi
+
+}
+
+check_docker_installed() {
+    if ! command -v docker &> /dev/null; then
+        DOCKER_ALREADY_INSTALLED="true"
+    else
+        DOCKER_ALREADY_INSTALLED="false"
+    fi
+}
+
 
 
 # *****************************************************************
@@ -425,9 +487,14 @@ dockerNuke(){
 # *****************************************************************
 
 #a. Welcome step
-get_config 
 
-clear
+check_docker_installed # Check if docker is installed
+
+checkIfHypernodeIsInstaller # Check if hypernode is already installed
+
+get_config # Get the configuration from the user
+
+clear # Clear the terminal
 
 if [ "$SKIP_GIT_INSTALL" != "true" ]; then
     # git installation
@@ -437,8 +504,8 @@ else
 fi
 
 
-if [ "$SKIP_DOKER_INSTALL" != "true" ]; then
-    # server installation
+if [ "$SKIP_DOCKER_INSTALL" != "true" ] || [ "$DOCKER_ALREADY_INSTALLED" != "true" ]; then
+    # docker installation
     dockerInstall
 else
     echo "Skipping docker install"

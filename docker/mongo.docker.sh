@@ -1,1 +1,3 @@
 docker run -d --name mongoForLocalPurpose -p 27017:27017 mongo
+
+expose 27017
