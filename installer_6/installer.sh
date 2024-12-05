@@ -443,7 +443,7 @@ get_config() {
         export CONF_PORT
         export RMQ
         export SERVER_BRANCH
-        export CONFIGURATOR_BRANCH        
+        export CONFIGURATOR_BRANCH
 
         ;;
     2 | 3 | 4 | 5 )
