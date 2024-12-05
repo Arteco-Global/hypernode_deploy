@@ -248,6 +248,8 @@ additionalServiceInstall() {
     fi
 
     # Installazione o aggiornamento
+    printenv
+
     execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
@@ -370,6 +372,11 @@ get_config() {
         echo "|-- 8. Auth Service"
         echo "|-- 9. Event Service"
         echo "|-- 10. Storage Service"
+        echo ""
+        echo "-------------------------------------:"
+        echo "------------- UTILITIES  ------------:"
+        echo "-------------------------------------:"
+        echo "|-- 11. Clean everything (remove all containers and db)"
         echo ""
         echo "0. EXIT"
         echo ""

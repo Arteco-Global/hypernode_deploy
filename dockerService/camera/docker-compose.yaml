@@ -26,6 +26,7 @@ services:
       - GATEWAY_WS_PORT=8000
     container_name: ${PROCESS_NAME}
     restart: unless-stopped
+    command: env
     
 volumes:
   mongodb_data:
