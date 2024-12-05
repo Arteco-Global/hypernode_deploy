@@ -67,7 +67,7 @@ execute_with_spinner() {
     local ERROR_LOG="/tmp/command_error.log"
 
     # Stampa il comando per debug
-    echo "Executing command: $COMMAND"
+    # echo "Executing command: $COMMAND"
 
     # Inizializza lo spinner
     SPINNER_ACTIVE=true
@@ -301,6 +301,16 @@ cloningCode() {
     # local psw=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
     local usr=LucaArteco
     local psw=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
+
+    # Step 0: Verifica se la cartella esiste e, se necessario, la rimuove
+    if [ -d "$ABSOLUTE_PATH/hypernode" ]; then
+        printf "Directory 'hypernode' already exists. Removing it...\n"
+        rm -rf "$ABSOLUTE_PATH/hypernode"
+        if [ $? -ne 0 ]; then
+            printf "\n❌ Failed to remove existing 'hypernode' directory.\n"
+            return 1
+        fi
+    fi
 
     # Step 1: Creazione della cartella per il clone
     execute_with_spinner "mkdir -p \"$ABSOLUTE_PATH/hypernode\"" "Creating folder for cloning" || return 1
