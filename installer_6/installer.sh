@@ -91,11 +91,7 @@ show_ascii_art
 show_progress() {
     local -r TOTAL_STEPS=$1
     local -r CURRENT_STEP=$2
-    local -r BAR_WIDTH=50
-
-    # Array di spinner
-    local SPINNER=("|" "/" "-" "\\")
-    local SPINNER_INDEX=$((CURRENT_STEP % 4)) # Determina l'indice del carattere dello spinner
+    local -r BAR_WIDTH=50    
 
     # Assicurati che CURRENT_STEP non superi TOTAL_STEPS
     local STEPS_TO_SHOW=$((CURRENT_STEP > TOTAL_STEPS ? TOTAL_STEPS : CURRENT_STEP))
@@ -108,9 +104,6 @@ show_progress() {
     for ((i=0; i<COMPLETED; i++)); do
         printf "#"
     done
-
-    # Aggiungi lo spinner
-    printf "${SPINNER[$SPINNER_INDEX]}"
 
     for ((i=0; i<REMAINING; i++)); do
         printf "-"
@@ -420,8 +413,7 @@ get_config() {
         export CONF_PORT
         export RMQ
         export SERVER_BRANCH
-        export CONFIGURATOR_BRANCH
-        export GATEWAY_REMOTE_IP=$RABBITMQ_HOST_FOR_CONTAINER
+        export CONFIGURATOR_BRANCH        
 
         ;;
     2 | 3 | 4 | 5 )
@@ -451,7 +443,7 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5672"
         export SERVER_BRANCH
-        export GATEWAY_REMOTE_IP=$RABBITMQ_HOST_FOR_CONTAINER
+        export GATEWAY_REMOTE_IP=$RABBITMQ_HOST_FOR_ADDITIONAL
 
         ;;
 
@@ -482,6 +474,7 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5672"
         export SERVER_BRANCH
+        export GATEWAY_REMOTE_IP=$RABBITMQ_HOST_FOR_ADDITIONAL
 
         ;;  
         
