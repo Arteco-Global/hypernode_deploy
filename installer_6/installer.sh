@@ -17,7 +17,7 @@ HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
 
 
-echo "Installer version v1.0.0"
+printf "\nInstaller version v1.0.0\n"
 
 
 while [[ "$#" -gt 0 ]]; do
@@ -53,197 +53,271 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+# Funzione per mostrare l'arte ASCII
+show_ascii_art() {
+    cat << "EOF"
+                                                                                                    
+                                  #############                                                     
+                               ##################                                                   
+                             ######################                                                 
+                            ########################                                                
+    +++           ++++     ######%%%##########              +++++++++++          ++++++++++++       
+    ++++         +++++     ####%%%%##############         +++++++++++++++      ++++++++++++++++     
+    ++++         +++++     ##%%%%%################       +++++        ++++    +++++        +++++    
+    ++++         +++++     %%%%%%%#################     +++++          ++++  +++++          ++++    
+    ++++         +++++     %%%%%%%%%       #########    +++++++++++++++++++  ++++++++++++++++++++   
+    ++++         +++++      %%%%%%%%%%%%%%%%########    +++++++++++++++++++  +++++++++++++++++++    
+    ++++         +++++       %%%%%%%%%%%%%%%%#######    +++++                 ++++                  
+    ++++++     ++++++         %%%%%%%%%%%%%%%#######     ++++++       +++     ++++++       +++      
+     ++++++++++++++             %%%%%%%%%%%#########       +++++++++++++++      +++++++++++++++     
+       ++++++++++          ########################          ++++++++++            +++++++++        
+                            ######################                                                  
+                             ####################                                                   
+                                ##############                                                      
+                                     ####                                                           
+                                                                                                    
+                                                                                                    
+    +++++++++++++ ++++++++  ++ ++++++++ +++++++ ++  ++ ++ ++++++++ +++++ +++++ ++++++++ ++++ ++     
+    ++++++++ +++++++++++++++++  +++++++++ +++ ++++  +++++++++++ +++++++++++++++++++++++++ ++  +     
+                                                                                                    
+EOF
+}
+
+# Mostra l'arte ASCII prima di qualsiasi altra cosa
+show_ascii_art
+
+
 
 show_progress() {
     local -r TOTAL_STEPS=$1
     local -r CURRENT_STEP=$2
     local -r BAR_WIDTH=50
 
-    local COMPLETED=$((CURRENT_STEP * BAR_WIDTH / TOTAL_STEPS))
-    local REMAINING=$((BAR_WIDTH - COMPLETED))
+    # Array di spinner
+    local SPINNER=("|" "/" "-" "\\")
+    local SPINNER_INDEX=$((CURRENT_STEP % 4)) # Determina l'indice del carattere dello spinner
+
+    # Assicurati che CURRENT_STEP non superi TOTAL_STEPS
+    local STEPS_TO_SHOW=$((CURRENT_STEP > TOTAL_STEPS ? TOTAL_STEPS : CURRENT_STEP))
+
+    local COMPLETED=$((STEPS_TO_SHOW * (BAR_WIDTH - 1) / TOTAL_STEPS)) # -1 per lasciare spazio allo spinner
+    local REMAINING=$((BAR_WIDTH - 1 - COMPLETED))
 
     # Stampa la barra di progresso
-    printf "\r"  # Riporta il cursore all'inizio della riga
-    printf "                                                     "  # Cancella la linea precedente con spazi
-    printf "\r"  # Riporta il cursore all'inizio della riga di nuovo
-
-    # Stampa la barra di progresso
-    printf "["
+    printf "\r["
     for ((i=0; i<COMPLETED; i++)); do
         printf "#"
     done
+
+    # Aggiungi lo spinner
+    printf "${SPINNER[$SPINNER_INDEX]}"
+
     for ((i=0; i<REMAINING; i++)); do
         printf "-"
     done
-    printf "] %d%% " $((CURRENT_STEP * 100 / TOTAL_STEPS))
+
+    # Percentuale
+    printf "] %d%%" $((STEPS_TO_SHOW * 100 / TOTAL_STEPS))
+
+    # Se il processo è completo, vai a capo
+    if [ "$STEPS_TO_SHOW" -ge "$TOTAL_STEPS" ]; then
+        printf "\n"
+    fi
+}
+
+
+
+end_with_message() {
+    local message=$1
+    local success=$2
+
+    # Porta la progress bar al 100%
+    show_progress "$TOTAL_STEPS" "$TOTAL_STEPS"
+
+    if [ "$success" -eq 0 ]; then
+        printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
+    else
+        printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
+        exit 1
+    fi
+
+    # Cancella eventuali barre di progresso extra
+    printf "\r\033[K"
 }
 
 
 additionalServiceInstall() {
+    local SERVICE_NAME=$1
+    local TYPE_OF_INSTALL=${2:-"install"} # Default a "install" se non specificato
 
-    SERVICE_NAME=$1  # Il primo parametro passato alla funzione
-    TYPE_OF_INSTALL=$1  # Il primo parametro passato alla funzione
-
-    echo "SERVICE_NAME: $SERVICE_NAME"
+    printf "\nSERVICE_NAME: $SERVICE_NAME"
 
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
-        echo "Updating service: $SERVICE_NAME"
+        printf "\nUpdating service: $SERVICE_NAME"
 
-        # Rimuovere eventuali container esistenti per il servizio
-        docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml" down
+        # Stop e rimuove i container esistenti
+        if ! docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml" down; then
+            printf "\nError: Failed to stop and remove containers for $SERVICE_NAME."
+            return 1
+        fi
 
-        # Pulire eventuali immagini obsolete
-        docker image prune -f
-
-        # Rimuovere i container con il nome specificato se esistono
-        EXISTING_CONTAINER=$(docker ps -a -q --filter "name=$SERVICE_NAME")
-        if [ ! -z "$EXISTING_CONTAINER" ]; then
-            echo "Removing existing container: $SERVICE_NAME"
-            docker rm -f "$EXISTING_CONTAINER"
+        # Pulizia delle immagini obsolete
+        if ! docker image prune -f >/dev/null 2>&1; then
+            printf "\nError: Failed to prune Docker images."
+            return 1
         fi
     fi
 
-    # *****************************************************************
-    # ADDITIONAL SERVICE INSTALLATION
-    # *****************************************************************
-
-    
-    #sudo bash installer.sh -skip-clean
-    # le var sono state settate in get_config
-
-
-    printf "Installing additional service: $SERVICE_NAME \r"
+    # Installazione o aggiornamento
+    printf "\nInstalling/updating service: $SERVICE_NAME"
     CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml" up -d --build
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
 
+    if ! docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml" up -d --build; then
+        printf "\nError: Failed to build and start service $SERVICE_NAME."
+        return 1
+    fi
 
-    printf "Installation completed !                   \r"
+    printf "\nInstallation/Update completed for $SERVICE_NAME."
     CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
 
-
+    return 0
 }
 
 
-
-dockerInstall(){
-            
-    # *****************************************************************
-    # INSTALLING DOCKER ***********************************************
-    # *****************************************************************
-
+dockerInstall() {
+    printf "\nInstalling Docker..."
 
     # Step 1: Update packages
-    printf "Updating packages                  \r"
+    printf "\nUpdating packages..."
     CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    sudo apt-get update -y >/dev/null 2>&1
-   
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! sudo apt-get update -y >/dev/null 2>&1; then
+        printf "\nError: Failed to update packages."
+        return 1
+    fi
 
     # Step 2: Install required packages
-    printf "Installing required packages                  \r"
+    printf "\nInstalling required packages..."
     CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common >/dev/null 2>&1
-
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common >/dev/null 2>&1; then
+        printf "\nError: Failed to install required packages."
+        return 1
+    fi
 
     # Step 3: Add Docker GPG key
-    printf "Adding Docker GPG key...                  \r"
+    printf "\nAdding Docker GPG key..."
     CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - >/dev/null 2>&1
-
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - >/dev/null 2>&1; then
+        printf "\nError: Failed to add Docker GPG key."
+        return 1
+    fi
 
     # Step 4: Add Docker repository
-    printf "Adding Docker GPG key... \r"
+    printf "\nAdding Docker repository..."
     CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable" -y >/dev/null 2>&1
-    
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable" -y >/dev/null 2>&1; then
+        printf "\nError: Failed to add Docker repository."
+        return 1
+    fi
 
     # Step 5: Install Docker
-    printf "Installing docker...                  \r"
+    printf "\nInstalling Docker..."
     CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    sudo apt-get update -y >/dev/null 2>&1
-    sudo apt-get install -y docker-ce >/dev/null 2>&1
-
-}
-
-installGit(){
-
-    printf "Installing git ...                          \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    # Esegui i comandi in modo silenzioso e cattura i warning
-    sudo apt update > /dev/null 2>&1
-    sudo apt install -y git > /dev/null 2>&1
-
-}
-
-cloningCode(){
-
-    # *****************************************************************
-    # CLONING FROM GITHUB *********************************************
-    # *****************************************************************
-
-    usr=mdalprato
-    psw=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
-
-
-    # creating folder Add Docker GPG key
-    printf "Creating folder ...                        \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    mkdir "$ABSOLUTE_PATH/hypernode" > /dev/null 2>&1
-
-    printf "Moving inside folder ...                  \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd "$ABSOLUTE_PATH/hypernode" > /dev/null
-
-    printf "Cloning code (may take a while) ...                         \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    git clone --quiet https://$usr:$psw@github.com/Arteco-Global/hypernode_deploy.git > /dev/null 2>&1
-    git clone --quiet https://$usr:$psw@github.com/Arteco-Global/hypernode_server_gui.git > /dev/null 2>&1
-    git clone --quiet https://$usr:$psw@github.com/Arteco-Global/hypernode-server.git > /dev/null 2>&1
-
-    # CONFIGURATOR BRANCH *********************************************************
-
-    printf "Moving into folder ...                         \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd "$ABSOLUTE_PATH/hypernode/hypernode_server_gui"  > /dev/null
-    
-    printf "Checkout branch...                         \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    git checkout "${CONFIGURATOR_BRANCH}" > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        echo "Error: Branch '${CONFIGURATOR_BRANCH}' not found or checkout failed."
-        exit 1
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! sudo apt-get update -y >/dev/null 2>&1 || ! sudo apt-get install -y docker-ce >/dev/null 2>&1; then
+        printf "\nError: Failed to install Docker."
+        return 1
     fi
 
-    # SERVER BRANCH *****************************************************************
-
-    printf "Moving into folder ...                         \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    cd "$ABSOLUTE_PATH/hypernode/hypernode-server"  > /dev/null
-    
-    printf "Checkout branch...                         \r"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    git checkout "${SERVER_BRANCH}" > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        echo "Error: Branch '${SERVER_BRANCH}' not found or checkout failed."
-        exit 1
-    fi
-        
-
+    return 0
 }
+
+
+installGit() {
+    printf "\nInstalling Git..."
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+
+    if ! sudo apt update >/dev/null 2>&1 || ! sudo apt install -y git >/dev/null 2>&1; then
+        printf "\nError: Failed to install Git."
+        return 1
+    fi
+
+    return 0
+}
+
+
+cloningCode() {
+    printf "\nCloning repositories from GitHub..."
+
+    local usr=mdalprato
+    local psw=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
+
+    # Step 1: Creazione della cartella per il clone
+    printf "\nCreating folder..."
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! mkdir -p "$ABSOLUTE_PATH/hypernode" >/dev/null 2>&1; then
+        printf "\nError: Failed to create directory for cloning."
+        return 1
+    fi
+
+    # Step 2: Entrare nella cartella
+    printf "\nMoving inside folder..."
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! cd "$ABSOLUTE_PATH/hypernode" >/dev/null 2>&1; then
+        printf "\nError: Failed to access the directory."
+        return 1
+    fi
+
+    # Step 3: Clonare i repository
+    printf "\nCloning repositories..."
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+
+    if ! git clone --quiet https://"$usr":"$psw"@github.com/Arteco-Global/hypernode_deploy.git >/dev/null 2>&1; then
+        printf "\nError: Failed to clone hypernode_deploy."
+        return 1
+    fi
+
+    if ! git clone --quiet https://"$usr":"$psw"@github.com/Arteco-Global/hypernode_server_gui.git >/dev/null 2>&1; then
+        printf "\nError: Failed to clone hypernode_server_gui."
+        return 1
+    fi
+
+    if ! git clone --quiet https://"$usr":"$psw"@github.com/Arteco-Global/hypernode-server.git >/dev/null 2>&1; then
+        printf "\nError: Failed to clone hypernode-server."
+        return 1
+    fi
+
+    # Step 4: Checkout branch per configuratore
+    printf "\nChecking out configurator branch..."
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! cd "$ABSOLUTE_PATH/hypernode/hypernode_server_gui" >/dev/null 2>&1 || ! git checkout "${CONFIGURATOR_BRANCH}" >/dev/null 2>&1; then
+        printf "\nError: Failed to checkout branch '${CONFIGURATOR_BRANCH}' for hypernode_server_gui."
+        return 1
+    fi
+
+    # Step 5: Checkout branch per server
+    printf "\nChecking out server branch..."
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    if ! cd "$ABSOLUTE_PATH/hypernode/hypernode-server" >/dev/null 2>&1 || ! git checkout "${SERVER_BRANCH}" >/dev/null 2>&1; then
+        printf "\nError: Failed to checkout branch '${SERVER_BRANCH}' for hypernode-server."
+        return 1
+    fi
+
+    printf "\nCloning and branch checkouts completed successfully."
+    return 0
+}
+
 
 
 get_config() {
@@ -303,7 +377,7 @@ get_config() {
         echo "|-- 10. Update Storage Service"
         echo ""
         echo "-------------------------------------:"
-        echo "-------------- UTILITIES  --------------:"
+        echo "------------- UTILITIES  ------------:"
         echo "-------------------------------------:"
         echo "|-- 11. Clean everything (remove all containers and db)"
         echo ""
@@ -361,13 +435,13 @@ get_config() {
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
         if [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
             RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
-            echo "Gateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
+            printf "\nGateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
         elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
             read -p "Insert the ip/url: " remote_host
             RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
-            echo "Gateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
+            printf "\nGateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
         else
-            echo "Wrong choice mate."
+            printf "\nWrong choice mate."
             exit 1
         fi
      
@@ -391,13 +465,13 @@ get_config() {
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
         if [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
             RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
-            echo "Gateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
+            printf "\nGateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
         elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
             read -p "Insert the ip/url: " remote_host
             RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
-            echo "Gateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
+            printf "\nGateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
         else
-            echo "Wrong choice mate."
+            printf "\nWrong choice mate."
             exit 1
         fi
 
@@ -415,18 +489,18 @@ get_config() {
         export SKIP_GIT_CLONE=true
         ;;
     0)
-        echo "Exiting."
+        printf "\nExiting."
         exit 0
         ;;
     *)
-        echo "Wrong choice mate."
+        printf "\nWrong choice mate."
         exit 1
         ;;
     esac
 
     export INSTALL_OPTION
 
-    echo "INSTALL_OPTION: $INSTALL_OPTION"
+    printf "\nINSTALL_OPTION: $INSTALL_OPTION"
 
 
 }
@@ -437,7 +511,7 @@ cleanProcedure(){
     # CLEANING PROCEDURE **********************************************
     # *****************************************************************
 
-    printf "Cleaning code ...                  \r"
+    printf "\nCleaning code..."
     CURRENT_STEP=$((CURRENT_STEP + 1))
     show_progress $TOTAL_STEPS $CURRENT_STEP
     rm -rf "$ABSOLUTE_PATH/hypernode" > /dev/null
@@ -445,25 +519,36 @@ cleanProcedure(){
 }
 
 dockerNuke() {
-    echo "Are you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) [there's no going back]"
+    printf "\nAre you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) \n[there's no going back]"
     read -r confirmation
 
     if [[ "$confirmation" == "y" || "$confirmation" == "Y" ]]; then
-        echo "Stopping all running containers..."
-        sudo docker stop $(sudo docker ps -q) 2>/dev/null
+        printf "\nStopping and removing all containers..."
 
-        echo "Removing all containers..."
-        sudo docker rm -f $(sudo docker ps -aq) 2>/dev/null
+        if ! sudo docker stop $(sudo docker ps -q) >/dev/null 2>&1; then
+            printf "\nError: Failed to stop containers."
+            return 1
+        fi
 
-        echo "Removing all images..."
-        sudo docker rmi -f $(sudo docker images -q) 2>/dev/null
+        if ! sudo docker rm -f $(sudo docker ps -aq) >/dev/null 2>&1; then
+            printf "\nError: Failed to remove containers."
+            return 1
+        fi
 
-        echo "Pruning all networks, volumes, and build cache..."
-        sudo docker system prune -a --volumes -f
+        if ! sudo docker rmi -f $(sudo docker images -q) >/dev/null 2>&1; then
+            printf "\nError: Failed to remove images."
+            return 1
+        fi
 
-        echo "All containers/images/networks/volumes have been removed."
+        if ! sudo docker system prune -a --volumes -f >/dev/null 2>&1; then
+            printf "\nError: Failed to prune Docker system."
+            return 1
+        fi
+
+        end_with_message "Docker cleanup" 0
     else
-        echo "Operation canceled."
+        printf "\nOperation canceled."
+        return 1
     fi
 }
 
@@ -473,10 +558,10 @@ checkIfHypernodeIsInstaller() {
 
     # Usa grep per cercare direttamente il nome del container nei risultati di `docker ps`
     if sudo docker ps | grep -qw "$container_name"; then
-        echo "Server is already installed."
+        printf "\nServer is already installed."
         HYPERNODE_ALREADY_INSTALLED="true"
     else
-        echo "No server detected. You should install a new one (or some services)."
+        printf "\nNo server detected. You should install a new one (or some services)."
         HYPERNODE_ALREADY_INSTALLED="false"
     fi
 }
@@ -510,7 +595,7 @@ if [ "$SKIP_GIT_INSTALL" != "true" ]; then
     # git installation
     installGit
 else
-    echo "Skipping git install"
+    printf "\nSkipping git install"
 fi
 
 
@@ -518,7 +603,7 @@ if [ "$SKIP_DOCKER_INSTALL" != "true" ] || [ "$DOCKER_ALREADY_INSTALLED" != "tru
     # docker installation
     dockerInstall
 else
-    echo "Skipping docker install"
+    printf "\nSkipping docker install"
 fi
 
 
@@ -526,7 +611,7 @@ if [ "$SKIP_GIT_CLONE" != "true" ]; then
     # d. Cloning code from github
     cloningCode
 else
-    echo "Skipping docker install"
+    printf "\nSkipping docker install"
 fi
 
 # echo "|-- 2. Additional Camera Service"
@@ -541,33 +626,34 @@ fi
 # echo "|-- 10. Update Storage Service"
 # echo "|-- 11. Clean everything (remove all containers and db)"
 
-if [ "$INSTALL_OPTION" -eq 1 ]; then
-    additionalServiceInstall "server"
+if [ "$INSTALL_OPTION" -eq 1 ]; then    
+    additionalServiceInstall "server" && end_with_message "Server installation" 0 || end_with_message "Server installation" 1
 elif [ "$INSTALL_OPTION" -eq 2 ]; then
-    additionalServiceInstall "camera"
+    additionalServiceInstall "camera" && end_with_message "Camera service installation" 0 || end_with_message "Camera service installation" 1
 elif [ "$INSTALL_OPTION" -eq 3 ]; then
-    additionalServiceInstall "auth"
+    additionalServiceInstall "auth" && end_with_message "Auth service installation" 0 || end_with_message "Auth service installation" 1
 elif [ "$INSTALL_OPTION" -eq 4 ]; then
-    additionalServiceInstall "event"
+    additionalServiceInstall "event" && end_with_message "Event service installation" 0 || end_with_message "Event service installation" 1
 elif [ "$INSTALL_OPTION" -eq 5 ]; then
-    additionalServiceInstall "storage"
+    additionalServiceInstall "storage" && end_with_message "Storage service installation" 0 || end_with_message "Storage service installation" 1
 elif [ "$INSTALL_OPTION" -eq 6 ]; then
-    additionalServiceInstall "server" "update"
+    additionalServiceInstall "server" "update" && end_with_message "Server update" 0 || end_with_message "Server update" 1
 elif [ "$INSTALL_OPTION" -eq 7 ]; then
-    additionalServiceInstall "storage" "update"
+    additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
 elif [ "$INSTALL_OPTION" -eq 8 ]; then
-    additionalServiceInstall "storage" "update"
+    additionalServiceInstall "storage" "update" && end_with_message "Auth service update" 0 || end_with_message "Auth service update" 1
 elif [ "$INSTALL_OPTION" -eq 9 ]; then
-    additionalServiceInstall "storage" "update"
+    additionalServiceInstall "storage" "update" && end_with_message "Event service update" 0 || end_with_message "Event service update" 1
 elif [ "$INSTALL_OPTION" -eq 10 ]; then
-    additionalServiceInstall "storage" "update"
+    additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
 elif [ "$INSTALL_OPTION" -eq 11 ]; then
-    dockerNuke
+    dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
 fi
+
 
 if [ "$SKIP_CLEAN" != "true" ]; then
     # server installation
     cleanProcedure
 else
-    echo "Skipping cleaning procedure"
+    printf "\nSkipping cleaning procedure"
 fi
