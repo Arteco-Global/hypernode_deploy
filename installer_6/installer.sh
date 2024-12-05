@@ -473,7 +473,7 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5672"
         export SERVER_BRANCH
-        export GATEWAY_REMOTE_IP=$RABBITMQ_HOST_FOR_ADDITIONAL
+        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL"
 
         ;;
 
@@ -504,7 +504,7 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5672"
         export SERVER_BRANCH
-        export GATEWAY_REMOTE_IP=$RABBITMQ_HOST_FOR_ADDITIONAL
+        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL"
 
         ;;  
         

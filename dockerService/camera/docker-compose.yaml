@@ -22,7 +22,7 @@ services:
     environment:
       - RABBITMQ_URI=${RMQ}
       - DATABASE_URI=${DATABASE_URI}
-      - GATEWAY_REMOTE_IP=${GATEWAY_REMOTE_IP}
+      - GATEWAY_REMOTE_IP=${GRI}
       - GATEWAY_WS_PORT=8000
     container_name: ${PROCESS_NAME}
     restart: unless-stopped
