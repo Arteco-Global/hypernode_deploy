@@ -62,21 +62,47 @@ update_progress() {
 
 # Funzione per eseguire operazioni con lo spinner
 execute_with_spinner() {
-    local command="$1" # Comando da eseguire
-    local message="$2" # Messaggio da mostrare durante l'esecuzione
+    local COMMAND=$1
+    local MESSAGE=$2
+    local ERROR_LOG="/tmp/command_error.log"
 
-    printf "\n%s...\n" "$message"
+    # Stampa il comando per debug
+    echo "Executing command: $COMMAND"
 
-    start_spinner
-    if eval "$command"; then
-        stop_spinner
-        update_progress
-        return 0
+    # Inizializza lo spinner
+    SPINNER_ACTIVE=true
+    (
+        local SPINNER=("|" "/" "-" "\\")
+        while $SPINNER_ACTIVE; do
+            for c in "${SPINNER[@]}"; do
+                printf "\r%s %s %s" "$c" "$MESSAGE" # Spinner + Messaggio
+                sleep 0.1
+            done
+        done
+    ) &
+    local SPINNER_PID=$!
+
+    # Esegui il comando e cattura il risultato
+    eval "$COMMAND" >/dev/null 2>"$ERROR_LOG"
+    local COMMAND_STATUS=$?
+
+    # Ferma lo spinner
+    SPINNER_ACTIVE=false
+    kill "$SPINNER_PID" >/dev/null 2>&1
+    wait "$SPINNER_PID" 2>/dev/null
+
+    # Stampa il risultato
+    if [ $COMMAND_STATUS -eq 0 ]; then
+        printf "\r✅ %s - Done.\n" "$MESSAGE"
     else
-        stop_spinner
-        printf "\n❌ Error: %s failed.\n" "$message"
-        return 1
+        printf "\r❌ %s - Failed.\n" "$MESSAGE"
+        printf "\nError log:\n"
+        cat "$ERROR_LOG"
+        exit 1
     fi
+
+    # Rimuovi il file temporaneo
+    rm -f "$ERROR_LOG"
 }
 
 
@@ -189,7 +215,7 @@ end_with_message() {
     local success=$2
 
     # Porta la progress bar al 100%
-    s_how_progress "$TOTAL_STEPS" "$TOTAL_STEPS"
+    show_progress "$TOTAL_STEPS" "$TOTAL_STEPS"
 
     if [ "$success" -eq 0 ]; then
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
@@ -271,8 +297,10 @@ installGit() {
 cloningCode() {
     printf "\nCloning repositories from GitHub..."
 
-    local usr=mdalprato
-    local psw=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
+    # local usr=mdalprato
+    # local psw=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
+    local usr=LucaArteco
+    local psw=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
 
     # Step 1: Creazione della cartella per il clone
     execute_with_spinner "mkdir -p \"$ABSOLUTE_PATH/hypernode\"" "Creating folder for cloning" || return 1
@@ -281,7 +309,7 @@ cloningCode() {
     execute_with_spinner "cd \"$ABSOLUTE_PATH/hypernode\"" "Accessing the folder" || return 1
 
     # Step 3: Clonare i repository
-    execute_with_spinner "git clone --quiet https://\"$usr\":\"$psw\"@github.com/Arteco-Global/hypernode_deploy.git" \
+    execute_with_spinner "git clone https://\"$usr\":\"$psw\"@github.com/Arteco-Global/hypernode_deploy.git" \
         "Cloning repository: hypernode_deploy" || return 1
 
     execute_with_spinner "git clone --quiet https://\"$usr\":\"$psw\"@github.com/Arteco-Global/hypernode_server_gui.git" \
