@@ -3,6 +3,8 @@
 # Global vars
 TOTAL_STEPS=13 #Steps for progressbar
 CURRENT_STEP=0 #Counter for progressbar
+SPINNER_ACTIVE=true
+SPINNER_PID=""
 SCRIPT_DIR=$(dirname "$0") #local path
 ABSOLUTE_PATH=$(realpath "$SCRIPT_DIR") #absolute path
 
@@ -15,6 +17,68 @@ CONFIGURATOR_BRANCH="main"
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
+
+# Funzione per lo spinner animato
+start_spinner() {
+    local SPINNER=("|" "/" "-" "\\")
+    (
+        while $SPINNER_ACTIVE; do
+            for c in "${SPINNER[@]}"; do
+                printf "\r["
+                for ((i = 0; i < CURRENT_COMPLETED; i++)); do
+                    printf "#"
+                done
+                printf "$c"
+                for ((i = 0; i < CURRENT_REMAINING; i++)); do
+                    printf "-"
+                done
+                printf "] %d%%" "$CURRENT_PERCENTAGE"
+                sleep 0.1
+            done
+        done
+    ) &
+    SPINNER_PID=$!
+}
+
+# Ferma lo spinner
+stop_spinner() {
+    if [ -n "$SPINNER_PID" ]; then
+        SPINNER_ACTIVE=false
+        kill "$SPINNER_PID" >/dev/null 2>&1
+        wait "$SPINNER_PID" 2>/dev/null
+        printf "\r\033[K" # Cancella la linea
+        SPINNER_PID=""
+    fi
+}
+
+# Aggiorna la barra di avanzamento
+update_progress() {
+    local -r BAR_WIDTH=50
+    CURRENT_PERCENTAGE=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+    CURRENT_COMPLETED=$((CURRENT_STEP * (BAR_WIDTH - 1) / TOTAL_STEPS))
+    CURRENT_REMAINING=$((BAR_WIDTH - 1 - CURRENT_COMPLETED))
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+}
+
+# Funzione per eseguire operazioni con lo spinner
+execute_with_spinner() {
+    local command="$1" # Comando da eseguire
+    local message="$2" # Messaggio da mostrare durante l'esecuzione
+
+    printf "\n%s...\n" "$message"
+
+    start_spinner
+    if eval "$command"; then
+        stop_spinner
+        update_progress
+        return 0
+    else
+        stop_spinner
+        printf "\n❌ Error: %s failed.\n" "$message"
+        return 1
+    fi
+}
+
 
 
 printf "\nInstaller version v1.0.0\n"
@@ -125,7 +189,7 @@ end_with_message() {
     local success=$2
 
     # Porta la progress bar al 100%
-    show_progress "$TOTAL_STEPS" "$TOTAL_STEPS"
+    s_how_progress "$TOTAL_STEPS" "$TOTAL_STEPS"
 
     if [ "$success" -eq 0 ]; then
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
@@ -149,83 +213,42 @@ additionalServiceInstall() {
         printf "\nUpdating service: $SERVICE_NAME"
 
         # Stop e rimuove i container esistenti
-        if ! docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml" down; then
-            printf "\nError: Failed to stop and remove containers for $SERVICE_NAME."
-            return 1
-        fi
+        execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml\" down" \
+            "Stopping and removing containers for $SERVICE_NAME" || return 1
 
         # Pulizia delle immagini obsolete
-        if ! docker image prune -f >/dev/null 2>&1; then
-            printf "\nError: Failed to prune Docker images."
-            return 1
-        fi
+        execute_with_spinner "docker image prune -f >/dev/null 2>&1" \
+            "Pruning Docker images" || return 1
     fi
 
     # Installazione o aggiornamento
-    printf "\nInstalling/updating service: $SERVICE_NAME"
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-
-    if ! docker compose -f "$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml" up -d --build; then
-        printf "\nError: Failed to build and start service $SERVICE_NAME."
-        return 1
-    fi
+    execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml\" up -d --build" \
+        "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
 
     return 0
 }
+
 
 
 dockerInstall() {
     printf "\nInstalling Docker..."
 
     # Step 1: Update packages
-    printf "\nUpdating packages..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! sudo apt-get update -y >/dev/null 2>&1; then
-        printf "\nError: Failed to update packages."
-        return 1
-    fi
+    execute_with_spinner "sudo apt-get update -y >/dev/null 2>&1" "Updating packages" || return 1
 
     # Step 2: Install required packages
-    printf "\nInstalling required packages..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common >/dev/null 2>&1; then
-        printf "\nError: Failed to install required packages."
-        return 1
-    fi
+    execute_with_spinner "sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common >/dev/null 2>&1" "Installing required packages" || return 1
 
     # Step 3: Add Docker GPG key
-    printf "\nAdding Docker GPG key..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - >/dev/null 2>&1; then
-        printf "\nError: Failed to add Docker GPG key."
-        return 1
-    fi
+    execute_with_spinner "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - >/dev/null 2>&1" "Adding Docker GPG key" || return 1
 
     # Step 4: Add Docker repository
-    printf "\nAdding Docker repository..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable" -y >/dev/null 2>&1; then
-        printf "\nError: Failed to add Docker repository."
-        return 1
-    fi
+    execute_with_spinner "sudo add-apt-repository 'deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable' -y >/dev/null 2>&1" "Adding Docker repository" || return 1
 
     # Step 5: Install Docker
-    printf "\nInstalling Docker..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! sudo apt-get update -y >/dev/null 2>&1 || ! sudo apt-get install -y docker-ce >/dev/null 2>&1; then
-        printf "\nError: Failed to install Docker."
-        return 1
-    fi
+    execute_with_spinner "sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
 
     return 0
 }
@@ -233,16 +256,16 @@ dockerInstall() {
 
 installGit() {
     printf "\nInstalling Git..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
 
-    if ! sudo apt update >/dev/null 2>&1 || ! sudo apt install -y git >/dev/null 2>&1; then
-        printf "\nError: Failed to install Git."
-        return 1
-    fi
+    # Step 1: Update packages
+    execute_with_spinner "sudo apt update >/dev/null 2>&1" "Updating packages for Git installation" || return 1
+
+    # Step 2: Install Git
+    execute_with_spinner "sudo apt install -y git >/dev/null 2>&1" "Installing Git" || return 1
 
     return 0
 }
+
 
 
 cloningCode() {
@@ -252,64 +275,33 @@ cloningCode() {
     local psw=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
 
     # Step 1: Creazione della cartella per il clone
-    printf "\nCreating folder..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! mkdir -p "$ABSOLUTE_PATH/hypernode" >/dev/null 2>&1; then
-        printf "\nError: Failed to create directory for cloning."
-        return 1
-    fi
+    execute_with_spinner "mkdir -p \"$ABSOLUTE_PATH/hypernode\"" "Creating folder for cloning" || return 1
 
     # Step 2: Entrare nella cartella
-    printf "\nMoving inside folder..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! cd "$ABSOLUTE_PATH/hypernode" >/dev/null 2>&1; then
-        printf "\nError: Failed to access the directory."
-        return 1
-    fi
+    execute_with_spinner "cd \"$ABSOLUTE_PATH/hypernode\"" "Accessing the folder" || return 1
 
     # Step 3: Clonare i repository
-    printf "\nCloning repositories..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
+    execute_with_spinner "git clone --quiet https://\"$usr\":\"$psw\"@github.com/Arteco-Global/hypernode_deploy.git" \
+        "Cloning repository: hypernode_deploy" || return 1
 
-    if ! git clone --quiet https://"$usr":"$psw"@github.com/Arteco-Global/hypernode_deploy.git >/dev/null 2>&1; then
-        printf "\nError: Failed to clone hypernode_deploy."
-        return 1
-    fi
+    execute_with_spinner "git clone --quiet https://\"$usr\":\"$psw\"@github.com/Arteco-Global/hypernode_server_gui.git" \
+        "Cloning repository: hypernode_server_gui" || return 1
 
-    if ! git clone --quiet https://"$usr":"$psw"@github.com/Arteco-Global/hypernode_server_gui.git >/dev/null 2>&1; then
-        printf "\nError: Failed to clone hypernode_server_gui."
-        return 1
-    fi
-
-    if ! git clone --quiet https://"$usr":"$psw"@github.com/Arteco-Global/hypernode-server.git >/dev/null 2>&1; then
-        printf "\nError: Failed to clone hypernode-server."
-        return 1
-    fi
+    execute_with_spinner "git clone --quiet https://\"$usr\":\"$psw\"@github.com/Arteco-Global/hypernode-server.git" \
+        "Cloning repository: hypernode-server" || return 1
 
     # Step 4: Checkout branch per configuratore
-    printf "\nChecking out configurator branch..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! cd "$ABSOLUTE_PATH/hypernode/hypernode_server_gui" >/dev/null 2>&1 || ! git checkout "${CONFIGURATOR_BRANCH}" >/dev/null 2>&1; then
-        printf "\nError: Failed to checkout branch '${CONFIGURATOR_BRANCH}' for hypernode_server_gui."
-        return 1
-    fi
+    execute_with_spinner "cd \"$ABSOLUTE_PATH/hypernode/hypernode_server_gui\" && git checkout \"${CONFIGURATOR_BRANCH}\"" \
+        "Checking out branch '${CONFIGURATOR_BRANCH}' for hypernode_server_gui" || return 1
 
     # Step 5: Checkout branch per server
-    printf "\nChecking out server branch..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress "$TOTAL_STEPS" "$CURRENT_STEP"
-    if ! cd "$ABSOLUTE_PATH/hypernode/hypernode-server" >/dev/null 2>&1 || ! git checkout "${SERVER_BRANCH}" >/dev/null 2>&1; then
-        printf "\nError: Failed to checkout branch '${SERVER_BRANCH}' for hypernode-server."
-        return 1
-    fi
+    execute_with_spinner "cd \"$ABSOLUTE_PATH/hypernode/hypernode-server\" && git checkout \"${SERVER_BRANCH}\"" \
+        "Checking out branch '${SERVER_BRANCH}' for hypernode-server" || return 1
 
     printf "\nCloning and branch checkouts completed successfully."
     return 0
 }
+
 
 
 
@@ -500,52 +492,48 @@ get_config() {
 
 }
 
-cleanProcedure(){
-    
+cleanProcedure() {
     # *****************************************************************
     # CLEANING PROCEDURE **********************************************
     # *****************************************************************
 
-    printf "\nCleaning code..."
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    show_progress $TOTAL_STEPS $CURRENT_STEP
-    rm -rf "$ABSOLUTE_PATH/hypernode" > /dev/null
+    execute_with_spinner "rm -rf \"$ABSOLUTE_PATH/hypernode\" > /dev/null" \
+        "Cleaning code" || return 1
 
+    printf "\nCleaning procedure completed successfully.\n"
 }
+
 
 dockerNuke() {
     printf "\nAre you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) \n[there's no going back]"
     read -r confirmation
 
     if [[ "$confirmation" == "y" || "$confirmation" == "Y" ]]; then
-        printf "\nStopping and removing all containers..."
+        printf "\nStopping and removing all containers, images, networks, and volumes...\n"
 
-        if ! sudo docker stop $(sudo docker ps -q) >/dev/null 2>&1; then
-            printf "\nError: Failed to stop containers."
-            return 1
-        fi
+        # Stop containers
+        execute_with_spinner "sudo docker stop \$(sudo docker ps -q) >/dev/null 2>&1" \
+            "Stopping containers" || return 1
 
-        if ! sudo docker rm -f $(sudo docker ps -aq) >/dev/null 2>&1; then
-            printf "\nError: Failed to remove containers."
-            return 1
-        fi
+        # Remove containers
+        execute_with_spinner "sudo docker rm -f \$(sudo docker ps -aq) >/dev/null 2>&1" \
+            "Removing containers" || return 1
 
-        if ! sudo docker rmi -f $(sudo docker images -q) >/dev/null 2>&1; then
-            printf "\nError: Failed to remove images."
-            return 1
-        fi
+        # Remove images
+        execute_with_spinner "sudo docker rmi -f \$(sudo docker images -q) >/dev/null 2>&1" \
+            "Removing Docker images" || return 1
 
-        if ! sudo docker system prune -a --volumes -f >/dev/null 2>&1; then
-            printf "\nError: Failed to prune Docker system."
-            return 1
-        fi
+        # Prune system
+        execute_with_spinner "sudo docker system prune -a --volumes -f >/dev/null 2>&1" \
+            "Pruning Docker system" || return 1
 
-        end_with_message "Docker cleanup" 0
+        end_with_message "Docker cleanup completed successfully" 0
     else
-        printf "\nOperation canceled."
+        printf "\nOperation canceled.\n"
         return 1
     fi
 }
+
 
 
 checkIfHypernodeIsInstaller() {
