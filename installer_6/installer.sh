@@ -660,11 +660,11 @@ elif [ "$INSTALL_OPTION" -eq 5 ]; then
 elif [ "$INSTALL_OPTION" -eq 6 ]; then
     additionalServiceInstall "server" "update" && end_with_message "Server update" 0 || end_with_message "Server update" 1
 elif [ "$INSTALL_OPTION" -eq 7 ]; then
-    additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
+    additionalServiceInstall "camera" "update" && end_with_message "Camera service update" 0 || end_with_message "Camera service update" 1
 elif [ "$INSTALL_OPTION" -eq 8 ]; then
-    additionalServiceInstall "storage" "update" && end_with_message "Auth service update" 0 || end_with_message "Auth service update" 1
+    additionalServiceInstall "auth" "update" && end_with_message "Auth service update" 0 || end_with_message "Auth service update" 1
 elif [ "$INSTALL_OPTION" -eq 9 ]; then
-    additionalServiceInstall "storage" "update" && end_with_message "Event service update" 0 || end_with_message "Event service update" 1
+    additionalServiceInstall "event" "update" && end_with_message "Event service update" 0 || end_with_message "Event service update" 1
 elif [ "$INSTALL_OPTION" -eq 10 ]; then
     additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
 elif [ "$INSTALL_OPTION" -eq 11 ]; then
