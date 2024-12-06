@@ -87,7 +87,7 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
-      - GATEWAY_REMOTE_IP=${GRI:-gateway}
+      - GATEWAY_REMOTE_IP=${GRI:-gateway:8000}
       - DATABASE_URI=mongodb://database:27017/camera-db
     container_name: camera
     restart: unless-stopped
