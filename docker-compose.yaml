@@ -45,7 +45,7 @@ services:
         - GATEWAY_API_PORT=5001
         - GATEWAY_WS_PORT=8000
         - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
-        - DATABASE_URI=mongodb://database:27017/gateway-db
+        - DATABASE_URI=mongodb://database:27017/gateway-db       
       container_name: gateway
       restart: unless-stopped
 
@@ -88,6 +88,8 @@ services:
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
       - DATABASE_URI=mongodb://database:27017/camera-db
+      - GATEWAY_REMOTE_IP=${GRI:-gateway}
+      - GATEWAY_WS_PORT=8000
     container_name: camera
     restart: unless-stopped
 

@@ -252,6 +252,7 @@ get_config() {
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_CONTAINER:5672"
+        export GATEWAY_REMOTE_IP=$RABBITMQ_HOST_FOR_CONTAINER
 
         # echo "PROCESS_NAME: $PROCESS_NAME"
         # echo "DB_NAME: $DB_NAME"
