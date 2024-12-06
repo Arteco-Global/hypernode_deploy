@@ -248,7 +248,7 @@ additionalServiceInstall() {
     fi
 
     # Installazione o aggiornamento
-    printenv
+    # printenv
 
     execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
