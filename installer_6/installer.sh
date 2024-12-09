@@ -12,11 +12,20 @@ SKIP_CLEAN="false"
 SKIP_DOCKER_INSTALL="false"
 SKIP_GIT_INSTALL="false"
 SKIP_GIT_CLONE="false"
+SKIP_BRANCH_ASK="false"
 SERVER_BRANCH="main"
 CONFIGURATOR_BRANCH="main"
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
+
+# Codici colore ANSI
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m' # Reset colore
 
 # Funzione per lo spinner animato
 start_spinner() {
@@ -112,6 +121,10 @@ printf "\nInstaller version v1.0.0\n"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
+        -skip-branch-ask) 
+            echo "got -skip-branch-ask parameter!"
+            SKIP_BRANCH_ASK="true"
+            ;;
         -skip-clean) 
             echo "got -skip-clean parameter!"
             SKIP_CLEAN="true"
@@ -167,16 +180,21 @@ show_ascii_art() {
                                      ####                                                           
                                                                                                     
                                                                                                     
-    +++++++++++++ ++++++++  ++ ++++++++ +++++++ ++  ++ ++ ++++++++ +++++ +++++ ++++++++ ++++ ++     
-    ++++++++ +++++++++++++++++  +++++++++ +++ ++++  +++++++++++ +++++++++++++++++++++++++ ++  +     
+    +++++++++++++++ ++++++++  ++ ++++++++ +++++++ ++  ++ ++ ++++++++ +++++ +++++ ++++++++ ++++ ++     
+
+       _____                 _             _____       _ _         _____           _        _ _ 
+      / ____|               (_)           / ____|     (_) |       |_   _|         | |      | | |
+     | (___   ___ _ ____   ___  ___ ___  | (___  _   _ _| |_ ___    | |  _ __  ___| |_ __ _| | |
+      \___ \ / _ \ '__\ \ / / |/ __/ _ \  \___ \| | | | | __/ _ \   | | | '_ \/ __| __/ _` | | |
+      ____) |  __/ |   \ V /| | (_|  __/  ____) | |_| | | ||  __/  _| |_| | | \__ \ || (_| | | |
+     |_____/ \___|_|    \_/ |_|\___\___| |_____/ \__,_|_|\__\___| |_____|_| |_|___/\__\__,_|_|_|
+                                                                                                
+                                                                                                
+
+    ++++++++ +++++++++++++++++  +++++++++ +++ ++++  +++++++++++ +++++++++++++++++++++++++ ++  ++++     
                                                                                                     
 EOF
 }
-
-# Mostra l'arte ASCII prima di qualsiasi altra cosa
-show_ascii_art
-
-
 
 show_progress() {
     local -r TOTAL_STEPS=$1
@@ -342,7 +360,75 @@ cloningCode() {
     return 0
 }
 
-
+# Menu delle opzioni
+show_menu() {
+    local mode=$1
+if [ "$mode" == "install" ]; then        
+    echo ""
+    echo ""
+    echo -e "${WHITE}"
+    echo "  ┌───────────────────────────────────────────────────────────┐"
+    echo "  │               HYPERNODE INSTALLER MENU                    │"
+    echo "  └───────────────────────────────────────────────────────────┘"
+    echo -e "  ${NC}"
+    echo -e "  ${YELLOW}INSTALL OPTIONS:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC}  1. ${GREEN}Server [auth, camera, storage, event, gateway]${NC}"
+    echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Camera Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  3. ${GREEN}Auth Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage Service${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "  ${YELLOW}UPDATE OPTIONS:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Camera Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${GREEN}Auth Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${GREEN}Event Service${NC}"
+    echo -e "  ${CYAN}  │${NC} 10. ${GREEN}Storage Service${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC} 11. ${RED}Clean everything (remove all containers and db)${NC}"
+    echo -e "  ${CYAN}  │${NC}  0. ${WHITE}EXIT${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo ""
+else
+    echo ""
+    echo ""
+    echo -e "${WHITE}"
+    echo "  ┌───────────────────────────────────────────────────────────┐"
+    echo "  │                 HYPERNODE UPDATE MENU                     │"
+    echo "  └───────────────────────────────────────────────────────────┘"
+    echo -e "  ${NC}"
+    echo -e "  ${YELLOW}ADD OPTIONS:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"    
+    echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Camera Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  3. ${GREEN}Auth Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage Service${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "  ${YELLOW}UPDATE OPTIONS:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC}  6. ${GREEN}All Server${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Camera Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${GREEN}Auth Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${GREEN}Event Service${NC}"
+    echo -e "  ${CYAN}  │${NC} 10. ${GREEN}Storage Service${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC} 11. ${RED}Clean everything (remove all containers and db)${NC}"
+    echo -e "  ${CYAN}  │${NC}  0. ${WHITE}EXIT${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo ""
+fi
+}
 
 
 get_config() {
@@ -351,70 +437,11 @@ get_config() {
     if [ "$HYPERNODE_ALREADY_INSTALLED" != "true" ]; then
     
         # Menu delle opzioni
-        echo ""
-        echo "-------------------------------------:"
-        echo "-------------- INSTALL  -------------:"
-        echo "-------------------------------------:"
-        echo ""
-        echo "What do you want to install:"
-        echo "|-- 1. Server [auth,camera,storage,event,gateway] "    
-        echo "|-- 2. Camera Service"
-        echo "|-- 3. Auth Service"
-        echo "|-- 4. Event Service"
-        echo "|-- 5. Storage Service"
-        echo ""
-        echo "-------------------------------------:"
-        echo "-------------- UPDATE  --------------:"
-        echo "-------------------------------------:"
-        echo ""
-        echo "What do you want to update:"
-        echo "|-- 7. Camera Service"
-        echo "|-- 8. Auth Service"
-        echo "|-- 9. Event Service"
-        echo "|-- 10. Storage Service"
-        echo ""
-        echo "-------------------------------------:"
-        echo "------------- UTILITIES  ------------:"
-        echo "-------------------------------------:"
-        echo "|-- 11. Clean everything (remove all containers and db)"
-        echo ""
-        echo "0. EXIT"
-        echo ""
+        show_menu "install"
 
     else
-
-        # Menu delle opzioni
-        echo ""
-        echo "-------------------------------------:"
-        echo "-------------- INSTALL  -------------:"
-        echo "-------------------------------------:"
-        echo ""
-        echo "What do you want to install:"
-        echo "|-- 2. Camera Service"
-        echo "|-- 3. Auth Service"
-        echo "|-- 4. Event Service"
-        echo "|-- 5. Storage Service"
-        echo ""
-        echo "-------------------------------------:"
-        echo "-------------- UPDATE  --------------:"
-        echo "-------------------------------------:"
-        echo ""
-        echo "What do you want to update:"
-        echo "|-- 6. Update all the server's servicies "    
-        echo "|-- 7. Update Camera Service"
-        echo "|-- 8. Update Auth Service"
-        echo "|-- 9. Update Event Service"
-        echo "|-- 10. Update Storage Service"
-        echo ""
-        echo "-------------------------------------:"
-        echo "------------- UTILITIES  ------------:"
-        echo "-------------------------------------:"
-        echo "|-- 11. Clean everything (remove all containers and db)"
-        echo ""
-        echo "0. EXIT"
-        echo ""
-
-       
+        show_menu "update"
+        
     fi
 
  
@@ -435,11 +462,14 @@ get_config() {
         read -p "Configurator port (default 8080): " CONF_PORT
         CONF_PORT=${CONF_PORT:-8080}
 
-        read -p "| --> Server branch (default is 'main') " SERVER_BRANCH
-        SERVER_BRANCH=${SERVER_BRANCH:-main}
+        if [ "$SKIP_BRANCH_ASK" != "true" ]; then
+            read -p "| --> Server branch (default is 'main') " SERVER_BRANCH
+            SERVER_BRANCH=${SERVER_BRANCH:-main}
 
-        read -p "| --> Web Configurator branch (default is 'main') " CONFIGURATOR_BRANCH
-        CONFIGURATOR_BRANCH=${CONFIGURATOR_BRANCH:-main}
+            read -p "| --> Web Configurator branch (default is 'main') " CONFIGURATOR_BRANCH
+            CONFIGURATOR_BRANCH=${CONFIGURATOR_BRANCH:-main}
+        fi
+        
 
         RMQ=amqp://hypernode:hypernode@messageBroker:5672
 
@@ -457,8 +487,10 @@ get_config() {
        
         read -p "Choose a unique name (in case of update, type the current service name): " PROCESS_NAME
 
-        read -p "| --> branch (default is 'main') " SERVER_BRANCH
-        SERVER_BRANCH=${SERVER_BRANCH:-main}
+        if [ "$SKIP_BRANCH_ASK" != "true" ]; then
+            read -p "| --> branch (default is 'main') " SERVER_BRANCH
+            SERVER_BRANCH=${SERVER_BRANCH:-main}
+        fi        
 
         read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
 
@@ -488,8 +520,10 @@ get_config() {
 
         read -p "Type the service name to update: " PROCESS_NAME
 
-        read -p "| --> branch (default is 'main') " SERVER_BRANCH
-        SERVER_BRANCH=${SERVER_BRANCH:-main}
+        if [ "$SKIP_BRANCH_ASK" != "true" ]; then
+            read -p "| --> branch (default is 'main') " SERVER_BRANCH
+            SERVER_BRANCH=${SERVER_BRANCH:-main}
+        fi        
 
         read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
 
@@ -545,7 +579,7 @@ cleanProcedure() {
     execute_with_spinner "rm -rf \"$ABSOLUTE_PATH/hypernode\" > /dev/null" \
         "Cleaning code" || return 1
 
-    printf "\nCleaning procedure completed successfully.\n"
+    printf "\nCleaning procedure completed successfully.\n\n"
 }
 
 
@@ -589,7 +623,7 @@ checkIfHypernodeIsInstaller() {
         printf "\nServer is already installed."
         HYPERNODE_ALREADY_INSTALLED="true"
     else
-        printf "\nNo server detected. You should install a new one (or some services)."
+        printf "\nNo server detected. Install the complete suite or specific services."
         HYPERNODE_ALREADY_INSTALLED="false"
     fi
 }
@@ -610,6 +644,9 @@ check_docker_installed() {
 # *****************************************************************
 
 #a. Welcome step
+clear
+
+show_ascii_art
 
 check_docker_installed # Check if docker is installed
 
@@ -617,7 +654,12 @@ checkIfHypernodeIsInstaller # Check if hypernode is already installed
 
 get_config # Get the configuration from the user
 
-clear # Clear the terminal
+clear
+
+show_ascii_art
+
+printf "\n\nStarting installation...\n"
+
 
 if [ "$SKIP_GIT_INSTALL" != "true" ]; then
     # git installation
@@ -683,5 +725,5 @@ if [ "$SKIP_CLEAN" != "true" ]; then
     # server installation
     cleanProcedure
 else
-    printf "\nSkipping cleaning procedure"
+    printf "\nSkipping cleaning procedure\n\n"
 fi
