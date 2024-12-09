@@ -607,8 +607,12 @@ dockerNuke() {
         execute_with_spinner "sudo docker rmi -f \$(sudo docker images -q) >/dev/null 2>&1" \
             "Removing Docker images" || return 1
 
-        # Prune system
-        execute_with_spinner "sudo docker system prune -a --volumes -f >/dev/null 2>&1" \
+        # Rimuove tutti i volumi manualmente
+        execute_with_spinner "docker volume ls -q | xargs -r docker volume rm" \
+            "Removing Docker volumes" || return 1
+
+        # Esegue il prune finale (opzionale)
+        execute_with_spinner "docker system prune -a --volumes -f" \
             "Pruning Docker system" || return 1
 
         end_with_message "Docker cleanup completed successfully" 0
@@ -620,7 +624,7 @@ dockerNuke() {
 
 
 
-checkIfHypernodeIsInstaller() {
+checkIfHypernodeIsInstalled() {
     local container_name="hypernode-server-gateway"
 
     # Usa grep per cercare direttamente il nome del container nei risultati di `docker ps`
@@ -655,7 +659,7 @@ show_ascii_art
 
 check_docker_installed # Check if docker is installed
 
-checkIfHypernodeIsInstaller # Check if hypernode is already installed
+checkIfHypernodeIsInstalled # Check if hypernode is already installed
 
 get_config # Get the configuration from the user
 
