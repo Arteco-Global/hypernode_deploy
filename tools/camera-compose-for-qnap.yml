@@ -1,0 +1,35 @@
+name: qnap-camera
+
+services:
+  
+  database:
+    image: mongo:4.4
+    # ports:
+    #   - 27050:27017
+    networks:
+      - hypernode-net
+    volumes:
+      - mongodb_data:/data/db
+    container_name: db-for-camera
+    restart: unless-stopped
+
+  camera:
+    image: mdalprato/additional-qnap-camera:latest
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@95.242.106.69:5672
+      - DATABASE_URI=mongodb://database:27017/camera-db
+      - GATEWAY_REMOTE_IP=95.242.106.69:549
+      # - GATEWAY_WS_PORT=548
+    container_name: qnap-camera
+    restart: unless-stopped    
+    
+volumes:
+  mongodb_data:
+      name: qnap-camera  # Nome unico per il volume
+
+networks:
+  hypernode-net:
+      driver: bridge
+
