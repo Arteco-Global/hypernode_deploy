@@ -232,24 +232,36 @@ show_progress() {
     fi
 }
 
-
+get_my_local_ip() {
+    local ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    if [[ -z "$ip" ]]; then
+        echo "127.0.0.1"  # Fallback all'indirizzo localhost
+    else
+        echo "$ip"
+    fi
+}
 
 end_with_message() {
     local message=$1
     local success=$2
+    local myIp=$(get_my_local_ip)
 
     # Porta la progress bar al 100%
     show_progress "$TOTAL_STEPS" "$TOTAL_STEPS"
 
+    # Cancella eventuali barre di progresso extra
+    printf "\r\033[K"
+
     if [ "$success" -eq 0 ]; then
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
+
+        if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
+            printf "\n You can now access the uSee Configurator at http://$myIp:$CONF_PORT\n"
+        fi
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
         exit 1
     fi
-
-    # Cancella eventuali barre di progresso extra
-    printf "\r\033[K"
 }
 
 drop_server_collection() {
@@ -671,10 +683,12 @@ checkIfHypernodeIsInstalled() {
 
 
 check_docker_installed() {
-    if ! command -v docker &> /dev/null; then
-        DOCKER_ALREADY_INSTALLED="true"
-    else
+    if ! command -v docker &> /dev/null; then       
+        printf "\nDocker is not installed.\n" 
         DOCKER_ALREADY_INSTALLED="false"
+    else
+        printf "\nDocker is already installed.\n"
+        DOCKER_ALREADY_INSTALLED="true"
     fi
 }
 
