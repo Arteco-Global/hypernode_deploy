@@ -1,0 +1,38 @@
+name: raspi-camera
+
+services:
+  
+  database:
+    image: mongo:4.4
+    # ports:
+    #   - 27050:27017
+    networks:
+      - hypernode-net
+    volumes:
+      - mongodb_data:/data/db
+    container_name: db-for-camera
+    restart: unless-stopped
+
+  camera:
+    image: mdalprato/additional-qnap-camera:latest
+    platform: linux/arm64  # Aggiungi questa riga per specificare la piattaforma ARM
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@192.168.10.31:5672
+      - DATABASE_URI=mongodb://database:27017/camera-db
+      - GATEWAY_REMOTE_IP=192.168.10.31:80
+      # - GATEWAY_WS_PORT=548
+    container_name: raspi-camera
+    restart: unless-stopped    
+    
+volumes:
+  mongodb_data:
+      name: raspi-camera  # Nome unico per il volume
+
+networks:
+  hypernode-net:
+      driver: bridge
+
+#docker buildx build --platform linux/amd64,linux/arm64/v8,linux/arm/v8  -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --load .
+#docker buildx build --platform linux/amd64,linux/arm64/v8,linux/arm/v8 -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --push .
