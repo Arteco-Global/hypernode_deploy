@@ -26,6 +26,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
+BLUE='\033[0;34m'
 NC='\033[0m' # Reset colore
 
 # Funzione per lo spinner animato
@@ -394,7 +395,7 @@ if [ "$mode" == "install" ]; then
     echo "  │               uSee Service suite | Installation           │"
     echo "  └───────────────────────────────────────────────────────────┘"
     echo -e "  ${NC}"
-    echo -e "  ${YELLOW}INSTALL NEW:${NC}"
+    echo -e "  ${GREEN}INSTALL NEW:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
     echo -e "  ${CYAN}  │${NC}  1. ${GREEN}Suite [Suite Manager, ID Verifier, Live Streamer, Media Recorder, Event Manager]${NC}"
     echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Live streamer${NC}"
@@ -403,12 +404,12 @@ if [ "$mode" == "install" ]; then
     echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Media recorder${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
-    echo -e "  ${YELLOW}UPDATE EXISTING SERVICE:${NC}"
+    echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Live streamer${NC}"
-    echo -e "  ${CYAN}  │${NC}  8. ${GREEN}ID Verifier${NC}"
-    echo -e "  ${CYAN}  │${NC}  9. ${GREEN}Event Manager${NC}"
-    echo -e "  ${CYAN}  │${NC} 10. ${GREEN}Media recorder${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${BLUE}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Media recorder${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -426,7 +427,7 @@ else
     echo "  |          uSee Service suite | Manage installation         │"
     echo "  └───────────────────────────────────────────────────────────┘"
     echo -e "  ${NC}"
-    echo -e "  ${YELLOW}ADD NEW SERVICES:${NC}"
+    echo -e "  ${GREEN}ADD NEW SERVICES:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"    
     echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Live streamer${NC}"
     echo -e "  ${CYAN}  │${NC}  3. ${GREEN}ID Verifier${NC}"
@@ -434,13 +435,13 @@ else
     echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Media Recorder${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
-    echo -e "  ${YELLOW}UPDATE EXISTING SERVICE:${NC}"
+    echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC}  6. ${GREEN}All the Service Suite${NC}"
-    echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Live streamer${NC}"
-    echo -e "  ${CYAN}  │${NC}  8. ${GREEN}ID Verifier${NC}"
-    echo -e "  ${CYAN}  │${NC}  9. ${GREEN}Event Manager${NC}"
-    echo -e "  ${CYAN}  │${NC} 10. ${GREEN}Media Recorder${NC}"
+    echo -e "  ${CYAN}  │${NC}  6. ${BLUE}All the Service Suite${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${BLUE}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Media Recorder${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -530,6 +531,8 @@ get_config() {
             RABBITMQ_HOST_FOR_ADDITIONAL_PORT=${remote_port:-5672}
             GATEWAY_REMOTE_PORT=${gateway_remote_port:-80}
 
+            printf "\nGateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
+
         else
             printf "\nOption unavailable."
             exit 1
@@ -560,8 +563,14 @@ get_config() {
             RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
             printf "\nGateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
         elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
-            read -p "Insert the ip/url: " remote_host
+            read -p "Insert uSee Gateway ip/url: " remote_host
+            read -p "Insert uSee Gateway broker port (default 5672): " remote_port
+            read -p "Insert uSee Gateway http port (default 80): " gateway_remote_port
+
             RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
+            RABBITMQ_HOST_FOR_ADDITIONAL_PORT=${remote_port:-5672}
+            GATEWAY_REMOTE_PORT=${gateway_remote_port:-80}
+
             printf "\nGateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
         else
             printf "\nOption unavailable."
@@ -571,9 +580,9 @@ get_config() {
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5673"
+        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:$RABBITMQ_HOST_FOR_ADDITIONAL_PORT"
         export SERVER_BRANCH
-        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL:547"
+        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL:$GATEWAY_REMOTE_PORT"
 
         ;;  
         
@@ -652,10 +661,10 @@ checkIfHypernodeIsInstalled() {
 
     # Usa grep per cercare direttamente il nome del container nei risultati di `docker ps`
     if sudo docker ps | grep -qw "$container_name"; then
-        printf "\nServer is already installed."
+        printf "\nSuite Manager detected. This is the uSee Gateway.\n"
         HYPERNODE_ALREADY_INSTALLED="true"
     else
-        printf "\nNo server detected. \nInstall the complete suite or specific services."
+        printf "\nNo Suite Manager detected. \nInstall the complete suite (Gateway Mode) or single services. (Runner Mode)\n"
         HYPERNODE_ALREADY_INSTALLED="false"
     fi
 }
