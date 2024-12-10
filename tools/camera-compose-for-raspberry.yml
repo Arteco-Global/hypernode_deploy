@@ -35,4 +35,4 @@ networks:
       driver: bridge
 
 #docker buildx build --platform linux/amd64,linux/arm64/v8,linux/arm/v8  -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --load .
-docker buildx build --platform linux/amd64,linux/arm64/v8,linux/arm/v8 -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --push .
+#docker buildx build --platform linux/amd64,linux/arm64/v8,linux/arm/v8 -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --push .
