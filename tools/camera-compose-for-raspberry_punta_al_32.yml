@@ -19,9 +19,9 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@192.168.10.31:5672
+      - RABBITMQ_URI=amqp://hypernode:hypernode@192.168.10.32:5672
       - DATABASE_URI=mongodb://database:27017/camera-db
-      - GATEWAY_REMOTE_IP=192.168.10.31:80
+      - GATEWAY_REMOTE_IP=192.168.10.32:80
       # - GATEWAY_WS_PORT=548
     container_name: raspi-camera
     restart: unless-stopped    
@@ -34,4 +34,4 @@ networks:
   hypernode-net:
       driver: bridge
 
-#sudo docker compose -f camera-compose-for-raspberry_punta_al_31.yml up --build -d
+#sudo docker compose -f camera-compose-for-raspberry_punta_al_32.yml up --build -d
