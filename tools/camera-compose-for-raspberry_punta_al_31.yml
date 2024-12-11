@@ -3,7 +3,7 @@ name: raspi-camera
 services:
   
   database:
-    image: mongo:4.4
+    image: mongo:4.0.0-rc0
     # ports:
     #   - 27050:27017
     networks:
@@ -33,6 +33,3 @@ volumes:
 networks:
   hypernode-net:
       driver: bridge
-
-#docker buildx build --platform linux/amd64,linux/arm64/v8,linux/arm/v8  -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --load .
-#docker buildx build --platform linux/amd64,linux/arm64/v8,linux/arm/v8 -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --push .
