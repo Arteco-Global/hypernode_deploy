@@ -1,0 +1,1 @@
+docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --push .
