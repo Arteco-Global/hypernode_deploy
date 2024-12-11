@@ -24,7 +24,7 @@ services:
       - GATEWAY_REMOTE_IP=192.168.10.31:80
       # - GATEWAY_WS_PORT=548
     container_name: raspi-camera
-    restart: unless-stopped    
+    restart: unless-stopped
     
 volumes:
   mongodb_data:
