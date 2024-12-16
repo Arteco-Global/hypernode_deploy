@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  # Servizio HAProxy
+  haproxy:
+    image: haproxy:latest
+    container_name: haproxy
+    ports:
+      - "80:80"        # Porta esterna 80 per HTTP
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    driver: bridge
+
+# docker run --rm --name haproxy \
+#   -p 80:90 \
+#   -v $(pwd)/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro \
+#   haproxy:latest
