@@ -3,3 +3,6 @@ docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/G
 docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/event.Dockerfile -t artecoglobalcompany/usee_event_manager:latest --push .
 docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/gateway.Dockerfile -t artecoglobalcompany/usee_suite_manager:latest --push .
 docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/storage.Dockerfile -t artecoglobalcompany/usee_media_recorder:latest --push .
+
+token per docker hub : dckr_oat_BdJVsQwdXuhw_2xpDkAV-01auTgTh0Y3
+user: artecoglobalcompany
