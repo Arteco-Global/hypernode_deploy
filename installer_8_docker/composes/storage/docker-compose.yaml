@@ -3,7 +3,7 @@ name: ${PROCESS_NAME}
 services:
   
   database:
-    image: mongo:4.4
+    image: ${MONGO_IMAGE:-mongo:4.4}
     # ports:
     #   - 27050:27017
     networks:

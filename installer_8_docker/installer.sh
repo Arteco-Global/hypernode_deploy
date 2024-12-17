@@ -15,6 +15,9 @@ ERASE_DB="false"
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
 
+ARCH=$(uname -m)
+
+
 # Codici colore ANSI
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -293,7 +296,7 @@ additionalServiceInstall() {
 }
 
 dockerLogin() {
-    execute_with_spinner "echo "dckr_oat_BdJVsQwdXuhw_2xpDkAV-01auTgTh0Y3" | docker login --username artecoglobalcompany --password-stdin" "Login to Docker                          " || return 1
+    execute_with_spinner "echo "dckr_oat_BdJVsQwdXuhw_2xpDkAV-01auTgTh0Y3" | docker login --username artecoglobalcompany --password-stdin" "Login to Docker" || return 1
 }
 
 dockerInstall() {
@@ -592,7 +595,23 @@ check_docker_installed() {
     fi
 }
 
+detectArchitecture(){
 
+    printf "\nDetecting architecture..."
+    
+    if [[ "$ARCH" == "aarch64"* ]]; then
+        MONGO_IMAGE="mongo:4.0.0-rc0" #raspberry pi
+        printf "\nDetected architecture: $ARCH fallback on lowest mongo image version: $MONGO_IMAGE"
+
+    else
+        MONGO_IMAGE="mongo:4.4"
+    fi
+
+    printf "\nDetected architecture: $ARCH"
+
+export MONGO_IMAGE
+
+}
 
 # *****************************************************************
 # STEP BY STEP INSTALLATION
@@ -613,6 +632,7 @@ clear
 
 show_ascii_art
 
+detectArchitecture
 
 if [ "$DOCKER_ALREADY_INSTALLED" == "true" ]; then
    

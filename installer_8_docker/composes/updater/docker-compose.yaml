@@ -1,9 +1,0 @@
-version: "3.8"
-services:
-  watchtower:
-    image: containrrr/watchtower
-    environment:
-        DOCKER_CONFIG: /config
-    command: --interval 500
-    container_name: updater
-    restart: unless-stopped

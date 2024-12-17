@@ -1,4 +1,4 @@
-name: hypernode-server
+name: uSee_Service_Suite
 
 services:
   messageBroker:
@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
     
   database:
-    image: mongo:4.4
+    image: ${MONGO_IMAGE:-mongo:4.4}
     networks:
       - hypernode-net
     volumes:
