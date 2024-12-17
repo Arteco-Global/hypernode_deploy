@@ -14,16 +14,19 @@ services:
     restart: unless-stopped
 
   camera:
-    image: artecoglobalcompany/ueee_live_streamer:latest
+    image: mdalprato/additional-qnap-camera:latest
     platform: linux/arm64  # Aggiungi questa riga per specificare la piattaforma ARM
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@192.168.10.31:5672
+      - RABBITMQ_URI=amqps://hypernode:hypernode@V12230451.lan.omniaweb.cloud:90
       - DATABASE_URI=mongodb://database:27017/camera-db
-      - GATEWAY_REMOTE_IP=192.168.10.31:80
+      - GATEWAY_REMOTE_IP=hypernode:hypernode@V12230451.lan.omniaweb.cloud:90
       # - GATEWAY_WS_PORT=548
     container_name: raspi-camera
+    extra_hosts:
+      - "v12230451.lan.omniaweb.cloud:192.168.10.67"
+      - "v12230451.my.omniaweb.cloud:192.168.10.67"    
     restart: unless-stopped    
     
 volumes:
@@ -33,5 +36,3 @@ volumes:
 networks:
   hypernode-net:
       driver: bridge
-
-#sudo docker compose -f camera-compose-for-raspberry_punta_al_31.yml up --build -d

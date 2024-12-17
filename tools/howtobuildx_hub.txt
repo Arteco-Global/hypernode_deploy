@@ -1,1 +1,5 @@
-docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t mdalprato/additional-qnap-camera:latest --push .
+docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/camera.Dockerfile -t artecoglobalcompany/ueee_live_streamer:latest --push .
+docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/auth.Dockerfile -t artecoglobalcompany/usee_id_verifier:latest --push .
+docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/event.Dockerfile -t artecoglobalcompany/usee_event_manager:latest --push .
+docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/gateway.Dockerfile -t artecoglobalcompany/usee_suite_manager:latest --push .
+docker buildx build --platform linux/amd64,linux/arm64 -f /Users/marcodalprato/GitHub/hypernode-server/docker/storage.Dockerfile -t artecoglobalcompany/usee_media_recorder:latest --push .
