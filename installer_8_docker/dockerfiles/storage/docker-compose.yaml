@@ -26,7 +26,7 @@ services:
     
 volumes:
   mongodb_data:
-      name: ${PROCESS_NAME}  # Nome unico per il volume
+      name: ${PROCESS_NAME}
 
 networks:
   hypernode-net:

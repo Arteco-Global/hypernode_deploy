@@ -10,9 +10,6 @@ ABSOLUTE_PATH=$(realpath "$SCRIPT_DIR") #absolute path
 
 SKIP_CLEAN="false"
 SKIP_DOCKER_INSTALL="false"
-SKIP_BRANCH_ASK="false"
-SERVER_BRANCH="main"
-CONFIGURATOR_BRANCH="main"
 ERASE_DB="false"
 
 HYPERNODE_ALREADY_INSTALLED="false"
@@ -124,10 +121,6 @@ while [[ "$#" -gt 0 ]]; do
         -erase-db) 
             echo "got -erase-db parameter!"
             ERASE_DB="true"
-            ;;
-        -skip-branch-ask) 
-            echo "got -skip-branch-ask parameter!"
-            SKIP_BRANCH_ASK="true"
             ;;
         -skip-clean) 
             echo "got -skip-clean parameter!"
@@ -280,7 +273,7 @@ additionalServiceInstall() {
         printf "\nUpdating service: $SERVICE_NAME"
 
         # Stop e rimuove i container esistenti
-        execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerServiceFromDockerHub/$SERVICE_NAME/docker-compose.yaml\" down" \
+        execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/dockerfiles/$SERVICE_NAME/docker-compose.yaml\" down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
 
         # Pulizia delle immagini obsolete
@@ -291,7 +284,7 @@ additionalServiceInstall() {
     # Installazione o aggiornamento
     # printenv
 
-    execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerServiceFromDockerHub/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
+    execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/dockerfiles/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
@@ -299,7 +292,9 @@ additionalServiceInstall() {
     return 0
 }
 
-
+dockerLogin() {
+    execute_with_spinner "echo "dckr_oat_BdJVsQwdXuhw_2xpDkAV-01auTgTh0Y3" | docker login --username artecoglobalcompany --password-stdin" "Login to Docker" || return 1
+}
 
 dockerInstall() {
     printf "\nInstalling Docker..."
@@ -318,8 +313,6 @@ dockerInstall() {
 
     # Step 5: Install Docker
     execute_with_spinner "sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
-
-    execute_with_spinner "echo "dckr_oat_BdJVsQwdXuhw_2xpDkAV-01auTgTh0Y3" | docker login --username artecoglobalcompany --password-stdin" "Login to Docker" || return 1
 
 
     return 0
@@ -428,14 +421,6 @@ get_config() {
         read -p "Configurator port (default 8080): " CONF_PORT
         CONF_PORT=${CONF_PORT:-8080}
 
-        if [ "$SKIP_BRANCH_ASK" != "true" ]; then
-            read -p "| --> Server branch (default is 'main') " SERVER_BRANCH
-            SERVER_BRANCH=${SERVER_BRANCH:-main}
-
-            read -p "| --> Web Configurator branch (default is 'main') " CONFIGURATOR_BRANCH
-            CONFIGURATOR_BRANCH=${CONFIGURATOR_BRANCH:-main}
-        fi
-        
 
         RMQ=amqp://hypernode:hypernode@messageBroker:5672
 
@@ -445,18 +430,12 @@ get_config() {
         export SSL_PORT
         export CONF_PORT
         export RMQ
-        export SERVER_BRANCH
-        export CONFIGURATOR_BRANCH
+       
 
         ;;
     2 | 3 | 4 | 5 )
        
         read -p "Choose a unique name (in case of update, type the current service name): " PROCESS_NAME
-
-        if [ "$SKIP_BRANCH_ASK" != "true" ]; then
-            read -p "| --> branch (default is 'main') " SERVER_BRANCH
-            SERVER_BRANCH=${SERVER_BRANCH:-main}
-        fi        
 
         read -p "is uSee Gateway on the same machine(l) or on a (r)remote machine? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
 
@@ -484,7 +463,6 @@ get_config() {
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:$RABBITMQ_HOST_FOR_ADDITIONAL_PORT"
-        export SERVER_BRANCH
         export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL:$GATEWAY_REMOTE_PORT"
 
         ;;
@@ -492,11 +470,6 @@ get_config() {
      7 | 8 | 9 | 10)
 
         read -p "Type the service name to update: " PROCESS_NAME
-
-        if [ "$SKIP_BRANCH_ASK" != "true" ]; then
-            read -p "| --> branch (default is 'main') " SERVER_BRANCH
-            SERVER_BRANCH=${SERVER_BRANCH:-main}
-        fi        
 
         read -p "is uSee Gateway on the same machine(l) or on a (r)remote machine? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
 
@@ -523,7 +496,6 @@ get_config() {
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:$RABBITMQ_HOST_FOR_ADDITIONAL_PORT"
-        export SERVER_BRANCH
         export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL:$GATEWAY_REMOTE_PORT"
 
         ;;  
@@ -651,6 +623,7 @@ else
     printf "\nSkipping docker install"
 fi
 
+dockerLogin
 
 # echo "|-- 2. Additional Camera Service"
 # echo "|-- 3. Additional Auth Service"
