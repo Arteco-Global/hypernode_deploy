@@ -273,7 +273,7 @@ additionalServiceInstall() {
         printf "\nUpdating service: $SERVICE_NAME"
 
         # Stop e rimuove i container esistenti
-        execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/dockerfiles/$SERVICE_NAME/docker-compose.yaml\" down" \
+        execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
 
         # Pulizia delle immagini obsolete
@@ -284,7 +284,7 @@ additionalServiceInstall() {
     # Installazione o aggiornamento
     # printenv
 
-    execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/dockerfiles/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
+    execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
@@ -293,11 +293,10 @@ additionalServiceInstall() {
 }
 
 dockerLogin() {
-    execute_with_spinner "echo "dckr_oat_BdJVsQwdXuhw_2xpDkAV-01auTgTh0Y3" | docker login --username artecoglobalcompany --password-stdin" "Login to Docker" || return 1
+    execute_with_spinner "echo "dckr_oat_BdJVsQwdXuhw_2xpDkAV-01auTgTh0Y3" | docker login --username artecoglobalcompany --password-stdin" "Login to Docker                          " || return 1
 }
 
 dockerInstall() {
-    printf "\nInstalling Docker..."
 
     # Step 1: Update packages
     execute_with_spinner "sudo apt-get update -y >/dev/null 2>&1" "Updating packages" || return 1
@@ -583,6 +582,7 @@ checkIfHypernodeIsInstalled() {
 
 
 check_docker_installed() {
+    echo "Checking if Docker is installed..."
     if ! command -v docker &> /dev/null; then       
         printf "\nDocker is not installed.\n" 
         DOCKER_ALREADY_INSTALLED="false"
@@ -613,15 +613,25 @@ clear
 
 show_ascii_art
 
-printf "\n\nStarting installation...\n"
 
+if [ "$DOCKER_ALREADY_INSTALLED" == "true" ]; then
+   
+    #alrady install do nothing
+    printf "\nSkipping docker install as it is already installed"
 
-if [ "$SKIP_DOCKER_INSTALL" != "true" ] || [ "$DOCKER_ALREADY_INSTALLED" != "true" ]; then
-    # docker installation
-    dockerInstall
 else
-    printf "\nSkipping docker install"
+ 
+    if [ "$SKIP_DOCKER_INSTALL" == "true" ]; then
+        printf "\nSkipping docker install as requested"
+
+    else
+        #dockerInstall
+        echo "Installing docker"
+
+    fi
+
 fi
+
 
 dockerLogin
 
