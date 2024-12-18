@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
 
   camera:
-    image: artecoglobalcompany/ueee_live_streamer:latest
+    image: artecoglobalcompany/usee_live_streamer:latest
     networks:
       - hypernode-net
     environment:
