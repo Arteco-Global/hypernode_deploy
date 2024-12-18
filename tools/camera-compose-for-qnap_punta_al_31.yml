@@ -21,10 +21,10 @@ services:
       - RABBITMQ_URI=amqp://hypernode:hypernode@95.242.106.69:5672
       - DATABASE_URI=mongodb://database:27017/camera-db
       - GATEWAY_REMOTE_IP=95.242.106.69:549
-      # - GATEWAY_WS_PORT=548
+      - SRV_INST_NAME=usee-live-streamer-qnap
     container_name: qnap-camera
-    restart: unless-stopped    
-    
+    restart: unless-stopped
+
 volumes:
   mongodb_data:
       name: qnap-camera  # Nome unico per il volume
