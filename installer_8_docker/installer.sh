@@ -571,10 +571,10 @@ dockerNuke() {
 
 
 checkIfHypernodeIsInstalled() {
-    local container_name="hypernode-server-gateway"
+    local container_name="gateway"
 
     # Usa grep per cercare direttamente il nome del container nei risultati di `docker ps`
-    if sudo docker ps | grep -qw "$container_name"; then
+    if sudo docker ps | grep "$container_name"; then
         printf "\nSuite Manager detected. This is the uSee Gateway.\n"
         HYPERNODE_ALREADY_INSTALLED="true"
     else
@@ -601,7 +601,7 @@ detectArchitecture(){
     
     if [[ "$ARCH" == "aarch64"* ]]; then
         MONGO_IMAGE="mongo:4.0.0-rc0" #raspberry pi
-        printf "\nDetected architecture: $ARCH fallback on lowest mongo image version: $MONGO_IMAGE"
+        printf "\nDetected architecture: $ARCH \nMongodb version: $MONGO_IMAGE"
 
     else
         MONGO_IMAGE="mongo:4.4"
