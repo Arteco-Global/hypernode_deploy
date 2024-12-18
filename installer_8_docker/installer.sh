@@ -574,7 +574,7 @@ checkIfHypernodeIsInstalled() {
     local container_name="gateway"
 
     # Usa grep per cercare direttamente il nome del container nei risultati di `docker ps`
-    if sudo docker ps | grep "$container_name"; then
+    if sudo docker ps | grep -qw "$container_name"; then
         printf "\nSuite Manager detected. This is the uSee Gateway.\n"
         HYPERNODE_ALREADY_INSTALLED="true"
     else
@@ -601,13 +601,13 @@ detectArchitecture(){
     
     if [[ "$ARCH" == "aarch64"* ]]; then
         MONGO_IMAGE="mongo:4.0.0-rc0" #raspberry pi
-        printf "\nDetected architecture: $ARCH \nMongodb version: $MONGO_IMAGE"
+        printf "\nDetected architecture: $ARCH \nMongodb version: $MONGO_IMAGE\n"
 
     else
         MONGO_IMAGE="mongo:4.4"
     fi
 
-    printf "\nDetected architecture: $ARCH"
+    printf "\nDetected architecture: $ARCH\n"
 
 export MONGO_IMAGE
 
@@ -637,16 +637,16 @@ detectArchitecture
 if [ "$DOCKER_ALREADY_INSTALLED" == "true" ]; then
    
     #alrady install do nothing
-    printf "\nSkipping docker install as it is already installed"
+    printf "\nSkipping docker install as it is already installed\n"
 
 else
  
     if [ "$SKIP_DOCKER_INSTALL" == "true" ]; then
-        printf "\nSkipping docker install as requested"
+        printf "\nSkipping docker install as requested\n"
 
     else
         #dockerInstall
-        echo "Installing docker"
+        printf "\nInstalling docker\n"
 
     fi
 
