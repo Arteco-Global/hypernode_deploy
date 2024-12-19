@@ -55,9 +55,3 @@ modifica il file aggiungendo sul tuo computer
 
 Fine
 
-## 6 Per visualizzare il log di un container
-
-   #Visualizzare log
-
-   sudo docker exec -it bdd8741f43d5 sh
-   vi logs.txt
