@@ -1,16 +1,16 @@
-name: qnap-camera
+name: ${PROCESS_NAME}
 
 services:
   
   database:
-    image: mongo:4.4
+    image: ${MONGO_IMAGE:-mongo:4.4}
     # ports:
     #   - 27050:27017
     networks:
       - hypernode-net
     volumes:
       - mongodb_data:/data/db
-    container_name: db-for-camera
+    container_name: ${DB_NAME}
     restart: unless-stopped
 
   camera:
@@ -18,16 +18,17 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@95.242.106.69:5673
-      - DATABASE_URI=mongodb://database:27017/camera-db
-      - GATEWAY_REMOTE_IP=95.242.106.69:548
-      - SRV_INST_NAME=usee-live-streamer-qnap
-    container_name: qnap-camera
+      - RABBITMQ_URI=${RMQ}
+      - DATABASE_URI=${DATABASE_URI}
+      - GATEWAY_REMOTE_IP=${GRI}
+      - GATEWAY_WS_PORT=8000
+      - SRV_INST_NAME=${PROCESS_NAME}
+    container_name: ${PROCESS_NAME}
     restart: unless-stopped    
     
 volumes:
   mongodb_data:
-      name: qnap-camera  # Nome unico per il volume
+      name: ${PROCESS_NAME}  # Nome unico per il volume
 
 networks:
   hypernode-net:
