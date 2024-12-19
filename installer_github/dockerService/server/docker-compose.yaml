@@ -114,7 +114,7 @@ services:
   configurator:
     build:
       context: ../../../../hypernode_server_gui
-      dockerfile: ../hypernode_server_gui/dockerfile_with_nginx  
+      dockerfile: ../hypernode_server_gui/dockerfile_with_nginx.Dockerfile
     container_name: configurator
     networks:
       - hypernode-net
