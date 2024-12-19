@@ -117,11 +117,7 @@ services:
     container_name: configurator
     networks:
       - hypernode-net
-    # ports:
-    #   - "${CONF_PORT:-90}:80"
-    #   - "${CONF__SSL_PORT:-444}:443"
     restart: unless-stopped
-
     
 volumes:
   rabbitmq_data:
