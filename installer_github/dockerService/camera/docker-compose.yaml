@@ -15,8 +15,8 @@ services:
 
   camera:
     build:
-      context: ../../../hypernode-server/ 
-      dockerfile: ../hypernode-server/docker/camera.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
+      context: ../../../../hypernode-server/
+      dockerfile: ../hypernode-server/docker/camera.Dockerfile  
     networks:
       - hypernode-net
     environment:

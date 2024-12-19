@@ -15,7 +15,7 @@ services:
 
   storage:
     build:
-      context: ../../../hypernode-server/ 
+      context: ../../../../hypernode-server/
       dockerfile: ../hypernode-server/docker/storage.Dockerfile  # or specify the path to your Dockerfile if it's not in the same directory
     networks:
        - hypernode-net
