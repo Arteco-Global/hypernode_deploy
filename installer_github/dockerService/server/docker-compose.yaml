@@ -114,12 +114,13 @@ services:
   configurator:
     build:
       context: ../../../../hypernode_server_gui
-      dockerfile: ../hypernode_server_gui/dockerfile  
+      dockerfile: ../hypernode_server_gui/dockerfile_with_nginx  
     container_name: configurator
     networks:
       - hypernode-net
-    ports:
-      - "${CONF_PORT:-8080}:8080"
+    # ports:
+    #   - "${CONF_PORT:-90}:80"
+    #   - "${CONF__SSL_PORT:-444}:443"
     restart: unless-stopped
 
     

@@ -19,9 +19,9 @@ Connettersi al server via ssh al server e eseguire quanto sotto.
    ```
 
 ## 5. Verifica che l'interfaccia funzioni correttamente
-Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il configurator, di default la porta è la 8080.
+Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il configurator, di default la porta è la 80.
    ```
-   http://localhost:8080
+   http://localhost
    ```
 
 ## 5. Verifica che il server funzioni correttamente
