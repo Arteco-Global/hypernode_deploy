@@ -15,6 +15,7 @@ SKIP_GIT_CLONE="false"
 SKIP_BRANCH_ASK="false"
 SERVER_BRANCH="main"
 CONFIGURATOR_BRANCH="main"
+ERASE_DB="false"
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
@@ -25,6 +26,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
+BLUE='\033[0;34m'
 NC='\033[0m' # Reset colore
 
 # Funzione per lo spinner animato
@@ -121,6 +123,10 @@ printf "\nInstaller version v1.0.0\n"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
+        -erase-db) 
+            echo "got -erase-db parameter!"
+            ERASE_DB="true"
+            ;;
         -skip-branch-ask) 
             echo "got -skip-branch-ask parameter!"
             SKIP_BRANCH_ASK="true"
@@ -226,26 +232,56 @@ show_progress() {
     fi
 }
 
-
+get_my_local_ip() {
+    local ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    if [[ -z "$ip" ]]; then
+        echo "127.0.0.1"  # Fallback all'indirizzo localhost
+    else
+        echo "$ip"
+    fi
+}
 
 end_with_message() {
     local message=$1
     local success=$2
+    local myIp=$(get_my_local_ip)
 
     # Porta la progress bar al 100%
     show_progress "$TOTAL_STEPS" "$TOTAL_STEPS"
 
+    # Cancella eventuali barre di progresso extra
+    printf "\r\033[K"
+
     if [ "$success" -eq 0 ]; then
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
+
+        if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
+            printf "\n You can now access the uSee Configurator at http://$myIp:$CONF_PORT\n"
+        fi
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
         exit 1
     fi
-
-    # Cancella eventuali barre di progresso extra
-    printf "\r\033[K"
 }
 
+drop_server_collection() {
+    printf "\nRe-initializing server DB...\n"
+
+    # Nome del container MongoDB
+    local MONGO_CONTAINER_NAME="database"
+
+    # Comando per droppare la collezione 'server' nel database 'gateway-db'
+    docker exec "$MONGO_CONTAINER_NAME" mongo gateway-db --eval "
+        db.server.drop();
+    "
+
+    # Verifica il risultato del comando
+    if [ $? -eq 0 ]; then
+        printf "\n✅ The 'server' collection has been successfully dropped from the 'gateway-db' database.\n"
+    else
+        printf "\n❌ Failed to drop the 'server' collection. Please check the container or database status.\n"
+    fi
+}
 
 additionalServiceInstall() {
     local SERVICE_NAME=$1
@@ -257,7 +293,7 @@ additionalServiceInstall() {
         printf "\nUpdating service: $SERVICE_NAME"
 
         # Stop e rimuove i container esistenti
-        execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml\" down" \
+        execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/installer_github/dockerService/$SERVICE_NAME/docker-compose.yaml\" down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
 
         # Pulizia delle immagini obsolete
@@ -268,7 +304,7 @@ additionalServiceInstall() {
     # Installazione o aggiornamento
     # printenv
 
-    execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/dockerService/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
+    execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/hypernode/hypernode_deploy/installer_github/dockerService/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
@@ -368,24 +404,24 @@ if [ "$mode" == "install" ]; then
     echo ""
     echo -e "${WHITE}"
     echo "  ┌───────────────────────────────────────────────────────────┐"
-    echo "  │               HYPERNODE INSTALLER MENU                    │"
+    echo "  │               uSee Service suite | Installation           │"
     echo "  └───────────────────────────────────────────────────────────┘"
     echo -e "  ${NC}"
-    echo -e "  ${YELLOW}INSTALL OPTIONS:${NC}"
+    echo -e "  ${GREEN}INSTALL NEW:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC}  1. ${GREEN}Server [auth, camera, storage, event, gateway]${NC}"
-    echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Camera Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  3. ${GREEN}Auth Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  1. ${GREEN}Suite [Suite Manager, ID Verifier, Live Streamer, Media Recorder, Event Manager]${NC}"
+    echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  3. ${GREEN}ID Verifier{NC}"
+    echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager{NC}"
+    echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Media recorder${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
-    echo -e "  ${YELLOW}UPDATE OPTIONS:${NC}"
+    echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Camera Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  8. ${GREEN}Auth Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  9. ${GREEN}Event Service${NC}"
-    echo -e "  ${CYAN}  │${NC} 10. ${GREEN}Storage Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${BLUE}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Media recorder${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -400,24 +436,24 @@ else
     echo ""
     echo -e "${WHITE}"
     echo "  ┌───────────────────────────────────────────────────────────┐"
-    echo "  │                 HYPERNODE UPDATE MENU                     │"
+    echo "  |          uSee Service suite | Manage installation         │"
     echo "  └───────────────────────────────────────────────────────────┘"
     echo -e "  ${NC}"
-    echo -e "  ${YELLOW}ADD OPTIONS:${NC}"
+    echo -e "  ${GREEN}ADD NEW SERVICES:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"    
-    echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Camera Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  3. ${GREEN}Auth Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  3. ${GREEN}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Media Recorder${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
-    echo -e "  ${YELLOW}UPDATE OPTIONS:${NC}"
+    echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC}  6. ${GREEN}All Server${NC}"
-    echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Camera Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  8. ${GREEN}Auth Service${NC}"
-    echo -e "  ${CYAN}  │${NC}  9. ${GREEN}Event Service${NC}"
-    echo -e "  ${CYAN}  │${NC} 10. ${GREEN}Storage Service${NC}"
+    echo -e "  ${CYAN}  │${NC}  6. ${BLUE}All the Service Suite${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${BLUE}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Media Recorder${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -492,27 +528,34 @@ get_config() {
             SERVER_BRANCH=${SERVER_BRANCH:-main}
         fi        
 
-        read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
+        read -p "is uSee Gateway on the same machine(l) or on a (r)remote machine? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
 
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
         if [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
             RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
             printf "\nGateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
         elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
-            read -p "Insert the ip/url: " remote_host
+            read -p "Insert uSee Gateway ip/url: " remote_host
+            read -p "Insert uSee Gateway broker port (default 5672): " remote_port
+            read -p "Insert uSee Gateway http port (default 80): " gateway_remote_port
+
             RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
+            RABBITMQ_HOST_FOR_ADDITIONAL_PORT=${remote_port:-5672}
+            GATEWAY_REMOTE_PORT=${gateway_remote_port:-80}
+
             printf "\nGateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
+
         else
-            printf "\nWrong choice mate."
+            printf "\nOption unavailable."
             exit 1
         fi
      
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5672"
+        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:$RABBITMQ_HOST_FOR_ADDITIONAL_PORT"
         export SERVER_BRANCH
-        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL"
+        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL:$GATEWAY_REMOTE_PORT"
 
         ;;
 
@@ -525,27 +568,33 @@ get_config() {
             SERVER_BRANCH=${SERVER_BRANCH:-main}
         fi        
 
-        read -p "Is the main gateway local (l) o (r)remote ? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
+        read -p "is uSee Gateway on the same machine(l) or on a (r)remote machine? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
 
         # Imposta la variabile RABBITMQ_HOST in base alla scelta
         if [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
             RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
             printf "\nGateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
         elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
-            read -p "Insert the ip/url: " remote_host
+            read -p "Insert uSee Gateway ip/url: " remote_host
+            read -p "Insert uSee Gateway broker port (default 5672): " remote_port
+            read -p "Insert uSee Gateway http port (default 80): " gateway_remote_port
+
             RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
+            RABBITMQ_HOST_FOR_ADDITIONAL_PORT=${remote_port:-5672}
+            GATEWAY_REMOTE_PORT=${gateway_remote_port:-80}
+
             printf "\nGateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
         else
-            printf "\nWrong choice mate."
+            printf "\nOption unavailable."
             exit 1
         fi
 
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:5672"
+        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:$RABBITMQ_HOST_FOR_ADDITIONAL_PORT"
         export SERVER_BRANCH
-        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL"
+        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL:$GATEWAY_REMOTE_PORT"
 
         ;;  
         
@@ -559,7 +608,7 @@ get_config() {
         exit 0
         ;;
     *)
-        printf "\nWrong choice mate."
+        printf "\nOption unavailable."
         exit 1
         ;;
     esac
@@ -584,7 +633,7 @@ cleanProcedure() {
 
 
 dockerNuke() {
-    printf "\nAre you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) \n[there's no going back]"
+    printf "\nAre you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) \n\n[there's no going back]"
     read -r confirmation
 
     if [[ "$confirmation" == "y" || "$confirmation" == "Y" ]]; then
@@ -624,20 +673,22 @@ checkIfHypernodeIsInstalled() {
 
     # Usa grep per cercare direttamente il nome del container nei risultati di `docker ps`
     if sudo docker ps | grep -qw "$container_name"; then
-        printf "\nServer is already installed."
+        printf "\nSuite Manager detected. This is the uSee Gateway.\n"
         HYPERNODE_ALREADY_INSTALLED="true"
     else
-        printf "\nNo server detected. Install the complete suite or specific services."
+        printf "\nNo Suite Manager detected. \nInstall the complete suite (Gateway Mode) or single services. (Runner Mode)\n"
         HYPERNODE_ALREADY_INSTALLED="false"
     fi
 }
 
 
 check_docker_installed() {
-    if ! command -v docker &> /dev/null; then
-        DOCKER_ALREADY_INSTALLED="true"
-    else
+    if ! command -v docker &> /dev/null; then       
+        printf "\nDocker is not installed.\n" 
         DOCKER_ALREADY_INSTALLED="false"
+    else
+        printf "\nDocker is already installed.\n"
+        DOCKER_ALREADY_INSTALLED="true"
     fi
 }
 
@@ -701,6 +752,9 @@ fi
 # echo "|-- 11. Clean everything (remove all containers and db)"
 
 if [ "$INSTALL_OPTION" -eq 1 ]; then    
+    if [ "$ERASE_DB" == "true" ]; then
+        drop_server_collection
+    fi
     additionalServiceInstall "server" && end_with_message "Server installation" 0 || end_with_message "Server installation" 1
 elif [ "$INSTALL_OPTION" -eq 2 ]; then
     additionalServiceInstall "camera" && end_with_message "Camera service installation" 0 || end_with_message "Camera service installation" 1
@@ -711,6 +765,9 @@ elif [ "$INSTALL_OPTION" -eq 4 ]; then
 elif [ "$INSTALL_OPTION" -eq 5 ]; then
     additionalServiceInstall "storage" && end_with_message "Storage service installation" 0 || end_with_message "Storage service installation" 1
 elif [ "$INSTALL_OPTION" -eq 6 ]; then
+    if [ "$ERASE_DB" == "true" ]; then
+        drop_server_collection
+    fi
     additionalServiceInstall "server" "update" && end_with_message "Server update" 0 || end_with_message "Server update" 1
 elif [ "$INSTALL_OPTION" -eq 7 ]; then
     additionalServiceInstall "camera" "update" && end_with_message "Camera service update" 0 || end_with_message "Camera service update" 1

@@ -1,0 +1,1 @@
+docker run -d --name rabbitForLocalPurpose -e RABBITMQ_DEFAULT_USER=hypernode -e RABBITMQ_DEFAULT_PASS=hypernode -p 5672:5672 -p 15672:15672 rabbitmq:3.13-management

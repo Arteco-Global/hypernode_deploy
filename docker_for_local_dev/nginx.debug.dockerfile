@@ -2,9 +2,8 @@
 FROM nginx
 
 # Copy custom configuration file to the container
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
-
-COPY nginx/ssl/my.omniaweb.cloud.pem /etc/nginx/ssl/my.omniaweb.cloud.pem
+COPY nginx_debug/nginx_debug.conf /etc/nginx/nginx.conf 
+COPY nginx_debug/ssl/my.omniaweb.cloud.pem /etc/nginx/ssl/my.omniaweb.cloud.pem
 
 # Expose port 80 for HTTP traffic
 EXPOSE 80
