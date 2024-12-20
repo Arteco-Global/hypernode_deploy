@@ -1,57 +1,75 @@
+Hypernode Installer Script Documentation
 
-# Guida installare Hypernode su un computer vergine
+This script automates the installation and update process for the Hypernode service suite. It includes functionalities for installing Docker, Git, cloning repositories from GitHub, and managing Docker containers for various services.
 
-## 1. Copiare il file su un server via ssh (ubunut)
+## Features
 
- **Lanciare lo script di copia dell'installer**:
-   ```bash
-      sudo sh setup.sh
-   ```
-Seguire l'operazione di copia del file passo passo.
+- **Progress Bar and Spinner**: Provides visual feedback during the installation process.
+- **Command Execution with Spinner**: Executes commands with a spinner animation and handles errors gracefully.
+- **ASCII Art**: Displays ASCII art at the beginning of the script.
+- **Menu Options**: Presents a menu for selecting installation or update options.
+- **Configuration**: Prompts the user for configuration options such as ports and branches.
+- **Docker Installation**: Installs Docker if not already installed.
+- **Git Installation**: Installs Git if not already installed.
+- **Repository Cloning**: Clones necessary repositories from GitHub.
+- **Service Installation and Update**: Installs or updates various services using Docker Compose.
+- **Cleanup**: Provides options for cleaning up Docker containers, images, and volumes.
 
-## 1. Avviare l'installazione
+## Usage
 
-Connettersi al server via ssh al server e eseguire quanto sotto.
+Run the script with the desired options. The script supports various command-line arguments to skip certain steps or provide specific configurations.
 
- **Lanciare l'installer complessivo**:
-   ```bash
-      sudo sh installer.sh
-   ```
+```bash
+./installer.sh [options]
+```
 
-## 5. Verifica che l'interfaccia funzioni correttamente
-Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il configurator, di default la porta è la 8080.
-   ```
-   http://localhost:8080
-   ```
+### Command-Line Options
 
-## 5. Verifica che il server funzioni correttamente
-Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il server (HTTP), di default la porta è la 80.
-   ```
-   http://localhost:80
-   ```
-Se correttamente funzionante si dovrebbe vedere il testo '!!!!! HYPERNODE HOME PAGE DEBUG MODE !!!!!'
+- `-erase-db`: Erase the database.
+- `-skip-branch-ask`: Skip asking for branch names.
+- `-skip-clean`: Skip the cleaning procedure.
+- `-skip-docker-install`: Skip Docker installation.
+- `-skip-git-install`: Skip Git installation.
+- `-skip-clone`: Skip cloning repositories from GitHub.
+- `-help`: Display help information.
 
-## 5. Aggiungere un camera service aggiuntivo
-Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il server (HTTP), di default la porta è la 80.
- **Lanciare l'installer complessivo**:
-   ```bash
-      sudo sh installer.sh
-   ```
-E scegliere l'opzione corrispondente per la scelta di un camera service aggiuntivo.
-NB: se il gateway è installato in un computer remoto è necessario inserire il suo ip/url, altrimenti selezionare la voce "locale".
+## Functions
 
-## 5. Per vederlo su USee
+- `start_spinner`: Starts the spinner animation.
+- `stop_spinner`: Stops the spinner animation.
+- `update_progress`: Updates the progress bar.
+- `execute_with_spinner`: Executes a command with a spinner animation.
+- `show_ascii_art`: Displays ASCII art.
+- `show_progress`: Displays the progress bar.
+- `get_my_local_ip`: Retrieves the local IP address.
+- `end_with_message`: Ends the script with a success or failure message.
+- `drop_server_collection`: Drops the 'server' collection from the MongoDB database.
+- `additionalServiceInstall`: Installs or updates an additional service.
+- `dockerInstall`: Installs Docker.
+- `installGit`: Installs Git.
+- `cloningCode`: Clones repositories from GitHub.
+- `show_menu`: Displays the menu options.
+- `get_config`: Prompts the user for configuration options.
+- `cleanProcedure`: Cleans up the code directory.
+- `dockerNuke`: Stops and removes all Docker containers, images, networks, and volumes.
+- `checkIfHypernodeIsInstalled`: Checks if Hypernode is already installed.
+- `check_docker_installed`: Checks if Docker is installed.
 
-esegui "sudo nano /etc/hosts"
+## Example
 
-modifica il file aggiungendo sul tuo computer 
+```bash
+./installer.sh -skip-docker-install -skip-git-install
+```
 
-    #hypernode setup
+This example runs the script while skipping Docker and Git installation steps.
 
-    127.0.0.1 V12230451.lan.omniaweb.cloud
-    127.0.0.1 V12230451.my.omniaweb.cloud
+## Notes
 
-    #end hypernode setup
+- Ensure you have the necessary permissions to run Docker and install packages.
+- The script uses ANSI color codes for colored output.
+- The script requires an active internet connection to clone repositories from GitHub.
 
-Fine
+## License
+
+This script is provided "as is" without any warranty. Use it at your own risk.
 

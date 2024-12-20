@@ -121,4 +121,8 @@ Detects the system architecture and sets the appropriate MongoDB image.
 
 # How to run
 
-To run the script, just call it with sh (onMacos) or bash (on Linux) ` sudo bash (sh) installer.sh`.
+To run the script, just call it with sh (onMacos) or bash (on Linux)
+
+```bash
+./installer.sh -skip-docker-install -skip-git-install
+```
