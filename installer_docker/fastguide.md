@@ -1,57 +1,124 @@
 
-# Guida installare Hypernode su un computer vergine
+# Installer Script Documentation
 
-## 1. Copiare il file su un server via ssh (ubunut)
+This document provides an overview and usage instructions for the installer script located at `installer.sh`.
 
- **Lanciare lo script di copia dell'installer**:
-   ```bash
-      sudo sh setup.sh
-   ```
-Seguire l'operazione di copia del file passo passo.
+## Table of Contents
+- [Installer Script Documentation](#installer-script-documentation)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Global Variables](#global-variables)
+  - [Functions](#functions)
+    - [start\_spinner](#start_spinner)
+    - [stop\_spinner](#stop_spinner)
+    - [update\_progress](#update_progress)
+    - [execute\_with\_spinner](#execute_with_spinner)
+    - [show\_ascii\_art](#show_ascii_art)
+    - [show\_progress](#show_progress)
+    - [get\_my\_local\_ip](#get_my_local_ip)
+    - [end\_with\_message](#end_with_message)
+    - [drop\_server\_collection](#drop_server_collection)
+    - [additionalServiceInstall](#additionalserviceinstall)
+    - [dockerLogin](#dockerlogin)
+    - [dockerInstall](#dockerinstall)
+    - [show\_menu](#show_menu)
+    - [get\_config](#get_config)
+    - [cleanProcedure](#cleanprocedure)
+    - [dockerNuke](#dockernuke)
+    - [checkIfHypernodeIsInstalled](#checkifhypernodeisinstalled)
+    - [check\_docker\_installed](#check_docker_installed)
+    - [detectArchitecture](#detectarchitecture)
+  - [Installation Steps](#installation-steps)
+- [How to run](#how-to-run)
 
-## 1. Avviare l'installazione
+## Overview
 
-Connettersi al server via ssh al server e eseguire quanto sotto.
+This script automates the installation and management of various services for the uSee Service suite. It includes options for installing, updating, and cleaning up services, as well as managing Docker installations.
 
- **Lanciare l'installer complessivo**:
-   ```bash
-      sudo sh installer.sh
-   ```
+## Global Variables
 
-## 5. Verifica che l'interfaccia funzioni correttamente
-Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il configurator, di default la porta è la 8080.
-   ```
-   http://localhost:8080
-   ```
+- `TOTAL_STEPS`: Total number of steps for the progress bar.
+- `CURRENT_STEP`: Counter for the progress bar.
+- `SPINNER_ACTIVE`: Flag to control the spinner.
+- `SPINNER_PID`: Process ID of the spinner.
+- `SCRIPT_DIR`: Local path of the script.
+- `ABSOLUTE_PATH`: Absolute path of the script.
+- `SKIP_CLEAN`, `SKIP_DOCKER_INSTALL`, `ERASE_DB`: Flags for skipping certain steps.
+- `HYPERNODE_ALREADY_INSTALLED`, `DOCKER_ALREADY_INSTALLED`: Flags indicating the installation status.
+- `ARCH`: System architecture.
+- ANSI color codes for formatting output.
 
-## 5. Verifica che il server funzioni correttamente
-Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il server (HTTP), di default la porta è la 80.
-   ```
-   http://localhost:80
-   ```
-Se correttamente funzionante si dovrebbe vedere il testo '!!!!! HYPERNODE HOME PAGE DEBUG MODE !!!!!'
+## Functions
 
-## 5. Aggiungere un camera service aggiuntivo
-Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il server (HTTP), di default la porta è la 80.
- **Lanciare l'installer complessivo**:
-   ```bash
-      sudo sh installer.sh
-   ```
-E scegliere l'opzione corrispondente per la scelta di un camera service aggiuntivo.
-NB: se il gateway è installato in un computer remoto è necessario inserire il suo ip/url, altrimenti selezionare la voce "locale".
+### start_spinner
+Starts an animated spinner in the terminal.
 
-## 5. Per vederlo su USee
+### stop_spinner
+Stops the animated spinner.
 
-esegui "sudo nano /etc/hosts"
+### update_progress
+Updates the progress bar based on the current step.
 
-modifica il file aggiungendo sul tuo computer 
+### execute_with_spinner
+Executes a command with an animated spinner and displays a message.
 
-    #hypernode setup
+### show_ascii_art
+Displays ASCII art in the terminal.
 
-    127.0.0.1 V12230451.lan.omniaweb.cloud
-    127.0.0.1 V12230451.my.omniaweb.cloud
+### show_progress
+Displays a progress bar in the terminal.
 
-    #end hypernode setup
+### get_my_local_ip
+Retrieves the local IP address of the machine.
 
-Fine
+### end_with_message
+Displays a completion message and the local IP address.
 
+### drop_server_collection
+Drops the 'server' collection from the 'gateway-db' database in MongoDB.
+
+### additionalServiceInstall
+Installs or updates a specified service using Docker Compose.
+
+### dockerLogin
+Logs into Docker using a predefined token.
+
+### dockerInstall
+Installs Docker on the system.
+
+### show_menu
+Displays the installation or update menu based on the mode.
+
+### get_config
+Prompts the user for configuration options and sets environment variables.
+
+### cleanProcedure
+Cleans up the installation directory.
+
+### dockerNuke
+Stops and removes all Docker containers, images, networks, and volumes.
+
+### checkIfHypernodeIsInstalled
+Checks if the Hypernode suite is already installed.
+
+### check_docker_installed
+Checks if Docker is installed on the system.
+
+### detectArchitecture
+Detects the system architecture and sets the appropriate MongoDB image.
+
+## Installation Steps
+
+1. **Welcome Step**: Clears the terminal and displays ASCII art.
+2. **Check Docker Installation**: Checks if Docker is installed.
+3. **Check Hypernode Installation**: Checks if Hypernode is already installed.
+4. **Get Configuration**: Prompts the user for configuration options.
+5. **Detect Architecture**: Detects the system architecture.
+6. **Docker Installation**: Installs Docker if not already installed.
+7. **Docker Login**: Logs into Docker.
+8. **Service Installation/Update**: Installs or updates the selected service.
+9. **Clean Procedure**: Cleans up the installation directory if not skipped.
+
+# How to run
+
+To run the script, just call it with sh (onMacos) or bash (on Linux) ` sudo bash (sh) installer.sh`.
