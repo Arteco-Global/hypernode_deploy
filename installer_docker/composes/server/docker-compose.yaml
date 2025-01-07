@@ -5,7 +5,6 @@ services:
     image: rabbitmq:3.8.17-management
     ports:
       - "5672:5672"
-      - "15672:15672"
     networks:
       - hypernode-net
     environment:
@@ -93,8 +92,6 @@ services:
     container_name: configurator
     networks:
       - hypernode-net
-    ports:
-      - "${CONF_PORT:-8080}:8080"
     restart: unless-stopped
     
 volumes:

@@ -256,7 +256,7 @@ end_with_message() {
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
 
         if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
-            printf "\n You can now access the uSee Configurator at http://$myIp:$CONF_PORT\n"
+            printf "\n You can now access the uSee Configurator at http://$myIp:$SERVER_PORT\n"
         fi
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
@@ -353,10 +353,8 @@ installGit() {
 cloningCode() {
     printf "\nCloning repositories from GitHub..."
 
-    # local usr=mdalprato
-    # local psw=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
-    local usr=LucaArteco
-    local psw=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
+    local usr=mdalprato
+    local psw=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
 
     # Step 0: Verifica se la cartella esiste e, se necessario, la rimuove
     if [ -d "$ABSOLUTE_PATH/hypernode" ]; then
@@ -495,9 +493,6 @@ get_config() {
         read -p "HTTPS server port (default 443): " SSL_PORT
         SSL_PORT=${SSL_PORT:-443}
 
-        read -p "Configurator port (default 8080): " CONF_PORT
-        CONF_PORT=${CONF_PORT:-8080}
-
         if [ "$SKIP_BRANCH_ASK" != "true" ]; then
             read -p "| --> Server branch (default is 'main') " SERVER_BRANCH
             SERVER_BRANCH=${SERVER_BRANCH:-main}
@@ -513,7 +508,6 @@ get_config() {
         # Esporta le variabili per renderle accessibili ad altri script
         export SERVER_PORT
         export SSL_PORT
-        export CONF_PORT
         export RMQ
         export SERVER_BRANCH
         export CONFIGURATOR_BRANCH

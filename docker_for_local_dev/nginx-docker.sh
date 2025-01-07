@@ -8,4 +8,3 @@ docker rm -f nginxForLocalPurpose
 sudo docker build -t nginx-local-purpose -f nginx.debug.dockerfile .
 docker run -d --name nginxForLocalPurpose --network bridge -p 80:80 -p 443:443  nginx-local-purpose
 
-sudo docker build --progress=plain --no-cache -f ../../../../hypernode-server/docker/nginx.Dockerfile  .

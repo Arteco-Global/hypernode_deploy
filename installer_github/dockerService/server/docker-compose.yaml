@@ -5,7 +5,6 @@ services:
     image: rabbitmq:3.8.17-management
     ports:
       - "5672:5672"
-      - "15672:15672"
     networks:
       - hypernode-net
     environment:
@@ -28,7 +27,7 @@ services:
   gateway:
       build:
         context: ../../../../hypernode-server
-        dockerfile: ../hypernode-server/docker/gateway.Dockerfile  
+        dockerfile: docker/gateway.Dockerfile
         args:
           SERVICE_NAME: "gateway-service" 
       networks:
@@ -45,7 +44,7 @@ services:
   storage:
     build:
       context: ../../../../hypernode-server/
-      dockerfile: ../hypernode-server/docker/storage.Dockerfile  
+      dockerfile: docker/storage.Dockerfile  
       args:
         SERVICE_NAME: "storage-service" 
     networks:
@@ -59,7 +58,7 @@ services:
   event:
     build:
       context: ../../../../hypernode-server/
-      dockerfile: ../hypernode-server/docker/event.Dockerfile  
+      dockerfile: docker/event.Dockerfile  
       args:
         SERVICE_NAME: "event-service" 
     networks:
@@ -73,7 +72,7 @@ services:
   camera:
     build:
       context: ../../../../hypernode-server/
-      dockerfile: ../hypernode-server/docker/camera.Dockerfile  
+      dockerfile: docker/camera.Dockerfile  
       args:
         SERVICE_NAME: "camera-service"   
     networks:
@@ -88,7 +87,7 @@ services:
   auth:
     build:
       context: ../../../../hypernode-server/
-      dockerfile: ../hypernode-server/docker/auth.Dockerfile  
+      dockerfile: docker/auth.Dockerfile  
       args:
         SERVICE_NAME: "auth-service" 
     networks:
@@ -101,8 +100,8 @@ services:
 
   webserver:
     build:
-      context: ../../../../hypernode-server/docker/
-      dockerfile: nginx.Dockerfile 
+      context: ../../../../hypernode-server/docker/nginx
+      dockerfile: nginx.Dockerfile
     ports:
         - "${SERVER_PORT:-80}:80"
         - "${SSL_PORT:-443}:443"
@@ -114,14 +113,11 @@ services:
   configurator:
     build:
       context: ../../../../hypernode_server_gui
-      dockerfile: ../hypernode_server_gui/dockerfile  
+      dockerfile: configurator.Dockerfile
     container_name: configurator
     networks:
       - hypernode-net
-    ports:
-      - "${CONF_PORT:-8080}:8080"
     restart: unless-stopped
-
     
 volumes:
   rabbitmq_data:

@@ -8,6 +8,7 @@ This document provides an overview and usage instructions for the installer scri
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Global Variables](#global-variables)
+  - [5. Verifica che l'interfaccia funzioni correttamente](#5-verifica-che-linterfaccia-funzioni-correttamente)
   - [Functions](#functions)
     - [start\_spinner](#start_spinner)
     - [stop\_spinner](#stop_spinner)
@@ -37,6 +38,13 @@ This script automates the installation and management of various services for th
 
 ## Global Variables
 
+<<<<<<< HEAD
+## 5. Verifica che l'interfaccia funzioni correttamente
+Accedi ai servizi esposti tramite il browser utilizzando come porta quella indicata come porta per il configurator, di default la porta è la 80.
+   ```
+   http://localhost
+   ```
+=======
 - `TOTAL_STEPS`: Total number of steps for the progress bar.
 - `CURRENT_STEP`: Counter for the progress bar.
 - `SPINNER_ACTIVE`: Flag to control the spinner.
@@ -47,6 +55,7 @@ This script automates the installation and management of various services for th
 - `HYPERNODE_ALREADY_INSTALLED`, `DOCKER_ALREADY_INSTALLED`: Flags indicating the installation status.
 - `ARCH`: System architecture.
 - ANSI color codes for formatting output.
+>>>>>>> main
 
 ## Functions
 
