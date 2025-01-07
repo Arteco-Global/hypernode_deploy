@@ -353,10 +353,8 @@ installGit() {
 cloningCode() {
     printf "\nCloning repositories from GitHub..."
 
-    # local usr=mdalprato
-    # local psw=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
-    local usr=LucaArteco
-    local psw=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
+    local usr=mdalprato
+    local psw=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
 
     # Step 0: Verifica se la cartella esiste e, se necessario, la rimuove
     if [ -d "$ABSOLUTE_PATH/hypernode" ]; then
