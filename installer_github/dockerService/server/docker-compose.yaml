@@ -100,8 +100,8 @@ services:
 
   webserver:
     build:
-      context: ../../../../hypernode-server/
-      dockerfile: docker/nginx.Dockerfile
+      context: ../../../../hypernode-server/docker/nginx
+      dockerfile: nginx.Dockerfile
     ports:
         - "${SERVER_PORT:-80}:80"
         - "${SSL_PORT:-443}:443"
