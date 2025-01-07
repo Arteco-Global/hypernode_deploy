@@ -1,7 +1,7 @@
 name: uSee_Service_Suite
 
 services:
-  messageBroker:
+  messagebroker:
     image: rabbitmq:3.8.17-management
     ports:
       - "5672:5672"
@@ -12,7 +12,7 @@ services:
       RABBITMQ_DEFAULT_PASS: hypernode
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-    container_name: messageBroker
+    container_name: messagebroker
     restart: unless-stopped
     
   database:
@@ -31,7 +31,7 @@ services:
       environment:
         - GATEWAY_API_PORT=5001
         - GATEWAY_WS_PORT=8000
-        - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
+        - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
         - DATABASE_URI=mongodb://database:27017/gateway-db
       container_name: gateway
       restart: unless-stopped
@@ -41,7 +41,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
       - DATABASE_URI=mongodb://database:27017/storage-db
     container_name: storage
     restart: unless-stopped
@@ -51,7 +51,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
       - DATABASE_URI=mongodb://database:27017/event-db
     container_name: event
     restart: unless-stopped
@@ -61,7 +61,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
       - GATEWAY_REMOTE_IP=${GRI:-gateway:8000}
       - DATABASE_URI=mongodb://database:27017/camera-db
     container_name: camera
@@ -72,7 +72,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messageBroker:5672}
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
       - DATABASE_URI=mongodb://database:27017/auth-db
     container_name: auth
     restart: unless-stopped
