@@ -1,14 +1,20 @@
 import pika
+import ssl
 
 # Stringa di connessione AMQP
-# url = "amqp://hypernode:hypernode@127.0.0.1:5672
-url = "amqps://hypernode:hypernode@127.0.0.1:443"
+url = "amqps://hypernode:hypernode@V12230451.my.omniaweb.cloud:443"
 
+# Configura le opzioni SSL per disabilitare la verifica del certificato
+context = ssl.create_default_context()
+context.check_hostname = False
+context.verify_mode = ssl.CERT_NONE
 
-# Connessione con URLParameters
-connection = pika.BlockingConnection(pika.URLParameters(url))
+# Connessione con URLParameters e opzioni SSL
+parameters = pika.URLParameters(url)
+parameters.ssl_options = pika.SSLOptions(context)
+
+connection = pika.BlockingConnection(parameters)
 channel = connection.channel()
-
 
 queue = 'testQueue'
 
