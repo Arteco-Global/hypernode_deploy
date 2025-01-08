@@ -5,6 +5,8 @@ import ssl
 url = "amqps://hypernode:hypernode@V12230451.my.omniaweb.cloud:443"
 
 # Configura le opzioni SSL per disabilitare la verifica del certificato
+# IL CERTIFICATO NON PUo essere validato dentro rabbitmq
+
 context = ssl.create_default_context()
 context.check_hostname = False
 context.verify_mode = ssl.CERT_NONE
