@@ -4,8 +4,8 @@ services:
 
   messagebroker:
       build:
-        context: ../../../../hypernode-server/docker/messagebroker
-        dockerfile: messageBroker.Dockerfile
+        context: ../../../../hypernode-server/
+        dockerfile: docker/messagebroker/messageBroker.Dockerfile
       networks:
         - hypernode-net
       environment:
@@ -16,18 +16,6 @@ services:
       container_name: messagebroker
       restart: unless-stopped
 
-  # messagebroker:
-  #   image: rabbitmq:3.8.17-management
-  #   networks:
-  #     - hypernode-net
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: hypernode
-  #     RABBITMQ_DEFAULT_PASS: hypernode
-  #   volumes:
-  #     - rabbitmq_data:/var/lib/rabbitmq
-  #   container_name: messagebroker
-  #   restart: unless-stopped
-    
   database:
     image: mongo:4.4
     networks:
@@ -39,7 +27,7 @@ services:
 
   gateway:
       build:
-        context: ../../../../hypernode-server
+        context: ../../../../hypernode-server/
         dockerfile: docker/gateway.Dockerfile
         args:
           SERVICE_NAME: "gateway-service" 
@@ -113,8 +101,8 @@ services:
 
   webserver:
     build:
-      context: ../../../../hypernode-server/docker/webserver
-      dockerfile: nginx.Dockerfile
+      context: ../../../../hypernode-server/
+      dockerfile: docker/webserver/nginx.Dockerfile
     container_name: webserver
     networks:
        - hypernode-net
@@ -131,8 +119,8 @@ services:
     
   portbroker:
     build:
-      context: /Users/marcodalprato/GitHub/hypernode-server/docker/portbroker
-      dockerfile: portBroker.Dockerfile
+      context: ../../../../hypernode-server
+      dockerfile: docker/portbroker/portBroker.Dockerfile
     container_name: portbroker
     ports:
        - "${SSL_PORT:-443}:443"
