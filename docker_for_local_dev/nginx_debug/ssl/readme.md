@@ -1,1 +1,0 @@
-The .pem file should be manually downloaded from arteco website
