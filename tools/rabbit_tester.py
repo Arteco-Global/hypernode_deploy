@@ -2,7 +2,7 @@ import pika
 
 # Stringa di connessione AMQP
 # url = "amqp://hypernode:hypernode@127.0.0.1:5672
-url = "amqp://hypernode:hypernode@192.168.10.67:80"
+url = "amqps://hypernode:hypernode@127.0.0.1:443"
 
 
 # Connessione con URLParameters

@@ -239,7 +239,7 @@ end_with_message() {
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
 
         if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
-            printf "\n You can now access the uSee Configurator at http://$myIp:$CONF_PORT\n"
+            printf "\n You can now access the uSee Configurator at http://$myIp:$SSL_PORT\n"
         fi
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
@@ -414,23 +414,16 @@ get_config() {
      # Esecuzione dell'azione in base alla option
     case $INSTALL_OPTION in
     1 | 6)
-        read -p "HTTP server port (default 80): " SERVER_PORT
-        SERVER_PORT=${SERVER_PORT:-80}
+     
 
-        read -p "HTTPS server port (default 443): " SSL_PORT
+        read -p "Server port (default 443): " SSL_PORT
         SSL_PORT=${SSL_PORT:-443}
 
-        read -p "Configurator port (default 8080): " CONF_PORT
-        CONF_PORT=${CONF_PORT:-8080}
-
-
-        RMQ=amqp://hypernode:hypernode@messageBroker:5672
+        RMQ=amqp://hypernode:hypernode@messagebroker:5672
 
 
         # Esporta le variabili per renderle accessibili ad altri script
-        export SERVER_PORT
         export SSL_PORT
-        export CONF_PORT
         export RMQ
        
 

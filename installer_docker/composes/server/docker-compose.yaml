@@ -3,8 +3,6 @@ name: uSee_Service_Suite
 services:
   messagebroker:
     image: rabbitmq:3.8.17-management
-    ports:
-      - "5672:5672"
     networks:
       - hypernode-net
     environment:
@@ -79,9 +77,6 @@ services:
 
   webserver:
     image: artecoglobalcompany/usee_web_server:latest
-    ports:
-        - "${SERVER_PORT:-80}:80"
-        - "${SSL_PORT:-443}:443"
     container_name: webserver
     networks:
        - hypernode-net
@@ -93,7 +88,18 @@ services:
     networks:
       - hypernode-net
     restart: unless-stopped
-    
+
+  portbroker:
+    image: artecoglobalcompany/usee_port_broker:latest
+    container_name: portbroker
+    ports:
+       # - "${HTTP_PORT:-80}:80"
+        - "${SSL_PORT:-443}:443"
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+
+
 volumes:
   rabbitmq_data:
   mongodb_data:
