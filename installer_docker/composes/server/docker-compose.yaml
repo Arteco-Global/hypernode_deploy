@@ -1,8 +1,10 @@
 name: uSee_Service_Suite
 
 services:
+
+
   messagebroker:
-    image: rabbitmq:3.8.17-management
+    image: artecoglobalcompany/usee_message_broker:latest
     networks:
       - hypernode-net
     environment:
@@ -93,7 +95,6 @@ services:
     image: artecoglobalcompany/usee_port_broker:latest
     container_name: portbroker
     ports:
-       # - "${HTTP_PORT:-80}:80"
         - "${SSL_PORT:-443}:443"
     networks:
       - hypernode-net
