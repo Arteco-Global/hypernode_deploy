@@ -2,7 +2,7 @@ import pika
 import ssl
 
 # Stringa di connessione AMQP
-url = "amqps://hypernode:hypernode@V12230451.my.omniaweb.cloud:443"
+url = "amqps://hypernode:hypernode@V12230451.lan.omniaweb.cloud:443"
 
 # Configura le opzioni SSL per disabilitare la verifica del certificato
 # IL CERTIFICATO NON PUo essere validato dentro rabbitmq
