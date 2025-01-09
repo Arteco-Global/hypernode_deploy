@@ -458,7 +458,6 @@ get_config() {
 
         read -p "Type the service name to update: " PROCESS_NAME
 
-      
         read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
         read -p "Insert uSee Gateway port (default 443): " remote_host_port
 
