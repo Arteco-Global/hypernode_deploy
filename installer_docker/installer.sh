@@ -239,7 +239,7 @@ end_with_message() {
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
 
         if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
-            printf "\n You can now access the uSee Configurator at http://$myIp:$CONF_PORT\n"
+            printf "\n You can now access the uSee Configurator at http://$myIp:$SSL_PORT\n"
         fi
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
@@ -414,23 +414,16 @@ get_config() {
      # Esecuzione dell'azione in base alla option
     case $INSTALL_OPTION in
     1 | 6)
-        read -p "HTTP server port (default 80): " SERVER_PORT
-        SERVER_PORT=${SERVER_PORT:-80}
+     
 
-        read -p "HTTPS server port (default 443): " SSL_PORT
+        read -p "Server port (default 443): " SSL_PORT
         SSL_PORT=${SSL_PORT:-443}
 
-        read -p "Configurator port (default 8080): " CONF_PORT
-        CONF_PORT=${CONF_PORT:-8080}
-
-
-        RMQ=amqp://hypernode:hypernode@messageBroker:5672
+        RMQ=amqp://hypernode:hypernode@messagebroker:5672
 
 
         # Esporta le variabili per renderle accessibili ad altri script
-        export SERVER_PORT
         export SSL_PORT
-        export CONF_PORT
         export RMQ
        
 
@@ -439,33 +432,25 @@ get_config() {
        
         read -p "Choose a unique name (in case of update, type the current service name): " PROCESS_NAME
 
-        read -p "is uSee Gateway on the same machine(l) or on a (r)remote machine? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
+        read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
+        read -p "Insert uSee Gateway port (default 443): " remote_host_port
 
-        # Imposta la variabile RABBITMQ_HOST in base alla scelta
-        if [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
-            RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
-            printf "\nGateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
-        elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
-            read -p "Insert uSee Gateway ip/url: " remote_host
-            read -p "Insert uSee Gateway broker port (default 5672): " remote_port
-            read -p "Insert uSee Gateway http port (default 80): " gateway_remote_port
+        REMOTE_GATEWAY_URL="$remote_host"
+        REMOTE_GATEWAY_PORT=${remote_host_port:-443}
 
-            RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
-            RABBITMQ_HOST_FOR_ADDITIONAL_PORT=${remote_port:-5672}
-            GATEWAY_REMOTE_PORT=${gateway_remote_port:-80}
-
-            printf "\nGateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
-
-        else
-            printf "\nOption unavailable."
-            exit 1
-        fi
+        printf "\nGateway set as $REMOTE_GATEWAY_URL"
      
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:$RABBITMQ_HOST_FOR_ADDITIONAL_PORT"
-        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL:$GATEWAY_REMOTE_PORT"
+        export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
+        export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
+
+        #       // "env": {
+        #       //   "RABBITMQ_URI": "amqps://hypernode:hypernode@V12230451.my.omniaweb.cloud:443",
+        #       //   "GATEWAY_REMOTE_IP": "wss://V12230451.my.omniaweb.cloud:443",
+        #       // }
+
 
         ;;
 
@@ -473,32 +458,24 @@ get_config() {
 
         read -p "Type the service name to update: " PROCESS_NAME
 
-        read -p "is uSee Gateway on the same machine(l) or on a (r)remote machine? [l/r]: " IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE
+        read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
+        read -p "Insert uSee Gateway port (default 443): " remote_host_port
 
-        # Imposta la variabile RABBITMQ_HOST in base alla scelta
-        if [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "l" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "L" ]; then
-            RABBITMQ_HOST_FOR_ADDITIONAL="172.17.0.1"
-            printf "\nGateway set as local. Host: $RABBITMQ_HOST_FOR_ADDITIONAL"
-        elif [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "r" ] || [ "$IS_ADDITIONAL_SERVICE_RMQ_LOCAL_OR_REMOTE" == "R" ]; then
-            read -p "Insert uSee Gateway ip/url: " remote_host
-            read -p "Insert uSee Gateway broker port (default 5672): " remote_port
-            read -p "Insert uSee Gateway http port (default 80): " gateway_remote_port
+        REMOTE_GATEWAY_URL="$remote_host"
+        REMOTE_GATEWAY_PORT=${remote_host_port:-443}
 
-            RABBITMQ_HOST_FOR_ADDITIONAL="$remote_host"
-            RABBITMQ_HOST_FOR_ADDITIONAL_PORT=${remote_port:-5672}
-            GATEWAY_REMOTE_PORT=${gateway_remote_port:-80}
-
-            printf "\nGateway set as remote $RABBITMQ_HOST_FOR_ADDITIONAL"
-        else
-            printf "\nOption unavailable."
-            exit 1
-        fi
-
+        printf "\nGateway set as $REMOTE_GATEWAY_URL"
+     
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqp://hypernode:hypernode@$RABBITMQ_HOST_FOR_ADDITIONAL:$RABBITMQ_HOST_FOR_ADDITIONAL_PORT"
-        export GRI="$RABBITMQ_HOST_FOR_ADDITIONAL:$GATEWAY_REMOTE_PORT"
+        export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
+        export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
+
+        #       // "env": {
+        #       //   "RABBITMQ_URI": "amqps://hypernode:hypernode@V12230451.my.omniaweb.cloud:443",
+        #       //   "GATEWAY_REMOTE_IP": "wss://V12230451.my.omniaweb.cloud:443",
+        #       // }
 
         ;;  
         
