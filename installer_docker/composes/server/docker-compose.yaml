@@ -1,7 +1,4 @@
-name: uSee_Service_Suite
-
 services:
-
 
   messagebroker:
     image: artecoglobalcompany/usee_message_broker:latest
@@ -33,9 +30,13 @@ services:
         - GATEWAY_WS_PORT=8000
         - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
         - DATABASE_URI=mongodb://database:27017/gateway-db
+        - SSO_PROVIDER=https://staging.arteco-global.com/en/wp-json/cert-provider/renew
+        - CERT_PATH=/ssl/my.omniaweb.cloud.pem
       container_name: gateway
       restart: unless-stopped
-
+      volumes:
+        - shared_ssl_certificate_volume:/ssl
+        
   storage:
     image: artecoglobalcompany/usee_media_recorder:latest
     networks:
@@ -99,12 +100,14 @@ services:
     networks:
       - hypernode-net
     restart: unless-stopped
-
+    volumes:
+      - shared_ssl_certificate_volume:/ssl
 
 volumes:
   rabbitmq_data:
   mongodb_data:
-   
+  shared_ssl_certificate_volume:
+
 networks:
   hypernode-net:
       driver: bridge
