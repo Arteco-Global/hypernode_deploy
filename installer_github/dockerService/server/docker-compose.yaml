@@ -83,9 +83,9 @@ services:
       args:
         SERVICE_NAME: "camera-service"   
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@host.docker.internal:5672}
-      - GATEWAY_REMOTE_IP=ws://host.docker.internal:8001
-      - DATABASE_URI=mongodb://host.docker.internal:27017/camera-db
+      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
+      - GATEWAY_REMOTE_IP=ws://127.0.0.1:8001
+      - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
     container_name: camera
     restart: unless-stopped
     network_mode: "host"
