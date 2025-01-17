@@ -13,6 +13,8 @@ services:
         RABBITMQ_DEFAULT_PASS: hypernode
       volumes:
         - rabbitmq_data:/var/lib/rabbitmq
+      ports:
+       - "5672:5672"
       container_name: messagebroker
       restart: unless-stopped
 
@@ -22,6 +24,8 @@ services:
       - hypernode-net
     volumes:
       - mongodb_data:/data/db
+    ports:
+       - "27017:27017"
     container_name: database
     restart: unless-stopped
 
@@ -33,7 +37,9 @@ services:
           SERVICE_NAME: "gateway-service" 
       networks:
         - hypernode-net
-
+      ports:
+       - "8000:8000"
+       - "8001:8001"
       environment:
         - GATEWAY_API_PORT=5001
         - GATEWAY_WS_PORT=8000
@@ -76,14 +82,13 @@ services:
       dockerfile: docker/camera.Dockerfile  
       args:
         SERVICE_NAME: "camera-service"   
-    networks:
-       - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
-      - GATEWAY_REMOTE_IP=${GRI:-gateway:8000}
-      - DATABASE_URI=mongodb://database:27017/camera-db
+      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
+      - GATEWAY_REMOTE_IP=ws://127.0.0.1:8001
+      - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
     container_name: camera
     restart: unless-stopped
+    network_mode: "host"
 
   auth:
     build:

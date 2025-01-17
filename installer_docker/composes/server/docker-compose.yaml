@@ -12,6 +12,8 @@ services:
       RABBITMQ_DEFAULT_PASS: hypernode
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+       - "5672:5672"
     container_name: messagebroker
     restart: unless-stopped
     
@@ -28,6 +30,9 @@ services:
       image: artecoglobalcompany/usee_suite_manager:latest
       networks:
         - hypernode-net
+      ports:
+       - "8000:8000"
+       - "8001:8001"
       environment:
         - GATEWAY_API_PORT=5001
         - GATEWAY_WS_PORT=8000
@@ -58,15 +63,14 @@ services:
 
   camera:
     image: artecoglobalcompany/usee_live_streamer:latest
-    networks:
-       - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
-      - GATEWAY_REMOTE_IP=${GRI:-gateway:8000}
-      - DATABASE_URI=mongodb://database:27017/camera-db
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@127.0.0.1:5672}
+      - GATEWAY_REMOTE_IP=${GRI:-ws://127.0.0.1:8001}
+      - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
     container_name: camera
     restart: unless-stopped
-
+    network_mode: "host"
+    
   auth:
     image: artecoglobalcompany/usee_id_verifier:latest
     networks:
