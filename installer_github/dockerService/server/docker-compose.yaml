@@ -37,7 +37,6 @@ services:
         - GATEWAY_WS_PORT=8000
         - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
         - DATABASE_URI=mongodb://database:27017/gateway-db
-        - SSO_PROVIDER=https://staging.arteco-global.com/en/wp-json/cert-provider/renew
         - CERT_PATH=/ssl/my.omniaweb.cloud.pem
         - EXTERNAL_PORT=${SSL_PORT:-443}
       container_name: gateway
