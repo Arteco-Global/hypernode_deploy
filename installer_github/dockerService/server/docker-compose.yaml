@@ -31,7 +31,9 @@ services:
           SERVICE_NAME: "gateway-service" 
       networks:
         - hypernode-net
-
+      ports:
+        - "8000:8000"
+        - "8001:8001"
       environment:
         - GATEWAY_API_PORT=5001
         - GATEWAY_WS_PORT=8000
@@ -82,7 +84,7 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
-      - GATEWAY_REMOTE_IP=${GRI:-gateway:8000}
+      - GATEWAY_REMOTE_IP=${GRI:-ws://gateway:8001}
       - DATABASE_URI=mongodb://database:27017/camera-db
     container_name: camera
     restart: unless-stopped
