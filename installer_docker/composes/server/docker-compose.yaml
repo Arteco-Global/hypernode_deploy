@@ -1,7 +1,4 @@
-name: uSee_Service_Suite
-
 services:
-
 
   messagebroker:
     image: artecoglobalcompany/usee_message_broker:latest
@@ -28,14 +25,21 @@ services:
       image: artecoglobalcompany/usee_suite_manager:latest
       networks:
         - hypernode-net
+      # ports:
+      #   - "8000:8000"
+      #   - "8001:8001"
       environment:
         - GATEWAY_API_PORT=5001
         - GATEWAY_WS_PORT=8000
         - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
         - DATABASE_URI=mongodb://database:27017/gateway-db
+        - CERT_PATH=/ssl/my.omniaweb.cloud.pem
+        - EXTERNAL_PORT=${SSL_PORT:-443}
       container_name: gateway
       restart: unless-stopped
-
+      volumes:
+        - security_shared_files:/ssl
+        
   storage:
     image: artecoglobalcompany/usee_media_recorder:latest
     networks:
@@ -62,7 +66,7 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
-      - GATEWAY_REMOTE_IP=${GRI:-gateway:8000}
+      - GATEWAY_REMOTE_IP=${GRI:-ws://gateway:8001}
       - DATABASE_URI=mongodb://database:27017/camera-db
     container_name: camera
     restart: unless-stopped
@@ -99,12 +103,14 @@ services:
     networks:
       - hypernode-net
     restart: unless-stopped
-
+    volumes:
+      - security_shared_files:/ssl
 
 volumes:
   rabbitmq_data:
   mongodb_data:
-   
+  security_shared_files:
+
 networks:
   hypernode-net:
       driver: bridge
