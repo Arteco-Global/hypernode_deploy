@@ -1,0 +1,143 @@
+name: hypernode-server
+
+services:
+
+  messagebroker:
+      build:
+        context: ../../../../hypernode-server/
+        dockerfile: docker/messagebroker/messageBroker.Dockerfile
+      networks:
+        - hypernode-net
+      environment:
+        RABBITMQ_DEFAULT_USER: hypernode
+        RABBITMQ_DEFAULT_PASS: hypernode
+      volumes:
+        - rabbitmq_data:/var/lib/rabbitmq
+      ports:
+       - "5672:5672"
+      container_name: messagebroker
+      restart: unless-stopped
+
+  database:
+    image: mongo:4.4
+    networks:
+      - hypernode-net
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+       - "27017:27017"
+    container_name: database
+    restart: unless-stopped
+
+  gateway:
+      build:
+        context: ../../../../hypernode-server/
+        dockerfile: docker/gateway.Dockerfile
+        args:
+          SERVICE_NAME: "gateway-service" 
+      networks:
+        - hypernode-net
+      ports:
+       - "8000:8000"
+       - "8001:8001"
+      environment:
+        - GATEWAY_API_PORT=5001
+        - GATEWAY_WS_PORT=8000
+        - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+        - DATABASE_URI=mongodb://database:27017/gateway-db
+      container_name: gateway
+      restart: unless-stopped
+
+  storage:
+    build:
+      context: ../../../../hypernode-server/
+      dockerfile: docker/storage.Dockerfile  
+      args:
+        SERVICE_NAME: "storage-service" 
+    networks:
+       - hypernode-net
+    environment:
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - DATABASE_URI=mongodb://database:27017/storage-db
+    container_name: storage
+    restart: unless-stopped
+
+  event:
+    build:
+      context: ../../../../hypernode-server/
+      dockerfile: docker/event.Dockerfile  
+      args:
+        SERVICE_NAME: "event-service" 
+    networks:
+       - hypernode-net
+    environment:
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - DATABASE_URI=mongodb://database:27017/event-db
+    container_name: event
+    restart: unless-stopped
+
+  camera:
+    build:
+      context: ../../../../hypernode-server/
+      dockerfile: docker/camera.Dockerfile  
+      args:
+        SERVICE_NAME: "camera-service"   
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
+      - GATEWAY_REMOTE_IP=ws://127.0.0.1:8001
+      - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
+    container_name: camera
+    restart: unless-stopped
+    network_mode: "host"
+
+  auth:
+    build:
+      context: ../../../../hypernode-server/
+      dockerfile: docker/auth.Dockerfile  
+      args:
+        SERVICE_NAME: "auth-service" 
+    networks:
+       - hypernode-net
+    environment:
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - DATABASE_URI=mongodb://database:27017/auth-db
+    container_name: auth
+    restart: unless-stopped
+
+  webserver:
+    build:
+      context: ../../../../hypernode-server/
+      dockerfile: docker/webserver/nginx.Dockerfile
+    container_name: webserver
+    networks:
+       - hypernode-net
+    restart: unless-stopped
+
+  configurator:
+    build:
+      context: ../../../../hypernode_server_gui
+      dockerfile: configurator.Dockerfile
+    container_name: configurator
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    
+  portbroker:
+    build:
+      context: ../../../../hypernode-server
+      dockerfile: docker/portbroker/portBroker.Dockerfile
+    container_name: portbroker
+    ports:
+       - "${SSL_PORT:-443}:443"
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
+  mongodb_data:
+   
+networks:
+  hypernode-net:
+      driver: bridge
+
