@@ -3,7 +3,7 @@ name: ${PROCESS_NAME}
 services:
   
   database:
-    image: ${MONGO_IMAGE:-mongo:4.4}
+    image: artecoglobalcompany/usee_database:${DOCKER_TAG:-latest}
     # ports:
     #   - 27050:27017
     networks:
@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
 
   event:
-    image: artecoglobalcompany/usee_event_manager:latest
+    image: artecoglobalcompany/usee_event_manager:${DOCKER_TAG:-latest}
     networks:
        - hypernode-net
     environment:

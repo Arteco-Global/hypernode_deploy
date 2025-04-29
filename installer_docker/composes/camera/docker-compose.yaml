@@ -3,34 +3,25 @@ name: ${PROCESS_NAME}
 services:
   
   database:
-    image: ${MONGO_IMAGE:-mongo:4.4}
-    # ports:
-    #   - 27050:27017
-    networks:
-      - hypernode-net
+    image: artecoglobalcompany/usee_database:${DOCKER_TAG:-latest}
+    ports:
+      - 27017:27017
     volumes:
       - mongodb_data:/data/db
     container_name: ${DB_NAME}
     restart: unless-stopped
 
   camera:
-    image: artecoglobalcompany/usee_live_streamer:latest
-    networks:
-      - hypernode-net
+    image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
     environment:
-      - RABBITMQ_URI=${RMQ}
-      - DATABASE_URI=${DATABASE_URI}
-      - GATEWAY_REMOTE_IP=${GRI}
-      - GATEWAY_WS_PORT=8000
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@127.0.0.1:5672}
+      - GATEWAY_REMOTE_IP=${GRI:-ws://127.0.0.1:8001}
+      - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
       - SRV_INST_NAME=${PROCESS_NAME}
     container_name: ${PROCESS_NAME}
     restart: unless-stopped    
-    
+    network_mode: "host"
+
 volumes:
   mongodb_data:
       name: ${PROCESS_NAME}  # Nome unico per il volume
-
-networks:
-  hypernode-net:
-      driver: bridge
-

@@ -1,10 +1,6 @@
 #!/bin/bash
 
 # Global vars
-TOTAL_STEPS=13 #Steps for progressbar
-CURRENT_STEP=0 #Counter for progressbar
-SPINNER_ACTIVE=true
-SPINNER_PID=""
 SCRIPT_DIR=$(dirname "$0") #local path
 ABSOLUTE_PATH=$(realpath "$SCRIPT_DIR") #absolute path
 
@@ -14,9 +10,9 @@ ERASE_DB="false"
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
-
+RUNNING_AS_SUDO="false"
+COMPOSE_CMD="docker compose"
 ARCH=$(uname -m)
-
 
 # Codici colore ANSI
 RED='\033[0;31m'
@@ -27,113 +23,62 @@ WHITE='\033[1;37m'
 BLUE='\033[0;34m'
 NC='\033[0m' # Reset colore
 
-# Funzione per lo spinner animato
-start_spinner() {
-    local SPINNER=("|" "/" "-" "\\")
-    (
-        while $SPINNER_ACTIVE; do
-            for c in "${SPINNER[@]}"; do
-                printf "\r["
-                for ((i = 0; i < CURRENT_COMPLETED; i++)); do
-                    printf "#"
-                done
-                printf "$c"
-                for ((i = 0; i < CURRENT_REMAINING; i++)); do
-                    printf "-"
-                done
-                printf "] %d%%" "$CURRENT_PERCENTAGE"
-                sleep 0.1
-            done
-        done
-    ) &
-    SPINNER_PID=$!
-}
+# Default values for input parameters
+SSL_PORT=443
+DOCKER_TAG="release_candidate"
 
-# Ferma lo spinner
-stop_spinner() {
-    if [ -n "$SPINNER_PID" ]; then
-        SPINNER_ACTIVE=false
-        kill "$SPINNER_PID" >/dev/null 2>&1
-        wait "$SPINNER_PID" 2>/dev/null
-        printf "\r\033[K" # Cancella la linea
-        SPINNER_PID=""
-    fi
-}
 
-# Aggiorna la barra di avanzamento
-update_progress() {
-    local -r BAR_WIDTH=50
-    CURRENT_PERCENTAGE=$((CURRENT_STEP * 100 / TOTAL_STEPS))
-    CURRENT_COMPLETED=$((CURRENT_STEP * (BAR_WIDTH - 1) / TOTAL_STEPS))
-    CURRENT_REMAINING=$((BAR_WIDTH - 1 - CURRENT_COMPLETED))
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-}
 
 # Funzione per eseguire operazioni con lo spinner
-execute_with_spinner() {
+execute_command() {
     local COMMAND=$1
     local MESSAGE=$2
-    local ERROR_LOG="/tmp/command_error.log"
 
     # Stampa il comando per debug
     # echo "Executing command: $COMMAND"
 
-    # Inizializza lo spinner
-    SPINNER_ACTIVE=true
-    (
-        local SPINNER=("|" "/" "-" "\\")
-        while $SPINNER_ACTIVE; do
-            for c in "${SPINNER[@]}"; do
-                printf "\r%s %s %s" "$c" "$MESSAGE" # Spinner + Messaggio
-                sleep 0.1
-            done
-        done
-    ) &
-    local SPINNER_PID=$!
-
     # Esegui il comando e cattura il risultato
-    eval "$COMMAND" >/dev/null 2>"$ERROR_LOG"
+    eval "$COMMAND" 
     local COMMAND_STATUS=$?
 
-    # Ferma lo spinner
-    SPINNER_ACTIVE=false
-    kill "$SPINNER_PID" >/dev/null 2>&1
-    wait "$SPINNER_PID" 2>/dev/null
-
+   
     # Stampa il risultato
     if [ $COMMAND_STATUS -eq 0 ]; then
         printf "\r✅ %s - Done.\n" "$MESSAGE"
     else
         printf "\r❌ %s - Failed.\n" "$MESSAGE"
-        printf "\nError log:\n"
-        cat "$ERROR_LOG"
         exit 1
     fi
-
-    # Rimuovi il file temporaneo
-    rm -f "$ERROR_LOG"
 }
-
-
 
 printf "\nInstaller version v1.0.0\n"
 
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        -erase-db) 
+        -p|--port)
+            SSL_PORT="$2"
+            shift 2
+            ;;
+        -tag|--tag)
+            DOCKER_TAG="$2"
+            shift 2
+            ;;
+        -eb|-erase-db) 
             echo "got -erase-db parameter!"
             ERASE_DB="true"
             ;;
-        -skip-clean) 
+        -sc|-skip-clean) 
             echo "got -skip-clean parameter!"
             SKIP_CLEAN="true"
             ;;
-        -skip-docker-install) 
+        -sdi|-skip-docker-install) 
             echo "got skip-docker-install!"
             SKIP_DOCKER_INSTALL="true"
             ;;
-        -help) 
+        -h|--help) 
+            echo "-port: setting the port for the server (default: 443)"
+            echo "-tag: setting the docker tag (default: release_candidate)"
             echo "-skip-clean: skip cleaning procedure"
             echo "-skip-docker-install: skip docker installation"
             exit
@@ -144,6 +89,13 @@ while [[ "$#" -gt 0 ]]; do
     esac
     shift
 done
+
+printf "\nSSL_PORT set to: $SSL_PORT\n"
+printf "DOCKER_TAG set to: $DOCKER_TAG\n"
+
+# Export the variables
+export SSL_PORT
+export DOCKER_TAG
 
 # Funzione per mostrare l'arte ASCII
 show_ascii_art() {
@@ -185,35 +137,7 @@ show_ascii_art() {
 EOF
 }
 
-show_progress() {
-    local -r TOTAL_STEPS=$1
-    local -r CURRENT_STEP=$2
-    local -r BAR_WIDTH=50    
 
-    # Assicurati che CURRENT_STEP non superi TOTAL_STEPS
-    local STEPS_TO_SHOW=$((CURRENT_STEP > TOTAL_STEPS ? TOTAL_STEPS : CURRENT_STEP))
-
-    local COMPLETED=$((STEPS_TO_SHOW * (BAR_WIDTH - 1) / TOTAL_STEPS)) # -1 per lasciare spazio allo spinner
-    local REMAINING=$((BAR_WIDTH - 1 - COMPLETED))
-
-    # Stampa la barra di progresso
-    printf "\r["
-    for ((i=0; i<COMPLETED; i++)); do
-        printf "#"
-    done
-
-    for ((i=0; i<REMAINING; i++)); do
-        printf "-"
-    done
-
-    # Percentuale
-    printf "] %d%%" $((STEPS_TO_SHOW * 100 / TOTAL_STEPS))
-
-    # Se il processo è completo, vai a capo
-    if [ "$STEPS_TO_SHOW" -ge "$TOTAL_STEPS" ]; then
-        printf "\n"
-    fi
-}
 
 get_my_local_ip() {
     local ip=$(hostname -I 2>/dev/null | awk '{print $1}')
@@ -229,9 +153,6 @@ end_with_message() {
     local success=$2
     local myIp=$(get_my_local_ip)
 
-    # Porta la progress bar al 100%
-    show_progress "$TOTAL_STEPS" "$TOTAL_STEPS"
-
     # Cancella eventuali barre di progresso extra
     printf "\r\033[K"
 
@@ -239,7 +160,7 @@ end_with_message() {
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
 
         if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
-            printf "\n You can now access the uSee Configurator at http://$myIp:$SSL_PORT\n"
+            printf "\n You can now access the uSee Configurator at https://$myIp:$SSL_PORT\n"
         fi
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
@@ -276,18 +197,18 @@ additionalServiceInstall() {
         printf "\nUpdating service: $SERVICE_NAME"
 
         # Stop e rimuove i container esistenti
-        execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" down" \
+        execute_command "$COMPOSE_CMD -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
 
         # Pulizia delle immagini obsolete
-        execute_with_spinner "docker image prune -f >/dev/null 2>&1" \
+        execute_command "docker image prune -f >/dev/null 2>&1" \
             "Pruning Docker images" || return 1
     fi
 
     # Installazione o aggiornamento
     # printenv
 
-    execute_with_spinner "docker compose -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
+    execute_command "$COMPOSE_CMD -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
@@ -295,26 +216,23 @@ additionalServiceInstall() {
     return 0
 }
 
-dockerLogin() {
-    execute_with_spinner "echo "dckr_oat_BdJVsQwdXuhw_2xpDkAV-01auTgTh0Y3" | docker login --username artecoglobalcompany --password-stdin" "Login to Docker" || return 1
-}
 
 dockerInstall() {
 
     # Step 1: Update packages
-    execute_with_spinner "sudo apt-get update -y >/dev/null 2>&1" "Updating packages" || return 1
+    execute_command "apt-get update -y >/dev/null 2>&1" "Updating packages" || return 1
 
     # Step 2: Install required packages
-    execute_with_spinner "sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common >/dev/null 2>&1" "Installing required packages" || return 1
+    execute_command "apt-get install -y apt-transport-https ca-certificates curl software-properties-common >/dev/null 2>&1" "Installing required packages" || return 1
 
     # Step 3: Add Docker GPG key
-    execute_with_spinner "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - >/dev/null 2>&1" "Adding Docker GPG key" || return 1
+    execute_command "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - >/dev/null 2>&1" "Adding Docker GPG key" || return 1
 
     # Step 4: Add Docker repository
-    execute_with_spinner "sudo add-apt-repository 'deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable' -y >/dev/null 2>&1" "Adding Docker repository" || return 1
+    execute_command "add-apt-repository 'deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable' -y >/dev/null 2>&1" "Adding Docker repository" || return 1
 
     # Step 5: Install Docker
-    execute_with_spinner "sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
+    execute_command "apt-get update -y >/dev/null 2>&1 &&  apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
 
 
     return 0
@@ -334,11 +252,13 @@ if [ "$mode" == "install" ]; then
     echo -e "  ${NC}"
     echo -e "  ${GREEN}INSTALL NEW:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC}  1. ${GREEN}Suite [Suite Manager, ID Verifier, Live Streamer, Media Recorder, Event Manager]${NC}"
+    echo -e "  ${CYAN}  │${NC}  1. ${GREEN}Suite${NC}"
     echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Live streamer${NC}"
     echo -e "  ${CYAN}  │${NC}  3. ${GREEN}ID Verifier{NC}"
     echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager{NC}"
     echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Media recorder${NC}"
+    echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
+
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
@@ -347,11 +267,12 @@ if [ "$mode" == "install" ]; then
     echo -e "  ${CYAN}  │${NC}  8. ${BLUE}ID Verifier${NC}"
     echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
     echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Media recorder${NC}"
+    echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC} 11. ${RED}Clean everything (remove all containers and db)${NC}"
+    echo -e "  ${CYAN}  │${NC} 99. ${RED}Clean everything (remove all containers and db)${NC}"
     echo -e "  ${CYAN}  │${NC}  0. ${WHITE}EXIT${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
@@ -370,20 +291,22 @@ else
     echo -e "  ${CYAN}  │${NC}  3. ${GREEN}ID Verifier${NC}"
     echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager${NC}"
     echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Media Recorder${NC}"
+    echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC}  6. ${BLUE}All the Service Suite${NC}"
-    echo -e "  ${CYAN}  │${NC}  7. ${BLUE}Live streamer${NC}"
-    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}ID Verifier${NC}"
-    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
-    echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Media Recorder${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${BLUE}All the Service Suite${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Media Recorder${NC}"
+    echo -e "  ${CYAN}  │${NC} 12. ${BLUE}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC} 11. ${RED}Clean everything (remove all containers and db)${NC}"
+    echo -e "  ${CYAN}  │${NC} 99. ${RED}Clean everything (remove all containers and db)${NC}"
     echo -e "  ${CYAN}  │${NC}  0. ${WHITE}EXIT${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
@@ -413,28 +336,23 @@ get_config() {
 
      # Esecuzione dell'azione in base alla option
     case $INSTALL_OPTION in
-    1 | 6)
+    1 | 7)
      
 
-        read -p "Server port (default 443): " SSL_PORT
-        SSL_PORT=${SSL_PORT:-443}
-
         RMQ=amqp://hypernode:hypernode@messagebroker:5672
-
-
         # Esporta le variabili per renderle accessibili ad altri script
-        export SSL_PORT
         export RMQ
        
 
         ;;
-    2 | 3 | 4 | 5 )
+    2 | 3 | 4 | 5 | 6)
        
         read -p "Choose a unique name (in case of update, type the current service name): " PROCESS_NAME
 
         read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
         read -p "Insert uSee Gateway port (default 443): " remote_host_port
 
+
         REMOTE_GATEWAY_URL="$remote_host"
         REMOTE_GATEWAY_PORT=${remote_host_port:-443}
 
@@ -445,22 +363,19 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
         export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-
-        #       // "env": {
-        #       //   "RABBITMQ_URI": "amqps://hypernode:hypernode@V12230451.my.omniaweb.cloud:443",
-        #       //   "GATEWAY_REMOTE_IP": "wss://V12230451.my.omniaweb.cloud:443",
-        #       // }
-
+      
 
         ;;
 
-     7 | 8 | 9 | 10)
+      8 | 9 | 10 | 11 | 12)
 
         read -p "Type the service name to update: " PROCESS_NAME
 
         read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
         read -p "Insert uSee Gateway port (default 443): " remote_host_port
 
+        
+
         REMOTE_GATEWAY_URL="$remote_host"
         REMOTE_GATEWAY_PORT=${remote_host_port:-443}
 
@@ -471,15 +386,9 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
         export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-
-        #       // "env": {
-        #       //   "RABBITMQ_URI": "amqps://hypernode:hypernode@V12230451.my.omniaweb.cloud:443",
-        #       //   "GATEWAY_REMOTE_IP": "wss://V12230451.my.omniaweb.cloud:443",
-        #       // }
-
         ;;  
         
-    11)
+    99)
         export SKIP_DOCKER_INSTALL=true      
         ;;
     0)
@@ -500,11 +409,8 @@ get_config() {
 }
 
 cleanProcedure() {
-    # *****************************************************************
-    # CLEANING PROCEDURE **********************************************
-    # *****************************************************************
 
-    execute_with_spinner "rm -rf \"$ABSOLUTE_PATH/hypernode\" > /dev/null" \
+    execute_command "rm -rf \"$ABSOLUTE_PATH/hypernode\" > /dev/null" \
         "Cleaning code" || return 1
 
     printf "\nCleaning procedure completed successfully.\n\n"
@@ -519,23 +425,23 @@ dockerNuke() {
         printf "\nStopping and removing all containers, images, networks, and volumes...\n"
 
         # Stop containers
-        execute_with_spinner "sudo docker stop \$(sudo docker ps -q) >/dev/null 2>&1" \
+        execute_command "docker stop \$(docker ps -q) >/dev/null 2>&1" \
             "Stopping containers" || return 1
 
         # Remove containers
-        execute_with_spinner "sudo docker rm -f \$(sudo docker ps -aq) >/dev/null 2>&1" \
+        execute_command "docker rm -f \$(docker ps -aq) >/dev/null 2>&1" \
             "Removing containers" || return 1
 
         # Remove images
-        execute_with_spinner "sudo docker rmi -f \$(sudo docker images -q) >/dev/null 2>&1" \
+        execute_command "docker rmi -f \$(docker images -q) >/dev/null 2>&1" \
             "Removing Docker images" || return 1
 
         # Rimuove tutti i volumi manualmente
-        execute_with_spinner "docker volume ls -q | xargs -r docker volume rm" \
+        execute_command "docker volume ls -q | xargs -r docker volume rm" \
             "Removing Docker volumes" || return 1
 
         # Esegue il prune finale (opzionale)
-        execute_with_spinner "docker system prune -a --volumes -f" \
+        execute_command "docker system prune -a --volumes -f" \
             "Pruning Docker system" || return 1
 
         end_with_message "Docker cleanup completed successfully" 0
@@ -546,12 +452,11 @@ dockerNuke() {
 }
 
 
-
 checkIfHypernodeIsInstalled() {
     local container_name="gateway"
 
     # Usa grep per cercare direttamente il nome del container nei risultati di `docker ps`
-    if sudo docker ps | grep -qw "$container_name"; then
+    if docker ps | grep -qw "$container_name"; then
         printf "\nSuite Manager detected. This is the uSee Gateway.\n"
         HYPERNODE_ALREADY_INSTALLED="true"
     else
@@ -562,31 +467,40 @@ checkIfHypernodeIsInstalled() {
 
 
 check_docker_installed() {
-    echo "Checking if Docker is installed..."
     if ! command -v docker &> /dev/null; then       
-        printf "\nDocker is not installed.\n" 
+        printf "Docker is not installed." 
         DOCKER_ALREADY_INSTALLED="false"
     else
-        printf "\nDocker is already installed.\n"
+        printf "Docker is already installed."
         DOCKER_ALREADY_INSTALLED="true"
     fi
 }
 
-detectArchitecture(){
 
-    printf "\nDetecting architecture..."
+detectSudo(){
     
-    if [[ "$ARCH" == "aarch64"* ]]; then
-        MONGO_IMAGE="mongo:4.0.0-rc0" #raspberry pi
-        printf "\nDetected architecture: $ARCH \nMongodb version: $MONGO_IMAGE\n"
-
+    if [ "$EUID" -ne 0 ]; then
+        printf "\nThis script is not running as root/sudo.\n" 
+        exit 1
     else
-        MONGO_IMAGE="mongo:4.4"
+        printf "\nThis script is running as root/sudo.\n" 
     fi
+}
 
-    printf "\nDetected architecture: $ARCH\n"
+detectDockerCompose(){
 
-export MONGO_IMAGE
+    # Step 2: Check if docker-compose command or docker compose command is available
+    if command -v docker-compose &> /dev/null; then
+        COMPOSE_CMD="docker-compose"
+        printf "Using 'docker-compose' command\n"
+    elif command -v docker &> /dev/null && docker --version | grep -q "Docker"; then
+        # Check if 'docker compose' (the plugin) is available
+        COMPOSE_CMD="docker compose"
+        printf "Using 'docker compose' command\n"
+    else
+        printf "❌ Neither 'docker-compose' nor 'docker compose' found. Please install the required tool.\n"
+        exit 1
+    fi
 
 }
 
@@ -595,21 +509,17 @@ export MONGO_IMAGE
 # *****************************************************************
 
 #a. Welcome step
-clear
 
+#clear
 show_ascii_art
-
+detectSudo
+detectDockerCompose
 check_docker_installed # Check if docker is installed
-
 checkIfHypernodeIsInstalled # Check if hypernode is already installed
-
 get_config # Get the configuration from the user
-
 clear
-
 show_ascii_art
 
-detectArchitecture
 
 if [ "$DOCKER_ALREADY_INSTALLED" == "true" ]; then
    
@@ -622,27 +532,13 @@ else
         printf "\nSkipping docker install as requested\n"
 
     else
-        #dockerInstall
+        dockerInstall
         printf "\nInstalling docker\n"
 
     fi
 
 fi
 
-
-dockerLogin
-
-# echo "|-- 2. Additional Camera Service"
-# echo "|-- 3. Additional Auth Service"
-# echo "|-- 4. Additional Event Service"
-# echo "|-- 5. Additional Storage Service"
-
-# echo "|-- 6. Update all the server's servicies "    
-# echo "|-- 7. Update Camera Service"
-# echo "|-- 8. Update Auth Service"
-# echo "|-- 9. Update Event Service"
-# echo "|-- 10. Update Storage Service"
-# echo "|-- 11. Clean everything (remove all containers and db)"
 
 if [ "$INSTALL_OPTION" -eq 1 ]; then    
     if [ "$ERASE_DB" == "true" ]; then
@@ -658,22 +554,25 @@ elif [ "$INSTALL_OPTION" -eq 4 ]; then
 elif [ "$INSTALL_OPTION" -eq 5 ]; then
     additionalServiceInstall "storage" && end_with_message "Storage service installation" 0 || end_with_message "Storage service installation" 1
 elif [ "$INSTALL_OPTION" -eq 6 ]; then
+    additionalServiceInstall "snapshot" && end_with_message "Snapshot service installation" 0 || end_with_message "Snapshot service installation" 1
+elif [ "$INSTALL_OPTION" -eq 7 ]; then
     if [ "$ERASE_DB" == "true" ]; then
         drop_server_collection
     fi
     additionalServiceInstall "server" "update" && end_with_message "Server update" 0 || end_with_message "Server update" 1
-elif [ "$INSTALL_OPTION" -eq 7 ]; then
-    additionalServiceInstall "camera" "update" && end_with_message "Camera service update" 0 || end_with_message "Camera service update" 1
 elif [ "$INSTALL_OPTION" -eq 8 ]; then
-    additionalServiceInstall "auth" "update" && end_with_message "Auth service update" 0 || end_with_message "Auth service update" 1
+    additionalServiceInstall "camera" "update" && end_with_message "Camera service update" 0 || end_with_message "Camera service update" 1
 elif [ "$INSTALL_OPTION" -eq 9 ]; then
-    additionalServiceInstall "event" "update" && end_with_message "Event service update" 0 || end_with_message "Event service update" 1
+    additionalServiceInstall "auth" "update" && end_with_message "Auth service update" 0 || end_with_message "Auth service update" 1
 elif [ "$INSTALL_OPTION" -eq 10 ]; then
-    additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
+    additionalServiceInstall "event" "update" && end_with_message "Event service update" 0 || end_with_message "Event service update" 1
 elif [ "$INSTALL_OPTION" -eq 11 ]; then
+    additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
+elif [ "$INSTALL_OPTION" -eq 12 ]; then
+    additionalServiceInstall "snapshot" "update" && end_with_message "Snapshot service update" 0 || end_with_message "Snapshot service update" 1
+elif [ "$INSTALL_OPTION" -eq 99 ]; then
     dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
 fi
-
 
 if [ "$SKIP_CLEAN" != "true" ]; then
     # server installation
