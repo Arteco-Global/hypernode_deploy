@@ -1,0 +1,34 @@
+name: ${PROCESS_NAME}
+
+services:
+  
+  database:
+    image: artecoglobalcompany/usee_database:${DOCKER_TAG:-latest}
+    # ports:
+    #   - 27050:27017
+    networks:
+      - hypernode-net
+    volumes:
+      - mongodb_data:/data/db
+    container_name: ${DB_NAME}
+    restart: unless-stopped
+
+  event:
+    image: artecoglobalcompany/usee_event_manager:${DOCKER_TAG:-latest}
+    networks:
+       - hypernode-net
+    environment:
+      - RABBITMQ_URI=${RMQ}
+      - DATABASE_URI=${DATABASE_URI}
+      - SRV_INST_NAME=${PROCESS_NAME}
+    container_name: ${PROCESS_NAME}
+    restart: unless-stopped
+    
+volumes:
+  mongodb_data:
+      name: ${PROCESS_NAME}  # Nome unico per il volume
+
+networks:
+  hypernode-net:
+      driver: bridge
+

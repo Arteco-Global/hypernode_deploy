@@ -1,0 +1,178 @@
+services:
+
+  messagebroker:
+    image: artecoglobalcompany/usee_message_broker:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      RABBITMQ_DEFAULT_USER: hypernode
+      RABBITMQ_DEFAULT_PASS: hypernode
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+    container_name: messagebroker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  database:
+    image: artecoglobalcompany/usee_database:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    volumes:
+      - mongodb_data:/data/db
+    container_name: database
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+
+  gateway:
+    image: artecoglobalcompany/usee_suite_manager:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    environment:
+      - GATEWAY_API_PORT=5001
+      - GATEWAY_WS_PORT=8000
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - DATABASE_URI=mongodb://database:27017/gateway-db
+      - CERT_PATH=/ssl
+    container_name: gateway
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+    volumes:
+      - hypernode_security_shared_files:/ssl
+
+  storage:
+    image: artecoglobalcompany/usee_media_recorder:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - DATABASE_URI=mongodb://database:27017/storage-db
+    container_name: storage
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+
+  event:
+    image: artecoglobalcompany/usee_event_manager:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - DATABASE_URI=mongodb://database:27017/event-db
+    container_name: event
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+
+  camera:
+    image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
+      - GATEWAY_REMOTE_IP=ws://127.0.0.1:8001
+      - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
+    container_name: camera
+    restart: unless-stopped
+    network_mode: "host"
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+
+  auth:
+    image: artecoglobalcompany/usee_id_verifier:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - DATABASE_URI=mongodb://database:27017/auth-db
+    container_name: auth
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+
+  snapshot:
+    image: artecoglobalcompany/usee_snapshot_recorder:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - DATABASE_URI=mongodb://database:27017/snapshot-db
+      - GATEWAY_REMOTE_IP=ws://gateway:8001
+      - SNAPSHOT_PATH_TO_SAVE=/snapshot_files
+    container_name: snapshot
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+    volumes:
+      - hypernode_snapshot_volume:/snapshot_files
+
+  webserver:
+    image: artecoglobalcompany/usee_web_server:${DOCKER_TAG:-latest}
+    container_name: webserver
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]  # O sostituisci con una health API
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  configurator:
+    image: artecoglobalcompany/usee_configurator:${DOCKER_TAG:-latest}
+    container_name: configurator
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+
+  portbroker:
+    image: artecoglobalcompany/usee_port_broker:${DOCKER_TAG:-latest}
+    container_name: portbroker
+    ports:
+      - "${SSL_PORT:-443}:443"
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+      webserver:  # Aspetta che il container "webserver" venga avviato
+        condition: service_healthy
+    volumes:
+      - hypernode_security_shared_files:/ssl
+
+volumes:
+  rabbitmq_data:
+  mongodb_data:
+  hypernode_security_shared_files:
+  hypernode_snapshot_volume:
+  hypernode_recordings_volume:
+
+networks:
+  hypernode-net:
+    driver: bridge
