@@ -26,7 +26,7 @@ NC='\033[0m' # Reset colore
 # Default values for input parameters
 SSL_PORT=443
 DOCKER_TAG="release_candidate"
-
+FORCE_INSTALL="false"
 
 
 # Funzione per eseguire operazioni con lo spinner
@@ -52,10 +52,12 @@ execute_command() {
 }
 
 printf "\nInstaller version v1.0.0\n"
-
-
 while [[ "$#" -gt 0 ]]; do
     case $1 in
+        -fi|--foce-install)
+            FORCE_INSTALL="true"
+            shift
+            ;;
         -p|--port)
             SSL_PORT="$2"
             shift 2
@@ -67,14 +69,17 @@ while [[ "$#" -gt 0 ]]; do
         -eb|-erase-db) 
             echo "got -erase-db parameter!"
             ERASE_DB="true"
+            shift
             ;;
         -sc|-skip-clean) 
             echo "got -skip-clean parameter!"
             SKIP_CLEAN="true"
+            shift
             ;;
         -sdi|-skip-docker-install) 
             echo "got skip-docker-install!"
             SKIP_DOCKER_INSTALL="true"
+            shift
             ;;
         -h|--help) 
             echo "-port: setting the port for the server (default: 443)"
@@ -84,10 +89,10 @@ while [[ "$#" -gt 0 ]]; do
             exit
             ;;
         *) 
-            echo "Unkwnon parameter: $1"
+            echo "Unknown parameter: $1"
+            shift
             ;;
     esac
-    shift
 done
 
 printf "\nSSL_PORT set to: $SSL_PORT\n"
@@ -329,12 +334,16 @@ get_config() {
     fi
 
  
-    # Lettura della scelta dell'utente
-    read -p "Enter the option: " INSTALL_OPTION
-    INSTALL_OPTION=${INSTALL_OPTION:-1}
+    if [ "$FORCE_INSTALL" == "true" ]; then
+        printf "\nForce install mode enabled. Skipping menu.\n"
+        INSTALL_OPTION=1
+    else
+        # Lettura della scelta dell'utente
+        read -p "Enter the option: " INSTALL_OPTION
+        INSTALL_OPTION=${INSTALL_OPTION:-1}
+    fi
 
-
-     # Esecuzione dell'azione in base alla option
+    # Esecuzione dell'azione in base alla option
     case $INSTALL_OPTION in
     1 | 7)
      
