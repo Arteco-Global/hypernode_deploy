@@ -14,14 +14,13 @@ RUNNING_AS_SUDO="false"
 COMPOSE_CMD="docker compose"
 ARCH=$(uname -m)
 
-# Codici colore ANSI
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
 BLUE='\033[0;34m'
-NC='\033[0m' # Reset colore
+NC='\033[0m' # Color reset
 
 # Default values for input parameters
 SSL_PORT=443
@@ -29,20 +28,13 @@ DOCKER_TAG="release_candidate"
 FORCE_INSTALL="false"
 
 
-# Funzione per eseguire operazioni con lo spinner
 execute_command() {
     local COMMAND=$1
     local MESSAGE=$2
 
-    # Stampa il comando per debug
-    # echo "Executing command: $COMMAND"
-
-    # Esegui il comando e cattura il risultato
     eval "$COMMAND" 
     local COMMAND_STATUS=$?
 
-   
-    # Stampa il risultato
     if [ $COMMAND_STATUS -eq 0 ]; then
         printf "\r✅ %s - Done.\n" "$MESSAGE"
     else
@@ -98,11 +90,9 @@ done
 printf "\nSSL_PORT set to: $SSL_PORT\n"
 printf "DOCKER_TAG set to: $DOCKER_TAG\n"
 
-# Export the variables
 export SSL_PORT
 export DOCKER_TAG
 
-# Funzione per mostrare l'arte ASCII
 show_ascii_art() {
     cat << "EOF"
                                                                                                     
@@ -147,7 +137,7 @@ EOF
 get_my_local_ip() {
     local ip=$(hostname -I 2>/dev/null | awk '{print $1}')
     if [[ -z "$ip" ]]; then
-        echo "127.0.0.1"  # Fallback all'indirizzo localhost
+        echo "127.0.0.1" 
     else
         echo "$ip"
     fi
@@ -158,7 +148,6 @@ end_with_message() {
     local success=$2
     local myIp=$(get_my_local_ip)
 
-    # Cancella eventuali barre di progresso extra
     printf "\r\033[K"
 
     if [ "$success" -eq 0 ]; then
@@ -176,15 +165,12 @@ end_with_message() {
 drop_server_collection() {
     printf "\nRe-initializing server DB...\n"
 
-    # Nome del container MongoDB
     local MONGO_CONTAINER_NAME="database"
 
-    # Comando per droppare la collezione 'server' nel database 'gateway-db'
     docker exec "$MONGO_CONTAINER_NAME" mongo gateway-db --eval "
         db.server.drop();
     "
 
-    # Verifica il risultato del comando
     if [ $? -eq 0 ]; then
         printf "\n✅ The 'server' collection has been successfully dropped from the 'gateway-db' database.\n"
     else
@@ -194,24 +180,19 @@ drop_server_collection() {
 
 additionalServiceInstall() {
     local SERVICE_NAME=$1
-    local TYPE_OF_INSTALL=${2:-"install"} # Default a "install" se non specificato
+    local TYPE_OF_INSTALL=${2:-"install"} 
 
     printf "\nSERVICE_NAME: $SERVICE_NAME"
 
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
         printf "\nUpdating service: $SERVICE_NAME"
 
-        # Stop e rimuove i container esistenti
         execute_command "$COMPOSE_CMD -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
 
-        # Pulizia delle immagini obsolete
         execute_command "docker image prune -f >/dev/null 2>&1" \
             "Pruning Docker images" || return 1
     fi
-
-    # Installazione o aggiornamento
-    # printenv
 
     execute_command "$COMPOSE_CMD -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
@@ -244,7 +225,6 @@ dockerInstall() {
 }
 
 
-# Menu delle opzioni
 show_menu() {
     local mode=$1
 if [ "$mode" == "install" ]; then        
@@ -325,7 +305,6 @@ get_config() {
 
     if [ "$HYPERNODE_ALREADY_INSTALLED" != "true" ]; then
     
-        # Menu delle opzioni
         show_menu "install"
 
     else
@@ -338,18 +317,15 @@ get_config() {
         printf "\nForce install mode enabled. Skipping menu.\n"
         INSTALL_OPTION=1
     else
-        # Lettura della scelta dell'utente
         read -p "Enter the option: " INSTALL_OPTION
         INSTALL_OPTION=${INSTALL_OPTION:-1}
     fi
 
-    # Esecuzione dell'azione in base alla option
     case $INSTALL_OPTION in
     1 | 7)
      
 
         RMQ=amqp://hypernode:hypernode@messagebroker:5672
-        # Esporta le variabili per renderle accessibili ad altri script
         export RMQ
        
 
@@ -464,7 +440,6 @@ dockerNuke() {
 checkIfHypernodeIsInstalled() {
     local container_name="gateway"
 
-    # Usa grep per cercare direttamente il nome del container nei risultati di `docker ps`
     if docker ps | grep -qw "$container_name"; then
         printf "\nSuite Manager detected. This is the uSee Gateway.\n"
         HYPERNODE_ALREADY_INSTALLED="true"
@@ -584,7 +559,6 @@ elif [ "$INSTALL_OPTION" -eq 99 ]; then
 fi
 
 if [ "$SKIP_CLEAN" != "true" ]; then
-    # server installation
     cleanProcedure
 else
     printf "\nSkipping cleaning procedure\n\n"

@@ -1,31 +1,31 @@
 #!/bin/sh
 
-# Crea la cartella di lavoro
+# Create the working directory
 mkdir -p hypernode
-cd hypernode || { echo "Errore nell'entrare nella cartella hypernode"; exit 1; }
+cd hypernode || { echo "Error entering the hypernode directory"; exit 1; }
 
-# Scarica il file ZIP con autenticazione
+# Download the ZIP file with authentication
 wget "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/main/installer_docker/hypernode_installer.zip" \
   --header="Authorization: token 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" \
   -O hypernode_installer.zip
 
-# Controlla se il download è andato a buon fine
+# Check if the download was successful
 if [ $? -ne 0 ]; then
-  echo "Errore nel download del file ZIP"
+  echo "Error downloading the ZIP file"
   exit 1
 fi
 
-# Estrae il contenuto dello ZIP
+# Extract the contents of the ZIP
 unzip -o hypernode_installer.zip
 
-# Controlla se il file installer.sh esiste
+# Check if the installer.sh file exists
 if [ ! -f installer.sh ]; then
-  echo "installer.sh non trovato dopo l'estrazione"
+  echo "installer.sh not found after extraction"
   exit 1
 fi
 
-# Rende lo script eseguibile
+# Make the script executable
 chmod +x installer.sh
 
-# Esegue lo script con la porta specificata
+# Run the script with the specified port
 sh installer.sh -fi -p 443
