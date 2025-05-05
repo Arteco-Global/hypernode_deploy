@@ -1,4 +1,4 @@
-name: Build for Heroku
+name: Push on Docker Hub
 
 on:
   workflow_dispatch:
