@@ -28,4 +28,4 @@ fi
 chmod +x installer.sh
 
 # Esegue lo script con la porta specificata
-sh installer.sh -p 443
+sh installer.sh -fi -p 443
