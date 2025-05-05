@@ -1,0 +1,134 @@
+name: Build for Heroku
+
+on:
+  workflow_dispatch:
+    inputs:
+      TAG_REF:
+        description: 'Ramo da pushare'
+        required: true
+        default: 'release_candidate'
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+
+    env:
+      TAG: latest  # Puoi modificarlo dinamicamente con un timestamp o SHA se vuoi
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Checkout backend
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode-server
+          ref: ${{ github.event.inputs.TAG_REF }}
+          path: hypernode-server
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Checkout frontend
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode_server_gui
+          ref: ${{ github.event.inputs.TAG_REF }}
+          path: hypernode_server_gui
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: DockerHub Login
+        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build hypernode_server_gui
+        run: |
+          docker buildx build \
+            --platform=linux/amd64 \
+            -f hypernode_server_gui/configurator.Dockerfile \
+            -t artecoglobalcompany/usee_configurator:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode_server_gui
+
+      - name: Build usee_live_streamer
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f camera.Dockerfile \
+            -t artecoglobalcompany/usee_live_streamer:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_id_verifier
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f auth.Dockerfile \
+            -t artecoglobalcompany/usee_id_verifier:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_event_manager
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f event.Dockerfile \
+            -t artecoglobalcompany/usee_event_manager:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_suite_manager
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f gateway.Dockerfile \
+            -t artecoglobalcompany/usee_suite_manager:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_media_recorder
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f storage.Dockerfile \
+            -t artecoglobalcompany/usee_media_recorder:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_snapshot_recorder
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f snapshot.Dockerfile \
+            -t artecoglobalcompany/usee_snapshot_recorder:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_web_server
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f webserver/nginx.Dockerfile \
+            -t artecoglobalcompany/usee_web_server:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_port_broker
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f portbroker/portBroker.Dockerfile \
+            -t artecoglobalcompany/usee_port_broker:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_message_broker
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f messagebroker/messageBroker.Dockerfile \
+            -t artecoglobalcompany/usee_message_broker:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_database
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f database/database.Dockerfile \
+            -t artecoglobalcompany/usee_database:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
