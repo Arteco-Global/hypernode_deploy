@@ -66,7 +66,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/camera.Dockerfile \
+            -f hypernode-server/docker/camera.Dockerfile \
             -t artecoglobalcompany/usee_live_streamer:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -74,7 +74,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/auth.Dockerfile \
+            -f hypernode-server/docker/auth.Dockerfile \
             -t artecoglobalcompany/usee_id_verifier:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -82,7 +82,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/event.Dockerfile \
+            -f hypernode-server/docker/event.Dockerfile \
             -t artecoglobalcompany/usee_event_manager:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -90,7 +90,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/gateway.Dockerfile \
+            -f hypernode-server/docker/gateway.Dockerfile \
             -t artecoglobalcompany/usee_suite_manager:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -98,7 +98,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/storage.Dockerfile \
+            -f hypernode-server/docker/storage.Dockerfile \
             -t artecoglobalcompany/usee_media_recorder:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -106,7 +106,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/snapshot.Dockerfile \
+            -f hypernode-server/docker/snapshot.Dockerfile \
             -t artecoglobalcompany/usee_snapshot_recorder:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -114,7 +114,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/webserver/nginx.Dockerfile \
+            -f hypernode-server/docker/webserver/nginx.Dockerfile \
             -t artecoglobalcompany/usee_web_server:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -122,7 +122,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/portbroker/portBroker.Dockerfile \
+            -f hypernode-server/docker/portbroker/portBroker.Dockerfile \
             -t artecoglobalcompany/usee_port_broker:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -130,7 +130,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/messagebroker/messageBroker.Dockerfile \
+            -f hypernode-server/docker/messagebroker/messageBroker.Dockerfile \
             -t artecoglobalcompany/usee_message_broker:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -138,6 +138,6 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/database/database.Dockerfile \
+            -f hypernode-server/docker/database/database.Dockerfile \
             -t artecoglobalcompany/usee_database:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
