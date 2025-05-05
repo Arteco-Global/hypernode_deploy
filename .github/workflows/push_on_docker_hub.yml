@@ -37,10 +37,16 @@ jobs:
           path: hypernode_server_gui
           token: ${{ secrets.GIT_PAT }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
         with:
-          platforms: all
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: DockerHub Login
         run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
@@ -51,7 +57,7 @@ jobs:
       - name: Build hypernode_server_gui
         run: |
           docker buildx build \
-            --platform=linux/amd64 \
+            --platform=linux/amd64,linux/arm64 \
             -f hypernode_server_gui/configurator.Dockerfile \
             -t artecoglobalcompany/usee_configurator:${{ github.event.inputs.TAG_REF }} \
             --push hypernode_server_gui
