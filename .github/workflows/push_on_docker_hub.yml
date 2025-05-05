@@ -45,6 +45,9 @@ jobs:
       - name: DockerHub Login
         run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+      - name: DockerHub check
+        run: docker info
+
       - name: Build hypernode_server_gui
         run: |
           docker buildx build \
