@@ -24,7 +24,7 @@ NC='\033[0m' # Color reset
 
 # Default values for input parameters
 SSL_PORT=443
-DOCKER_TAG="release_candidate"
+DOCKER_TAG="latest"
 FORCE_INSTALL="false"
 
 
@@ -75,7 +75,7 @@ while [[ "$#" -gt 0 ]]; do
             ;;
         -h|--help) 
             echo "-port: setting the port for the server (default: 443)"
-            echo "-tag: setting the docker tag (default: release_candidate)"
+            echo "-tag: setting the docker tag (default: latest)"
             echo "-skip-clean: skip cleaning procedure"
             echo "-skip-docker-install: skip docker installation"
             exit
