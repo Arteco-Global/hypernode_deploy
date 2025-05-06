@@ -1,1 +1,0 @@
-scp -O -P 6022 ./hypernode_installer.zip root@192.168.5.139:/var/prova/hypernode_installer.zip
