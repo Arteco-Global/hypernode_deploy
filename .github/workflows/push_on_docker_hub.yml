@@ -3,11 +3,15 @@ name: Push on Docker Hub
 on:
   workflow_dispatch:
     inputs:
-      TAG_REF:
-        description: 'Ramo da pushare'
+      BRANCH_REF:
+        description: 'Checkout branch (both Configurator and Backend) (default: release_candidate)'
         required: true
         default: 'release_candidate'
-
+      TAG_REF:
+        description: 'Tag to push on Docker Hub (default: latest)'
+        required: true
+        default: 'latest'
+        
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
@@ -25,7 +29,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode-server
-          ref: ${{ github.event.inputs.TAG_REF }}
+          ref: ${{ github.event.inputs.BRANCH_REF }}
           path: hypernode-server
           token: ${{ secrets.GIT_PAT }}
 
@@ -33,7 +37,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode_server_gui
-          ref: ${{ github.event.inputs.TAG_REF }}
+          ref: ${{ github.event.inputs.BRANCH_REF }}
           path: hypernode_server_gui
           token: ${{ secrets.GIT_PAT }}
 
