@@ -3,8 +3,12 @@ name: Push on Docker Hub
 on:
   workflow_dispatch:
     inputs:
-      BRANCH_REF:
-        description: 'Checkout branch (both Configurator and Backend) (default: release_candidate)'
+      BRANCH_CONFIGURATOR_REF:
+        description: 'Checkout branch Configurator (Client) (default: release_candidate)'
+        required: true
+        default: 'release_candidate'
+      BRANCH_BACKEND_REF:
+        description: 'Checkout branch backend (server) (default: release_candidate)'
         required: true
         default: 'release_candidate'
       TAG_REF:
@@ -29,7 +33,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode-server
-          ref: ${{ github.event.inputs.BRANCH_REF }}
+          ref: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
           path: hypernode-server
           token: ${{ secrets.GIT_PAT }}
 
@@ -37,7 +41,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode_server_gui
-          ref: ${{ github.event.inputs.BRANCH_REF }}
+          ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
           path: hypernode_server_gui
           token: ${{ secrets.GIT_PAT }}
 
