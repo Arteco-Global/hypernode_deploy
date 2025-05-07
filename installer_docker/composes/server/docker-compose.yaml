@@ -77,7 +77,7 @@ services:
       - DATABASE_URI=mongodb://database:27017/snapshot-db
       - GATEWAY_REMOTE_IP=ws://gateway:8001
       - RECORDING_PATH_TO_SAVE=/recording_files      
-    container_name: ${PROCESS_NAME}
+    container_name: recording
     restart: unless-stopped
     volumes:
       - hypernode_recording_volume:/recording_files
@@ -186,7 +186,7 @@ volumes:
   mongodb_data:
   hypernode_security_shared_files:
   hypernode_snapshot_volume:
-  hypernode_recordings_volume:
+  hypernode_recording_volume:
 
 networks:
   hypernode-net:
