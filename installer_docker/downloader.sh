@@ -1,5 +1,16 @@
 #!/bin/sh
 
+# Default port
+PORT=443
+
+# Parse command-line arguments
+while getopts "p:" opt; do
+  case $opt in
+    p) PORT=$OPTARG ;;
+    *) echo "Usage: $0 -p <port>"; exit 1 ;;
+  esac
+done
+
 # Create the working directory
 mkdir -p hypernode
 cd hypernode || { echo "Error entering the hypernode directory"; exit 1; }
@@ -28,4 +39,4 @@ fi
 chmod +x installer.sh
 
 # Run the script with the specified port
-sh installer.sh -fi -p 443
+sh installer.sh -fi -p "$PORT"
