@@ -13,20 +13,26 @@ services:
     container_name: ${DB_NAME}
     restart: unless-stopped
 
-  storage:
-    image: artecoglobalcompany/usee_media_storage:${DOCKER_TAG:-latest}
+  recording:
+    image: artecoglobalcompany/usee_media_recorder:${DOCKER_TAG:-latest}
     networks:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ}
       - DATABASE_URI=${DATABASE_URI}
       - SRV_INST_NAME=${PROCESS_NAME}
+      - RECORDING_PATH_TO_SAVE=/recording_files
+      - GATEWAY_REMOTE_IP=${GRI:-ws://gateway:8001}
     container_name: ${PROCESS_NAME}
     restart: unless-stopped
-    
+    volumes:
+      - hypernode_recording_volume:/recording_files
+
 volumes:
+  hypernode_snapshot_volume:
+    name: ${PROCESS_NAME}_hypernode_recording_volume
   mongodb_data:
-      name: ${PROCESS_NAME}
+      name: ${PROCESS_NAME}__mongodb_data
 
 networks:
   hypernode-net:
