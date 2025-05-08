@@ -106,7 +106,7 @@ jobs:
         run: |
           docker buildx build \
             --platform=linux/amd64,linux/arm64 \
-            -f hypernode-server/docker/storage.Dockerfile \
+            -f hypernode-server/docker/recording.Dockerfile \
             -t artecoglobalcompany/usee_media_recorder:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
 
@@ -148,4 +148,12 @@ jobs:
             --platform=linux/amd64,linux/arm64 \
             -f hypernode-server/docker/database/database.Dockerfile \
             -t artecoglobalcompany/usee_database:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode-server
+
+      - name: Build usee_media_storage
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/storage.Dockerfile \
+            -t artecoglobalcompany/usee_media_storage:${{ github.event.inputs.TAG_REF }} \
             --push hypernode-server
