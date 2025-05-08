@@ -74,7 +74,7 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
-      - DATABASE_URI=mongodb://database:27017/snapshot-db
+      - DATABASE_URI=mongodb://database:27017/recording-db
       - GATEWAY_REMOTE_IP=ws://gateway:8001
       - RECORDING_PATH_TO_SAVE=/recording_files      
     container_name: recording
