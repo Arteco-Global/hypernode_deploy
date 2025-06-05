@@ -184,23 +184,29 @@ additionalServiceInstall() {
 
     printf "\nSERVICE_NAME: $SERVICE_NAME"
 
+    local COMPOSE_FILE="$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml"
+
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
         printf "\nUpdating service: $SERVICE_NAME"
 
-        execute_command "$COMPOSE_CMD -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" down" \
+        execute_command "$COMPOSE_CMD -f \"$COMPOSE_FILE\" pull" \
+            "Pulling latest images for $SERVICE_NAME" || return 1
+
+        execute_command "$COMPOSE_CMD -f \"$COMPOSE_FILE\" down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
 
         execute_command "docker image prune -f >/dev/null 2>&1" \
             "Pruning Docker images" || return 1
     fi
 
-    execute_command "$COMPOSE_CMD -f \"$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml\" up -d --build --remove-orphans" \
+    execute_command "$COMPOSE_CMD -f \"$COMPOSE_FILE\" up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
 
     return 0
 }
+
 
 
 dockerInstall() {
