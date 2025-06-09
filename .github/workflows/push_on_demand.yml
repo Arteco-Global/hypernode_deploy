@@ -1,0 +1,193 @@
+name: Push on Demand
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH_CONFIGURATOR_REF:
+        description: 'Checkout branch Configurator (client)'
+        required: true
+        default: 'release_candidate'
+      BRANCH_BACKEND_REF:
+        description: 'Checkout branch Backend (server)'
+        required: true
+        default: 'release_candidate'
+      TAG_REF:
+        description: 'Tag Docker (es. latest, v1.2.3)'
+        required: true
+        default: 'latest'
+      SERVICES:
+        description: |
+          Comma-separated list of servizi da buildare:
+            • configurator  
+            • live_streamer  
+            • id_verifier  
+            • event_manager  
+            • suite_manager  
+            • media_recorder  
+            • snapshot_recorder  
+            • web_server  
+            • port_broker  
+            • message_broker  
+            • database  
+            • media_storage  
+          oppure "all" per tutti.
+        required: true
+        default: 'all'
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.TAG_REF }}
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Checkout backend
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode-server
+          ref: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
+          path: hypernode-server
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Checkout frontend
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode_server_gui
+          ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
+          path: hypernode_server_gui
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      # -----------------------------------------------------------------------------
+      # Per ogni servizio aggiungiamo una condizione `if:` che controlla
+      # se l'utente ha scritto "all" o se la lista CSV contiene la parola chiave
+      # -----------------------------------------------------------------------------
+
+      - name: BuildConfigurator
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'configurator') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode_server_gui/configurator.Dockerfile \
+            -t artecoglobalcompany/usee_configurator:${{ env.TAG }} \
+            --push hypernode_server_gui
+
+      - name: BuildLiveStreamer
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'live_streamer') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/camera.Dockerfile \
+            -t artecoglobalcompany/usee_live_streamer:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildIDVerifier
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'id_verifier') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/auth.Dockerfile \
+            -t artecoglobalcompany/usee_id_verifier:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildEventManager
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'event_manager') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/event.Dockerfile \
+            -t artecoglobalcompany/usee_event_manager:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildSuiteManager
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'suite_manager') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/gateway.Dockerfile \
+            -t artecoglobalcompany/usee_suite_manager:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildMediaRecorder
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'media_recorder') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/recording.Dockerfile \
+            -t artecoglobalcompany/usee_media_recorder:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildSnapshotRecorder
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'snapshot_recorder') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/snapshot.Dockerfile \
+            -t artecoglobalcompany/usee_snapshot_recorder:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildWebServer
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'web_server') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/webserver/nginx.Dockerfile \
+            -t artecoglobalcompany/usee_web_server:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildPortBroker
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'port_broker') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/portbroker/portBroker.Dockerfile \
+            -t artecoglobalcompany/usee_port_broker:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildMessageBroker
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'message_broker') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/messagebroker/messageBroker.Dockerfile \
+            -t artecoglobalcompany/usee_message_broker:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildDatabase
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'database') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/database/database.Dockerfile \
+            -t artecoglobalcompany/usee_database:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildMediaStorage
+        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'media_storage') }}
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode-server/docker/storage.Dockerfile \
+            -t artecoglobalcompany/usee_media_storage:${{ env.TAG }} \
+            -o type=registry \
+            --push hypernode-server
