@@ -3,10 +3,6 @@ name: Push on Demand
 on:
   workflow_dispatch:
     inputs:
-      BRANCH_CONFIGURATOR_REF:
-        description: 'Checkout branch Configurator (client)'
-        required: true
-        default: 'release_candidate'
       BRANCH_BACKEND_REF:
         description: 'Checkout branch Backend (server)'
         required: true
@@ -17,8 +13,7 @@ on:
         default: 'latest'
       SERVICES:
         description: |
-          Comma-separated list of servizi da buildare:
-            • configurator  
+          Comma-separated list of servizi da buildare:            
             • live_streamer  
             • id_verifier  
             • event_manager  
@@ -54,14 +49,6 @@ jobs:
           path: hypernode-server
           token: ${{ secrets.GIT_PAT }}
 
-      - name: Checkout frontend
-        uses: actions/checkout@v3
-        with:
-          repository: Arteco-Global/hypernode_server_gui
-          ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
-          path: hypernode_server_gui
-          token: ${{ secrets.GIT_PAT }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -82,15 +69,6 @@ jobs:
       # Per ogni servizio aggiungiamo una condizione `if:` che controlla
       # se l'utente ha scritto "all" o se la lista CSV contiene la parola chiave
       # -----------------------------------------------------------------------------
-
-      - name: BuildConfigurator
-        if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'configurator') }}
-        run: |
-          docker buildx build \
-            --platform=linux/amd64,linux/arm64 \
-            -f hypernode_server_gui/configurator.Dockerfile \
-            -t artecoglobalcompany/usee_configurator:${{ env.TAG }} \
-            --push hypernode_server_gui
 
       - name: BuildLiveStreamer
         if: ${{ inputs.SERVICES == 'all' || contains(inputs.SERVICES, 'live_streamer') }}
