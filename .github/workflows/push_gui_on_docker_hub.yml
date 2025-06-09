@@ -1,0 +1,59 @@
+name: Push only Configurator
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH_CONFIGURATOR_REF:
+        description: 'Checkout branch Configurator (Client) (default: release_candidate)'
+        required: true
+        default: 'release_candidate'      
+      TAG_REF:
+        description: 'Tag to push on Docker Hub (default: latest)'
+        required: true
+        default: 'latest'
+        
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+
+    env:
+      TAG: latest  # Puoi modificarlo dinamicamente con un timestamp o SHA se vuoi
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Checkout frontend
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode_server_gui
+          ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
+          path: hypernode_server_gui
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: DockerHub Login
+        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: DockerHub check
+        run: docker info
+
+      - name: Build hypernode_server_gui
+        run: |
+          docker buildx build \
+            --platform=linux/amd64,linux/arm64 \
+            -f hypernode_server_gui/configurator.Dockerfile \
+            -t artecoglobalcompany/usee_configurator:${{ github.event.inputs.TAG_REF }} \
+            --push hypernode_server_gui
