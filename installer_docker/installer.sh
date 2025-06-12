@@ -331,8 +331,8 @@ get_config() {
     1 | 7)
      
 
-        RMQ="amqp://hypernode:hypernode@messagebroker:5672?heartbeat=90"
-        RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672?heartbeat=90"
+        RMQ="amqp://hypernode:hypernode@messagebroker:5672"
+        RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672"
         export RMQ
         export RMQ_HOST       
 
@@ -353,9 +353,9 @@ get_config() {
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT?heartbeat=90"
+        export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
         export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-        export RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672?heartbeat=90"
+        export RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672"
 
 
         ;;
@@ -377,9 +377,9 @@ get_config() {
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT?heartbeat=90"
+        export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
         export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-        export RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672?heartbeat=90"
+        export RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672"
 
         ;;  
         
