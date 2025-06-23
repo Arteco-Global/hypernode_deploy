@@ -4,10 +4,6 @@
 SCRIPT_DIR=$(dirname "$0") #local path
 ABSOLUTE_PATH=$(realpath "$SCRIPT_DIR") #absolute path
 
-SKIP_CLEAN="false"
-SKIP_DOCKER_INSTALL="false"
-ERASE_DB="false"
-
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
 RUNNING_AS_SUDO="false"
@@ -43,7 +39,6 @@ execute_command() {
     fi
 }
 
-printf "\nInstaller version v1.0.0\n"
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -fi|--foce-install)
@@ -58,26 +53,10 @@ while [[ "$#" -gt 0 ]]; do
             DOCKER_TAG="$2"
             shift 2
             ;;
-        -eb|-erase-db) 
-            echo "got -erase-db parameter!"
-            ERASE_DB="true"
-            shift
-            ;;
-        -sc|-skip-clean) 
-            echo "got -skip-clean parameter!"
-            SKIP_CLEAN="true"
-            shift
-            ;;
-        -sdi|-skip-docker-install) 
-            echo "got skip-docker-install!"
-            SKIP_DOCKER_INSTALL="true"
-            shift
-            ;;
+     
         -h|--help) 
             echo "-port: setting the port for the server (default: 443)"
             echo "-tag: setting the docker tag (default: latest)"
-            echo "-skip-clean: skip cleaning procedure"
-            echo "-skip-docker-install: skip docker installation"
             exit
             ;;
         *) 
@@ -87,51 +66,11 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
-printf "\nSSL_PORT set to: $SSL_PORT\n"
-printf "DOCKER_TAG set to: $DOCKER_TAG\n"
+#printf "\nSSL_PORT set to: $SSL_PORT\n"
+#printf "DOCKER_TAG set to: $DOCKER_TAG\n"
 
 export SSL_PORT
 export DOCKER_TAG
-
-show_ascii_art() {
-    cat << "EOF"
-                                                                                                    
-                                  #############                                                     
-                               ##################                                                   
-                             ######################                                                 
-                            ########################                                                
-    +++           ++++     ######%%%##########              +++++++++++          ++++++++++++       
-    ++++         +++++     ####%%%%##############         +++++++++++++++      ++++++++++++++++     
-    ++++         +++++     ##%%%%%################       +++++        ++++    +++++        +++++    
-    ++++         +++++     %%%%%%%#################     +++++          ++++  +++++          ++++    
-    ++++         +++++     %%%%%%%%%       #########    +++++++++++++++++++  ++++++++++++++++++++   
-    ++++         +++++      %%%%%%%%%%%%%%%%########    +++++++++++++++++++  +++++++++++++++++++    
-    ++++         +++++       %%%%%%%%%%%%%%%%#######    +++++                 ++++                  
-    ++++++     ++++++         %%%%%%%%%%%%%%%#######     ++++++       +++     ++++++       +++      
-     ++++++++++++++             %%%%%%%%%%%#########       +++++++++++++++      +++++++++++++++     
-       ++++++++++          ########################          ++++++++++            +++++++++        
-                            ######################                                                  
-                             ####################                                                   
-                                ##############                                                      
-                                     ####                                                           
-                                                                                                    
-                                                                                                    
-    +++++++++++++++ ++++++++  ++ ++++++++ +++++++ ++  ++ ++ ++++++++ +++++ +++++ ++++++++ ++++ ++     
-
-       _____                 _             _____       _ _         _____           _        _ _ 
-      / ____|               (_)           / ____|     (_) |       |_   _|         | |      | | |
-     | (___   ___ _ ____   ___  ___ ___  | (___  _   _ _| |_ ___    | |  _ __  ___| |_ __ _| | |
-      \___ \ / _ \ '__\ \ / / |/ __/ _ \  \___ \| | | | | __/ _ \   | | | '_ \/ __| __/ _` | | |
-      ____) |  __/ |   \ V /| | (_|  __/  ____) | |_| | | ||  __/  _| |_| | | \__ \ || (_| | | |
-     |_____/ \___|_|    \_/ |_|\___\___| |_____/ \__,_|_|\__\___| |_____|_| |_|___/\__\__,_|_|_|
-                                                                                                
-                                                                                                
-
-    ++++++++ +++++++++++++++++  +++++++++ +++ ++++  +++++++++++ +++++++++++++++++++++++++ ++  ++++     
-                                                                                                    
-EOF
-}
-
 
 
 get_my_local_ip() {
@@ -159,22 +98,6 @@ end_with_message() {
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
         exit 1
-    fi
-}
-
-drop_server_collection() {
-    printf "\nRe-initializing server DB...\n"
-
-    local MONGO_CONTAINER_NAME="database"
-
-    docker exec "$MONGO_CONTAINER_NAME" mongo gateway-db --eval "
-        db.server.drop();
-    "
-
-    if [ $? -eq 0 ]; then
-        printf "\n✅ The 'server' collection has been successfully dropped from the 'gateway-db' database.\n"
-    else
-        printf "\n❌ Failed to drop the 'server' collection. Please check the container or database status.\n"
     fi
 }
 
@@ -339,8 +262,6 @@ get_config() {
         ;;
     2 | 3 | 4 | 5 | 6)
        
-        read -p "Choose a unique name (in case of update, type the current service name): " PROCESS_NAME
-
         read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
         read -p "Insert uSee Gateway port (default 443): " remote_host_port
 
@@ -349,6 +270,8 @@ get_config() {
         REMOTE_GATEWAY_PORT=${remote_host_port:-443}
 
         printf "\nGateway set as $REMOTE_GATEWAY_URL"
+
+        PROCESS_NAME=$(od -A n -N4 -t x1 /dev/urandom | tr -d ' \n')
      
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
@@ -363,11 +286,8 @@ get_config() {
       8 | 9 | 10 | 11 | 12)
 
         read -p "Type the service name to update: " PROCESS_NAME
-
         read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
         read -p "Insert uSee Gateway port (default 443): " remote_host_port
-
-        
 
         REMOTE_GATEWAY_URL="$remote_host"
         REMOTE_GATEWAY_PORT=${remote_host_port:-443}
@@ -384,7 +304,6 @@ get_config() {
         ;;  
         
     99)
-        export SKIP_DOCKER_INSTALL=true      
         ;;
     0)
         printf "\nExiting."
@@ -401,14 +320,6 @@ get_config() {
     printf "\nINSTALL_OPTION: $INSTALL_OPTION"
 
 
-}
-
-cleanProcedure() {
-
-    execute_command "rm -rf \"$ABSOLUTE_PATH/hypernode\" > /dev/null" \
-        "Cleaning code" || return 1
-
-    printf "\nCleaning procedure completed successfully.\n\n"
 }
 
 
@@ -451,7 +362,6 @@ checkIfHypernodeIsInstalled() {
     local container_name="gateway"
 
     if docker ps | grep -qw "$container_name"; then
-        printf "\nSuite Manager detected. This is the uSee Gateway.\n"
         HYPERNODE_ALREADY_INSTALLED="true"
     else
         printf "\nNo Suite Manager detected. \nInstall the complete suite (Gateway Mode) or single services. (Runner Mode)\n"
@@ -462,10 +372,8 @@ checkIfHypernodeIsInstalled() {
 
 check_docker_installed() {
     if ! command -v docker &> /dev/null; then       
-        printf "Docker is not installed." 
         DOCKER_ALREADY_INSTALLED="false"
     else
-        printf "Docker is already installed."
         DOCKER_ALREADY_INSTALLED="true"
     fi
 }
@@ -476,8 +384,6 @@ detectSudo(){
     if [ "$EUID" -ne 0 ]; then
         printf "\nThis script is not running as root/sudo.\n" 
         exit 1
-    else
-        printf "\nThis script is running as root/sudo.\n" 
     fi
 }
 
@@ -486,11 +392,9 @@ detectDockerCompose(){
     # Step 2: Check if docker-compose command or docker compose command is available
     if command -v docker-compose &> /dev/null; then
         COMPOSE_CMD="docker-compose"
-        printf "Using 'docker-compose' command\n"
     elif command -v docker &> /dev/null && docker --version | grep -q "Docker"; then
         # Check if 'docker compose' (the plugin) is available
         COMPOSE_CMD="docker compose"
-        printf "Using 'docker compose' command\n"
     else
         printf "❌ Neither 'docker-compose' nor 'docker compose' found. Please install the required tool.\n"
         exit 1
@@ -505,14 +409,14 @@ detectDockerCompose(){
 #a. Welcome step
 
 #clear
-show_ascii_art
+
 detectSudo
 detectDockerCompose
 check_docker_installed # Check if docker is installed
 checkIfHypernodeIsInstalled # Check if hypernode is already installed
 get_config # Get the configuration from the user
 clear
-show_ascii_art
+
 
 
 if [ "$DOCKER_ALREADY_INSTALLED" == "true" ]; then
@@ -522,22 +426,12 @@ if [ "$DOCKER_ALREADY_INSTALLED" == "true" ]; then
 
 else
  
-    if [ "$SKIP_DOCKER_INSTALL" == "true" ]; then
-        printf "\nSkipping docker install as requested\n"
-
-    else
-        dockerInstall
-        printf "\nInstalling docker\n"
-
-    fi
+   dockerInstall
 
 fi
 
 
 if [ "$INSTALL_OPTION" -eq 1 ]; then    
-    if [ "$ERASE_DB" == "true" ]; then
-        drop_server_collection
-    fi
     additionalServiceInstall "server" && end_with_message "Server installation" 0 || end_with_message "Server installation" 1
 elif [ "$INSTALL_OPTION" -eq 2 ]; then
     additionalServiceInstall "camera" && end_with_message "Camera service installation" 0 || end_with_message "Camera service installation" 1
@@ -550,9 +444,6 @@ elif [ "$INSTALL_OPTION" -eq 5 ]; then
 elif [ "$INSTALL_OPTION" -eq 6 ]; then
     additionalServiceInstall "snapshot" && end_with_message "Snapshot service installation" 0 || end_with_message "Snapshot service installation" 1
 elif [ "$INSTALL_OPTION" -eq 7 ]; then
-    if [ "$ERASE_DB" == "true" ]; then
-        drop_server_collection
-    fi
     additionalServiceInstall "server" "update" && end_with_message "Server update" 0 || end_with_message "Server update" 1
 elif [ "$INSTALL_OPTION" -eq 8 ]; then
     additionalServiceInstall "camera" "update" && end_with_message "Camera service update" 0 || end_with_message "Camera service update" 1
@@ -566,10 +457,4 @@ elif [ "$INSTALL_OPTION" -eq 12 ]; then
     additionalServiceInstall "snapshot" "update" && end_with_message "Snapshot service update" 0 || end_with_message "Snapshot service update" 1
 elif [ "$INSTALL_OPTION" -eq 99 ]; then
     dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
-fi
-
-if [ "$SKIP_CLEAN" != "true" ]; then
-    cleanProcedure
-else
-    printf "\nSkipping cleaning procedure\n\n"
 fi
