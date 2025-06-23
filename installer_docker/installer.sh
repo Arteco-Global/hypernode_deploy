@@ -22,6 +22,7 @@ NC='\033[0m' # Color reset
 SSL_PORT=443
 DOCKER_TAG="latest"
 FORCE_INSTALL="false"
+DB_PORT=27017
 
 
 execute_command() {
@@ -104,10 +105,31 @@ end_with_message() {
 additionalServiceInstall() {
     local SERVICE_NAME=$1
     local TYPE_OF_INSTALL=${2:-"install"} 
+    local DEFAULT_DB_USED="true";
+    
+    checkIfDbPortIsUsed
+    if [ $? -eq 0 ]; then
+        DEFAULT_DB_USED="true"
+    else
+        DEFAULT_DB_USED="false"
+        execute_command "$COMPOSE_CMD -f \""$ABSOLUTE_PATH/composes/database/docker-compose.yaml"\" up -d --build --remove-orphans" \
+
+    fi
 
     printf "\nSERVICE_NAME: $SERVICE_NAME"
 
     local COMPOSE_FILE="$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml"
+
+    if [ "$DEFAULT_DB_USED" == "true" ]; then
+        printf "\nUsing default database for $SERVICE_NAME"
+        DB_PORT=27017
+    fi
+
+    export DB_PORT
+
+ 
+
+    #fai le altre qui !!
 
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
         printf "\nUpdating service: $SERVICE_NAME"
@@ -206,16 +228,18 @@ else
     echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager${NC}"
     echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Recording${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
     echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}  │${NC}  7. ${BLUE}All the Service Suite${NC}"
-    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}Live streamer${NC}"
-    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}ID Verifier${NC}"
-    echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Event Manager${NC}"
-    echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Storage service${NC}"
-    echo -e "  ${CYAN}  │${NC} 12. ${BLUE}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}All the Service Suite${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  10. ${BLUE}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC} 12. ${BLUE}Storage service${NC}"
+    echo -e "  ${CYAN}  │${NC} 13. ${BLUE}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC} 14. ${BLUE}Recording${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -228,6 +252,19 @@ else
 fi
 }
 
+checkIfDbPortIsUsed() {
+  
+    if lsof -i :$DB_PORT > /dev/null; then
+        # deb già attivo, inutile aggiungerne uno
+        echo "Port used, using default database !"
+        return 0;
+    else
+        ### Installing Database 
+        echo "Port $DB_PORT is not in use, proceeding with database installation."
+        return 1;
+
+    fi
+}
 
 get_config() {
 
@@ -251,7 +288,7 @@ get_config() {
     fi
 
     case $INSTALL_OPTION in
-    1 | 7)
+    1 | 8)
      
 
         RMQ="amqp://hypernode:hypernode@messagebroker:5672"
@@ -260,7 +297,7 @@ get_config() {
         export RMQ_HOST       
 
         ;;
-    2 | 3 | 4 | 5 | 6)
+    2 | 3 | 4 | 5 | 6 | 7)
        
         read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
         read -p "Insert uSee Gateway port (default 443): " remote_host_port
@@ -419,12 +456,7 @@ clear
 
 
 
-if [ "$DOCKER_ALREADY_INSTALLED" == "true" ]; then
-   
-    #alrady install do nothing
-    printf "\nSkipping docker install as it is already installed\n"
-
-else
+if [ "$DOCKER_ALREADY_INSTALLED" != "true" ]; then
  
    dockerInstall
 
@@ -444,16 +476,18 @@ elif [ "$INSTALL_OPTION" -eq 5 ]; then
 elif [ "$INSTALL_OPTION" -eq 6 ]; then
     additionalServiceInstall "snapshot" && end_with_message "Snapshot service installation" 0 || end_with_message "Snapshot service installation" 1
 elif [ "$INSTALL_OPTION" -eq 7 ]; then
-    additionalServiceInstall "server" "update" && end_with_message "Server update" 0 || end_with_message "Server update" 1
+    additionalServiceInstall "recording" && end_with_message "Recording service installation" 0 || end_with_message "Recording service installation" 1
 elif [ "$INSTALL_OPTION" -eq 8 ]; then
-    additionalServiceInstall "camera" "update" && end_with_message "Camera service update" 0 || end_with_message "Camera service update" 1
+    additionalServiceInstall "server" "update" && end_with_message "Server update" 0 || end_with_message "Server update" 1
 elif [ "$INSTALL_OPTION" -eq 9 ]; then
-    additionalServiceInstall "auth" "update" && end_with_message "Auth service update" 0 || end_with_message "Auth service update" 1
+    additionalServiceInstall "camera" "update" && end_with_message "Camera service update" 0 || end_with_message "Camera service update" 1
 elif [ "$INSTALL_OPTION" -eq 10 ]; then
-    additionalServiceInstall "event" "update" && end_with_message "Event service update" 0 || end_with_message "Event service update" 1
+    additionalServiceInstall "auth" "update" && end_with_message "Auth service update" 0 || end_with_message "Auth service update" 1
 elif [ "$INSTALL_OPTION" -eq 11 ]; then
-    additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
+    additionalServiceInstall "event" "update" && end_with_message "Event service update" 0 || end_with_message "Event service update" 1
 elif [ "$INSTALL_OPTION" -eq 12 ]; then
+    additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
+elif [ "$INSTALL_OPTION" -eq 13 ]; then
     additionalServiceInstall "snapshot" "update" && end_with_message "Snapshot service update" 0 || end_with_message "Snapshot service update" 1
 elif [ "$INSTALL_OPTION" -eq 99 ]; then
     dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
