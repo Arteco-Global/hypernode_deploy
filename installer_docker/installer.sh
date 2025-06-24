@@ -285,16 +285,16 @@ get_config() {
 
     case $INSTALL_OPTION in
     1 | 8)
-     
+    
+        # Install the complete suite (Gateway Mode)
 
         RMQ="amqp://hypernode:hypernode@messagebroker:5672"
-        RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672"
         export RMQ
-        export RMQ_HOST       
 
         ;;
     2 | 3 | 4 | 5 | 6 | 7)
        
+        # Install single services (Runner Mode)
         read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
         read -p "Insert uSee Gateway port (default 443): " remote_host_port
 
@@ -311,13 +311,13 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
         export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-        export RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672"
 
 
         ;;
 
       8 | 9 | 10 | 11 | 12)
 
+        # Update single services (Runner Mode)
         read -p "Type the service name to update: " PROCESS_NAME
         read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
         read -p "Insert uSee Gateway port (default 443): " remote_host_port
@@ -332,7 +332,6 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
         export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-        export RMQ_HOST="amqp://hypernode:hypernode@127.0.0.1:5672"
 
         ;;  
         

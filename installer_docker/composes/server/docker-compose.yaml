@@ -99,7 +99,7 @@ services:
   camera:
     image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
     environment:
-      - RABBITMQ_URI=${RMQ_HOST:-amqp://hypernode:hypernode@127.0.0.1:5672}
+      - RABBITMQ_URI=${amqp://hypernode:hypernode@127.0.0.1:5672}
       - GATEWAY_REMOTE_IP=ws://127.0.0.1:8001
       - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
     container_name: camera
