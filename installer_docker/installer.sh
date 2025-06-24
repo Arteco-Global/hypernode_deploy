@@ -105,30 +105,26 @@ end_with_message() {
 additionalServiceInstall() {
     local SERVICE_NAME=$1
     local TYPE_OF_INSTALL=${2:-"install"} 
-    local DEFAULT_DB_USED="true";
-    
-    checkIfDbPortIsUsed
-    if [ $? -eq 0 ]; then
-        DEFAULT_DB_USED="true"
-    else
-        DEFAULT_DB_USED="false"
-        execute_command "$COMPOSE_CMD -f \""$ABSOLUTE_PATH/composes/database/docker-compose.yaml"\" up -d --build --remove-orphans" \
-
-    fi
-
-    printf "\nSERVICE_NAME: $SERVICE_NAME"
-
     local COMPOSE_FILE="$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml"
 
-    if [ "$DEFAULT_DB_USED" == "true" ]; then
-        printf "\nUsing default database for $SERVICE_NAME"
-        DB_PORT=27017
+    if [ "$SERVICE_NAME" != "server" ] ; then
+    #se non è il server, allora devo controllare se il database è già attivo, nel caso crearlo oppure usare quello esistente
+    
+        checkIfDbPortIsUsed
+        if [ $? -eq 0 ]; then
+            printf "\nUsing default database for $SERVICE_NAME"
+            DB_PORT=27017
+        else
+            printf "\nInstalling additional database for $SERVICE_NAME"
+            execute_command "$COMPOSE_CMD -f \""$ABSOLUTE_PATH/composes/database/docker-compose.yaml"\" up -d --build --remove-orphans" 
+            DB_PORT=27017
+        fi
+        
+        export DB_PORT
+
     fi
 
-    export DB_PORT
-
  
-
     #fai le altre qui !!
 
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
