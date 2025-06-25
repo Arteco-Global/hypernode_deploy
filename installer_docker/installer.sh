@@ -2,7 +2,7 @@
 
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
-ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker
+ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
@@ -111,7 +111,7 @@ end_with_message() {
 additionalServiceInstall() {
     local SERVICE_NAME=$1
     local TYPE_OF_INSTALL=${2:-"install"} 
-    local COMPOSE_FILE="$ABSOLUTE_PATH/composes/$SERVICE_NAME/docker-compose.yaml"
+    local COMPOSE_FILE="$ABSOLUTE_PATH/$SERVICE_NAME/docker-compose.yaml"
 
     if [ "$SERVICE_NAME" != "server" ] ; then
     #se non è il server, allora devo controllare se il database è già attivo, nel caso crearlo oppure usare quello esistente
@@ -123,6 +123,7 @@ additionalServiceInstall() {
         else
             printf "\nInstalling additional database for $SERVICE_NAME"
             execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans" 
+
             DB_PORT=27017
         fi
         
