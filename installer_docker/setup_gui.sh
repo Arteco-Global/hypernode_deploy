@@ -12,7 +12,7 @@ if [ $? -eq 0 ]; then
   # Put your install command here, for example:
   curl -sSL -o installer.sh https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/installer.sh
   chmod +x installer.sh
-  sudo ./installer.sh -fi
+  sudo bash ./installer.sh -fi
 
 else
   zenity --info --text="Installation cancelled."
