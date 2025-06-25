@@ -2,7 +2,7 @@
 
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
-ABSOLUTE_PATH=$(realpath "$SCRIPT_DIR") #absolute path
+ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
@@ -50,14 +50,20 @@ while [[ "$#" -gt 0 ]]; do
             SSL_PORT="$2"
             shift 2
             ;;
+        -m|--mode)
+            INSTALL_OPTION="$2"
+            shift 2
+            ;;
         -tag|--tag)
             DOCKER_TAG="$2"
             shift 2
             ;;
      
         -h|--help) 
-            echo "-port: setting the port for the server (default: 443)"
-            echo "-tag: setting the docker tag (default: latest)"
+            echo "-p|--port: set the port for the server (default: 443)"
+            echo "-tag|--tag: set the docker tag (default: latest)"
+            echo "-fi|--force-install: force the installation"
+            echo "-m|--mode: set the installation mode"
             exit
             ;;
         *) 
@@ -116,7 +122,7 @@ additionalServiceInstall() {
             DB_PORT=27017
         else
             printf "\nInstalling additional database for $SERVICE_NAME"
-            execute_command "$COMPOSE_CMD -f \""$ABSOLUTE_PATH/composes/database/docker-compose.yaml"\" up -d --build --remove-orphans" 
+            execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans" 
             DB_PORT=27017
         fi
         
@@ -140,7 +146,7 @@ additionalServiceInstall() {
             "Pruning Docker images" || return 1
     fi
 
-    execute_command "$COMPOSE_CMD -f \"$COMPOSE_FILE\" up -d --build --remove-orphans" \
+    execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
