@@ -137,10 +137,10 @@ additionalServiceInstall() {
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
         printf "\nUpdating service: $SERVICE_NAME"
 
-        execute_command "$COMPOSE_CMD -f \"$COMPOSE_FILE\" pull" \
+        execute_command "$COMPOSE_CMD -f  <(curl -sSL "$COMPOSE_FILE") pull" \
             "Pulling latest images for $SERVICE_NAME" || return 1
 
-        execute_command "$COMPOSE_CMD -f \"$COMPOSE_FILE\" down" \
+        execute_command "$COMPOSE_CMD -f  <(curl -sSL "$COMPOSE_FILE") down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
 
         execute_command "docker image prune -f >/dev/null 2>&1" \
