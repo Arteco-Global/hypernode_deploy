@@ -122,7 +122,7 @@ additionalServiceInstall() {
             DB_PORT=27017
         else
             printf "\nInstalling additional database for $SERVICE_NAME"
-            execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans" 
+            execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" 
 
             DB_PORT=27017
         fi
@@ -318,6 +318,13 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
         export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
+        printf "\nGateway set as $REMOTE_GATEWAY_URL"
+        printf "\nPROCESS_NAME set as $PROCESS_NAME"
+        printf "\nDB_NAME set as $DB_NAME"
+        printf "\nDATABASE_URI set as $DATABASE_URI"
+        printf "\nRMQ set as $RMQ"
+        printf "\nGRI set as $GRI"
+        read -p $'\nPress enter to continue ...'
 
 
         ;;
@@ -339,6 +346,14 @@ get_config() {
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
         export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
         export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
+
+        printf "\nGateway set as $REMOTE_GATEWAY_URL"
+        printf "\nPROCESS_NAME set as $PROCESS_NAME"
+        printf "\nDB_NAME set as $DB_NAME"
+        printf "\nDATABASE_URI set as $DATABASE_URI"
+        printf "\nRMQ set as $RMQ"
+        printf "\nGRI set as $GRI"
+        read -p $'\nPress enter to continue ...'
 
         ;;  
         
