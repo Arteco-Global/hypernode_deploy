@@ -152,7 +152,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost"]  # O sostituisci con una health API
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 30
       start_period: 30s
 
   configurator:
