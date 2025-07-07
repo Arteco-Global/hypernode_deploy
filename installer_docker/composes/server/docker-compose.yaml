@@ -42,9 +42,7 @@ services:
       - "8000:8000"
       - "8001:8001"
     environment:
-      - GATEWAY_API_PORT=5001
-      - GATEWAY_WS_PORT=8000
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/gateway-db
       - CERT_PATH=/ssl
     container_name: gateway
@@ -60,7 +58,7 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/storage-db
     container_name: storage
     restart: unless-stopped
@@ -73,7 +71,7 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/recording-db
       - GATEWAY_REMOTE_IP=ws://gateway:8001
       - RECORDING_PATH_TO_SAVE=/recording_files      
@@ -88,7 +86,7 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/event-db
     container_name: event
     restart: unless-stopped
@@ -114,7 +112,7 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/auth-db
     container_name: auth
     restart: unless-stopped
@@ -127,7 +125,7 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=${RMQ:-amqp://hypernode:hypernode@messagebroker:5672}
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/snapshot-db
       - GATEWAY_REMOTE_IP=ws://gateway:8001
       - SNAPSHOT_PATH_TO_SAVE=/snapshot_files
