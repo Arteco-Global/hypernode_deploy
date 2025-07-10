@@ -42,6 +42,8 @@ services:
       - "8000:8000"
       - "8001:8001"
     environment:
+      - GATEWAY_API_PORT=5001
+      - GATEWAY_WS_PORT=8000
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/gateway-db
       - CERT_PATH=/ssl
