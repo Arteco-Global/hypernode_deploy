@@ -8,9 +8,6 @@
 		},
 		{
 			"path": "../hypernode-server"
-		},
-		{
-			"path": "../hypernode_microservice_manager"
 		}
 	],
 	"settings": {}
