@@ -464,7 +464,7 @@ detectDockerCompose(){
 
 #clear
 
-detectSudo
+#detectSudo
 detectDockerCompose
 check_docker_installed # Check if docker is installed
 checkIfHypernodeIsInstalled # Check if hypernode is already installed
