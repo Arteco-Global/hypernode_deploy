@@ -433,13 +433,13 @@ check_docker_installed() {
 }
 
 
-detectSudo(){
+# detectSudo(){
     
-    if [ "$EUID" -ne 0 ]; then
-        printf "\nThis script is not running as root/sudo.\n" 
-        exit 1
-    fi
-}
+#     if [ "$EUID" -ne 0 ]; then
+#         printf "\nThis script is not running as root/sudo.\n" 
+#         exit 1
+#     fi
+# }
 
 detectDockerCompose(){
 
@@ -464,7 +464,7 @@ detectDockerCompose(){
 
 #clear
 
-detectSudo
+#detectSudo
 detectDockerCompose
 check_docker_installed # Check if docker is installed
 checkIfHypernodeIsInstalled # Check if hypernode is already installed
