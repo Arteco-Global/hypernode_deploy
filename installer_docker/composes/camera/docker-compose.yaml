@@ -6,7 +6,7 @@ services:
     image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
     environment:
       - RABBITMQ_URI=${RMQ}
-      - GATEWAY_REMOTE_IP=${GRI}
+      - GATEWAY_URI=${GRI}
       - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/camera_${PROCESS_NAME}
       - SRV_INST_NAME=camera_${PROCESS_NAME}
     container_name: camera_${PROCESS_NAME}

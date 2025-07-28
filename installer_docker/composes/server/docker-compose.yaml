@@ -75,7 +75,7 @@ services:
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/recording-db
-      - GATEWAY_REMOTE_IP=ws://gateway:8001
+      - GATEWAY_URI=ws://gateway:8001
       - RECORDING_PATH_TO_SAVE=/recording_files      
     container_name: recording
     restart: unless-stopped
@@ -100,7 +100,7 @@ services:
     image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
-      - GATEWAY_REMOTE_IP=ws://127.0.0.1:8001
+      - GATEWAY_URI=ws://127.0.0.1:8001
       - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
     container_name: camera
     restart: unless-stopped
@@ -129,7 +129,7 @@ services:
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/snapshot-db
-      - GATEWAY_REMOTE_IP=ws://gateway:8001
+      - GATEWAY_URI=ws://gateway:8001
       - SNAPSHOT_PATH_TO_SAVE=/snapshot_files
     container_name: snapshot
     restart: unless-stopped
