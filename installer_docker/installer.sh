@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# LOCAL INSTALLER TEST |
+
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
 ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes
@@ -24,6 +26,11 @@ DOCKER_TAG="latest"
 FORCE_INSTALL="false"
 DB_PORT=27017
 
+PROCESS_NAME="--"
+remote_host="--"   
+
+
+
 
 execute_command() {
     local COMMAND=$1
@@ -42,28 +49,40 @@ execute_command() {
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        -fi|--foce-install)
+        -fi)
             FORCE_INSTALL="true"
             shift
             ;;
-        -p|--port)
+        -p)
             SSL_PORT="$2"
             shift 2
             ;;
-        -m|--mode)
+        -host)
+            remote_host="$2"
+            shift 2
+            ;;
+        -pn)
+            PROCESS_NAME="$2"
+            shift 2
+            ;;
+        -m)
             INSTALL_OPTION="$2"
             shift 2
             ;;
-        -tag|--tag)
+        -t)
             DOCKER_TAG="$2"
             shift 2
             ;;
      
-        -h|--help) 
-            echo "-p|--port: set the port for the server (default: 443)"
-            echo "-tag|--tag: set the docker tag (default: latest)"
-            echo "-fi|--force-install: force the installation"
-            echo "-m|--mode: set the installation mode"
+        -h) 
+            echo "-p: set the port for the server (default: 443)"
+            echo "-t: set the docker tag (default: latest)"
+            echo "-fi: force the installation"
+            echo "-m: set the installation mode"
+            echo "-host: set the remote host for the service"
+            echo "-pn: set the process name for the service"
+            echo "-h: show this help message"
+            echo "Example: ./installer.sh -p 443 -t latest -fi -m 1 -host V123456.my.omniaweb.cloud:443 -pn camera"
             exit
             ;;
         *) 
@@ -284,11 +303,14 @@ get_config() {
  
     if [ "$FORCE_INSTALL" == "true" ]; then
         printf "\nForce install mode enabled. Skipping menu.\n"
-        INSTALL_OPTION=1
     else
         read -p "Enter the option: " INSTALL_OPTION
         INSTALL_OPTION=${INSTALL_OPTION:-1}
     fi
+
+    printf "\nYou selected option: $INSTALL_OPTION\n"
+
+
 
     case $INSTALL_OPTION in
     1 | 8)
@@ -301,60 +323,56 @@ get_config() {
         ;;
     2 | 3 | 4 | 5 | 6 | 7)
        
-        # Install single services (Runner Mode)
-        read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
-        read -p "Insert uSee Gateway port (default 443): " remote_host_port
 
+        if [ "$FORCE_INSTALL" == "false" ]; then
+            # Install single services (Runner Mode)
+            read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud:443): " remote_host
+            read -p "Type the service name to update: " PROCESS_NAME
+
+        fi
 
         REMOTE_GATEWAY_URL="$remote_host"
-        REMOTE_GATEWAY_PORT=${remote_host_port:-443}
-
-        printf "\nGateway set as $REMOTE_GATEWAY_URL"
-
-        PROCESS_NAME=$(od -A n -N4 -t x1 /dev/urandom | tr -d ' \n')
      
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-        export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-        printf "\nGateway set as $REMOTE_GATEWAY_URL"
+        export RMQ="amqps://hypernode:hypernode@$remote_host"
+        export GRI="wss://$remote_host"
+        printf "\nGateway set as $remote_host"
         printf "\nPROCESS_NAME set as $PROCESS_NAME"
         printf "\nDB_NAME set as $DB_NAME"
         printf "\nDATABASE_URI set as $DATABASE_URI"
         printf "\nRMQ set as $RMQ"
         printf "\nGRI set as $GRI"
-        read -p $'\nPress enter to continue ...'
 
-
+        if [ "$FORCE_INSTALL" == "false" ]; then
+            read -p $'\nPress enter to continue ...'
+        fi
         ;;
 
       8 | 9 | 10 | 11 | 12)
 
         # Update single services (Runner Mode)
         read -p "Type the service name to update: " PROCESS_NAME
-        read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud): " remote_host
-        read -p "Insert uSee Gateway port (default 443): " remote_host_port
-
-        REMOTE_GATEWAY_URL="$remote_host"
-        REMOTE_GATEWAY_PORT=${remote_host_port:-443}
-
-        printf "\nGateway set as $REMOTE_GATEWAY_URL"
+        read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud:443): " remote_host
      
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqps://hypernode:hypernode@$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
-        export GRI="wss://$REMOTE_GATEWAY_URL:$REMOTE_GATEWAY_PORT"
+        export RMQ="amqps://hypernode:hypernode@$remote_host"
+        export GRI="wss://$remote_host"
 
-        printf "\nGateway set as $REMOTE_GATEWAY_URL"
+        printf "\nGateway set as $remote_host"
         printf "\nPROCESS_NAME set as $PROCESS_NAME"
         printf "\nDB_NAME set as $DB_NAME"
         printf "\nDATABASE_URI set as $DATABASE_URI"
         printf "\nRMQ set as $RMQ"
         printf "\nGRI set as $GRI"
-        read -p $'\nPress enter to continue ...'
 
+        if [ "$FORCE_INSTALL" == "false" ]; then
+            read -p $'\nPress enter to continue ...'
+        fi
+        
         ;;  
         
     99)
