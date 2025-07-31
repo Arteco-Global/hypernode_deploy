@@ -78,7 +78,7 @@ while [[ "$#" -gt 0 ]]; do
       shift 2
       ;;
     -tz|--timezone)
-      TIMEZONE="$2"
+      SERVER_TIMEZONE="$2"
       shift 2
       ;;
     -in|--internal-name)
@@ -86,15 +86,15 @@ while [[ "$#" -gt 0 ]]; do
       shift 2
       ;;
     -email|--email)
-      ADMIN_EMAIL="$2"
+      ARTECO_GLOBAL_EMAIL="$2"
       shift 2
       ;;
     -pass|--password)
-      ADMIN_PASSWORD="$2"
+      ARTECO_GLOBAL_PASSWORD="$2"
       shift 2
       ;;
     -sip|--server-ip)
-      SERVER_IP="$2"
+      SERVER_IP_ADDRESS="$2"
       shift 2
       ;;
     -h|--help)
