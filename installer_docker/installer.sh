@@ -48,49 +48,86 @@ execute_command() {
 }
 
 while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        -fi)
-            FORCE_INSTALL="true"
-            shift
-            ;;
-        -p)
-            SSL_PORT="$2"
-            shift 2
-            ;;
-        -host)
-            remote_host="$2"
-            shift 2
-            ;;
-        -pn)
-            PROCESS_NAME="$2"
-            shift 2
-            ;;
-        -m)
-            INSTALL_OPTION="$2"
-            shift 2
-            ;;
-        -t)
-            DOCKER_TAG="$2"
-            shift 2
-            ;;
-     
-        -h) 
-            echo "-p: set the port for the server (default: 443)"
-            echo "-t: set the docker tag (default: latest)"
-            echo "-fi: force the installation"
-            echo "-m: set the installation mode"
-            echo "-host: set the remote host for the service"
-            echo "-pn: set the process name for the service"
-            echo "-h: show this help message"
-            echo "Example: ./installer.sh -p 443 -t latest -fi -m 1 -host V123456.my.omniaweb.cloud:443 -pn camera"
-            exit
-            ;;
-        *) 
-            echo "Unknown parameter: $1"
-            shift
-            ;;
-    esac
+  case "$1" in
+    -fi|--force-install)
+      FORCE_INSTALL="true"
+      shift
+      ;;
+    -p|--port)
+      SSL_PORT="$2"
+      shift 2
+      ;;
+    -t|--tag)
+      DOCKER_TAG="$2"
+      shift 2
+      ;;
+    -m|--mode)
+      INSTALL_OPTION="$2"
+      shift 2
+      ;;
+    -host|--host)
+      remote_host="$2"
+      shift 2
+      ;;
+    -pn|--process-name)
+      PROCESS_NAME="$2"
+      shift 2
+      ;;
+    -sn|--serial-number)
+      SERIAL_NUMBER="$2"
+      shift 2
+      ;;
+    -tz|--timezone)
+      TIMEZONE="$2"
+      shift 2
+      ;;
+    -in|--internal-name)
+      SERVER_NAME="$2"
+      shift 2
+      ;;
+    -email|--email)
+      ADMIN_EMAIL="$2"
+      shift 2
+      ;;
+    -pass|--password)
+      ADMIN_PASSWORD="$2"
+      shift 2
+      ;;
+    -sip|--server-ip)
+      SERVER_IP="$2"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: installer.sh [options]"
+      echo ""
+      echo "Network options:"
+      echo "  -p, --port              Set the port for the server (default: 443)"
+      echo "  -t, --tag               Set the docker tag (default: latest)"
+      echo "  -fi, --force-install    Force the installation"
+      echo "  -m, --mode              Set the installation mode"
+      echo "  -host, --host           Set the remote host (e.g., domain:443)"
+      echo "  -pn, --process-name     Set the process name"
+      echo ""
+      echo "Setup info:"
+      echo "  -sn, --serial-number    Set the device serial number"
+      echo "  -tz, --timezone         Set the timezone (e.g., Europe/Rome)"
+      echo "  -in, --internal-name    Set the internal server name"
+      echo "  -email, --email         Set the admin email"
+      echo "  -pass, --password       Set the admin password"
+      echo "  -sip, --server-ip       Set the server IP"
+      echo ""
+      echo "Example:"
+      echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10"
+      exit 0
+      ;;
+    *)
+      echo "Unknown parameter: $1"
+      shift
+      ;;
+  esac
 done
+
+
 
 #printf "\nSSL_PORT set to: $SSL_PORT\n"
 #printf "DOCKER_TAG set to: $DOCKER_TAG\n"
