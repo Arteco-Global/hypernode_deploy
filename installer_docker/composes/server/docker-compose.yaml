@@ -47,6 +47,13 @@ services:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://database:27017/gateway-db
       - CERT_PATH=/ssl
+      - SERIAL_NUMBER=${SERIAL_NUMBER}
+      - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
+      - SERVER_NAME=${SERVER_NAME:-Hypernode Server}
+      - ARTECO_GLOBAL_EMAIL=${ARTECO_GLOBAL_EMAIL}
+      - ARTECO_GLOBAL_PASSWORD=${ARTECO_GLOBAL_PASSWORD}
+      - SERVER_IP_ADDRESS=${SERVER_IP_ADDRESS}
+
     container_name: gateway
     restart: unless-stopped
     depends_on:
