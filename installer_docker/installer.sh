@@ -75,26 +75,32 @@ while [[ "$#" -gt 0 ]]; do
       ;;
     -sn|--serial-number)
       SERIAL_NUMBER="$2"
+      export SERIAL_NUMBER
       shift 2
       ;;
     -tz|--timezone)
       SERVER_TIMEZONE="$2"
+      export SERVER_TIMEZONE
       shift 2
       ;;
     -in|--internal-name)
       SERVER_NAME="$2"
+      export SERVER_NAME
       shift 2
       ;;
     -email|--email)
       ARTECO_GLOBAL_EMAIL="$2"
+      export ARTECO_GLOBAL_EMAIL
       shift 2
       ;;
     -pass|--password)
       ARTECO_GLOBAL_PASSWORD="$2"
+      export ARTECO_GLOBAL_PASSWORD
       shift 2
       ;;
     -sip|--server-ip)
       SERVER_IP_ADDRESS="$2"
+      export SERVER_IP_ADDRESS
       shift 2
       ;;
     -h|--help)
