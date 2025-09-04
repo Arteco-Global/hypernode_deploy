@@ -196,7 +196,7 @@ additionalServiceInstall() {
     if [ "$SERVICE_NAME" != "server" ] ; then
     
         printf "\nInstalling additional database for $SERVICE_NAME"
-        execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" 
+        execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans --pull always" 
 
     fi
 
@@ -214,7 +214,7 @@ additionalServiceInstall() {
             "Pruning Docker images" || return 1
     fi
 
-    execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans" \
+    execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans --pull always" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
