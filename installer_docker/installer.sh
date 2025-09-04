@@ -170,12 +170,23 @@ end_with_message() {
     fi
 }
 
+installLocalDb() {
+    printf "\nInstalling local database on port $DB_PORT"
+
+    execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" \
+        "Installing local database" || return 1
+
+    return 0
+}
+
 additionalServiceInstall() {
     local SERVICE_NAME=$1
     local TYPE_OF_INSTALL=${2:-"install"} 
     local COMPOSE_FILE="$ABSOLUTE_PATH/$SERVICE_NAME/docker-compose.yaml"
 
     getFirstDbPortFree
+    installLocalDb
+
 
     printf "\nInstalling '$SERVICE_NAME' on port '$DB_PORT'"
 
@@ -336,6 +347,8 @@ getFirstDbPortFree() {
     echo "No free port found after $MAX_TRIES attempts!"
     return 1
 }
+
+
 
 
 
