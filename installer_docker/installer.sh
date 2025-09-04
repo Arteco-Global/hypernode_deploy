@@ -173,6 +173,8 @@ end_with_message() {
 installLocalDb() {
     printf "\nInstalling local database on port $DB_PORT"
 
+    printf "\nDatabase name: "$ABSOLUTE_PATH/database/docker-compose.yaml""
+
     execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" \
         "Installing local database" || return 1
 
