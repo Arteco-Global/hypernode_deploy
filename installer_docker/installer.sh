@@ -175,27 +175,19 @@ additionalServiceInstall() {
     local TYPE_OF_INSTALL=${2:-"install"} 
     local COMPOSE_FILE="$ABSOLUTE_PATH/$SERVICE_NAME/docker-compose.yaml"
 
-    if [ "$SERVICE_NAME" != "server" ] ; then
-    #se non è il server, allora devo controllare se il database è già attivo, nel caso crearlo oppure usare quello esistente
-    
-        checkIfDbPortIsUsed
-        if [ $? -eq 0 ]; then
-            printf "\nUsing default database for $SERVICE_NAME"
-            DB_PORT=27017
-        else
-            printf "\nInstalling additional database for $SERVICE_NAME"
-            execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" 
+    getFirstDbPortFree
 
-            DB_PORT=27017
-        fi
-        
-        export DB_PORT
+    printf "\nInstalling '$SERVICE_NAME' on port '$DB_PORT'"
+
+
+    if [ "$SERVICE_NAME" != "server" ] ; then
+    
+        printf "\nInstalling additional database for $SERVICE_NAME"
+        execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" 
 
     fi
 
  
-    #fai le altre qui !!
-
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
         printf "\nUpdating service: $SERVICE_NAME"
 
@@ -317,19 +309,36 @@ else
 fi
 }
 
-checkIfDbPortIsUsed() {
-  
-    if lsof -i :$DB_PORT > /dev/null; then
-        # deb già attivo, inutile aggiungerne uno
-        echo "Port used, using default database !"
-        return 0;
-    else
-        ### Installing Database 
-        echo "Port $DB_PORT is not in use, proceeding with database installation."
-        return 1;
+getFirstDbPortFree() {
+    local DEFAULT_PORT=27017
+    local MAX_TRIES=100
+    local attempt=0
 
+    # Se DB_PORT non è settata, iniziamo dalla default
+    if [ -z "$DB_PORT" ]; then
+        DB_PORT=$DEFAULT_PORT
     fi
+
+    while [ $attempt -lt $MAX_TRIES ]; do
+        if lsof -i :$DB_PORT > /dev/null 2>&1; then
+            # Porta occupata, proviamo la prossima
+            echo "Port $DB_PORT is in use."
+            DB_PORT=$((DB_PORT + 1))
+            attempt=$((attempt + 1))
+        else
+            # Porta libera
+            export DB_PORT
+            echo "Using port $DB_PORT for the database."
+            return 0
+        fi
+    done
+
+    echo "No free port found after $MAX_TRIES attempts!"
+    return 1
 }
+
+
+
 
 get_config() {
 
@@ -361,6 +370,7 @@ get_config() {
         # Install the complete suite (Gateway Mode)
 
         RMQ="amqp://hypernode:hypernode@messagebroker:5672"
+
         export RMQ
 
         ;;

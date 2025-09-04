@@ -32,7 +32,7 @@ services:
       - GATEWAY_API_PORT=5001
       - GATEWAY_WS_PORT=8000
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/gateway-db
+      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/gateway-db
       - CERT_PATH=/ssl
       - SERIAL_NUMBER=${SERIAL_NUMBER}
       - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
@@ -55,7 +55,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/storage-db
+      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/storage-db
     container_name: storage
     restart: unless-stopped
     depends_on:
@@ -68,7 +68,7 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/recording-db
+      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/recording-db
       - GATEWAY_URI=ws://gateway:8001
       - RECORDING_PATH_TO_SAVE=/recording_files      
     container_name: recording
@@ -83,7 +83,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/event-db
+      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/event-db
     container_name: event
     restart: unless-stopped
     depends_on:
@@ -109,7 +109,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/auth-db
+      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/auth-db
     container_name: auth
     restart: unless-stopped
     depends_on:
@@ -122,7 +122,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/snapshot-db
+      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/snapshot-db
       - GATEWAY_URI=ws://gateway:8001
       - SNAPSHOT_PATH_TO_SAVE=/snapshot_files
     container_name: snapshot
