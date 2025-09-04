@@ -7,7 +7,7 @@ services:
     ports:
       - "${DB_PORT:-27017}:27017"
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_data:/data/db_${DB_NAME}
     container_name: ${DB_NAME:-mydb}
     restart: unless-stopped
     
