@@ -48,6 +48,8 @@ services:
         condition: service_healthy
     volumes:
       - hypernode_security_shared_files:/ssl
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   storage:
     image: artecoglobalcompany/usee_media_storage:${DOCKER_TAG:-latest}
@@ -61,6 +63,8 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   recording:
     image: artecoglobalcompany/usee_media_recorder:${DOCKER_TAG:-latest}
@@ -75,7 +79,8 @@ services:
     restart: unless-stopped
     volumes:
       - hypernode_recording_volume:/recording_files
-
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   event:
     image: artecoglobalcompany/usee_event_manager:${DOCKER_TAG:-latest}
@@ -89,6 +94,8 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   camera:
     image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
@@ -115,6 +122,8 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   snapshot:
     image: artecoglobalcompany/usee_snapshot_recorder:${DOCKER_TAG:-latest}
@@ -132,7 +141,9 @@ services:
         condition: service_healthy
     volumes:
       - hypernode_snapshot_volume:/snapshot_files
-
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      
   webserver:
     image: artecoglobalcompany/usee_web_server:${DOCKER_TAG:-latest}
     container_name: webserver
