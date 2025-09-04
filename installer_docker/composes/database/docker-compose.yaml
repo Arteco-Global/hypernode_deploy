@@ -1,4 +1,4 @@
-name: loca_database_for_${DB_NAME}
+name: local_database_for_${DB_NAME}
 
 services:
   
