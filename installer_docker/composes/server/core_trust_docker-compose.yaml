@@ -40,11 +40,9 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
-    volumes:
-      - hypernode_security_shared_files:/ssl
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
 
   coretrust:
     image: artecoglobalcompany/usee_coretrust:${DOCKER_TAG:-latest}
@@ -52,18 +50,19 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/storage-db
+      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/coretrust-db
       - CERT_PATH=/ssl
       - SERIAL_NUMBER=${SERIAL_NUMBER}
       - ARTECO_GLOBAL_EMAIL=${ARTECO_GLOBAL_EMAIL}
       - ARTECO_GLOBAL_PASSWORD=${ARTECO_GLOBAL_PASSWORD}
       - SERVER_IP_ADDRESS=${SERVER_IP_ADDRESS}
-
     container_name: coretrust
     restart: unless-stopped
     depends_on:
       messagebroker:
         condition: service_healthy
+    volumes:
+      - hypernode_security_shared_files:/ssl
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
