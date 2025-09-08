@@ -241,7 +241,6 @@ dockerInstall() {
     # Step 5: Install Docker
     execute_command "apt-get update -y >/dev/null 2>&1 &&  apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
 
-
     return 0
 }
 
@@ -333,7 +332,7 @@ getFirstDbPortFree() {
     fi
 
     while [ $attempt -lt $MAX_TRIES ]; do
-        if lsof -i :$DB_PORT > /dev/null 2>&1; then
+        if ss -ltnp | grep ":$DB_PORT " > /dev/null 2>&1; then
             # Porta occupata, proviamo la prossima
             echo "Port $DB_PORT is in use."
             DB_PORT=$((DB_PORT + 1))
@@ -528,15 +527,13 @@ check_docker_installed() {
 # }
 
 detectDockerCompose(){
-
-    # Step 2: Check if docker-compose command or docker compose command is available
-    if command -v docker-compose &> /dev/null; then
-        COMPOSE_CMD="docker-compose"
-    elif command -v docker &> /dev/null && docker --version | grep -q "Docker"; then
-        # Check if 'docker compose' (the plugin) is available
+    # Step 2: Check if 'docker compose' (plugin) or 'docker-compose' (legacy) is available
+    if command -v docker &> /dev/null && docker compose version &> /dev/null; then
         COMPOSE_CMD="docker compose"
+    elif command -v docker-compose &> /dev/null; then
+        COMPOSE_CMD="docker-compose"
     else
-        printf "❌ Neither 'docker-compose' nor 'docker compose' found. Please install the required tool.\n"
+        printf "❌ Neither 'docker compose' nor 'docker-compose' found. Please install the required tool.\n"
         exit 1
     fi
 
