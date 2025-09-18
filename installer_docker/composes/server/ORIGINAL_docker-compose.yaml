@@ -33,36 +33,15 @@ services:
       - GATEWAY_WS_PORT=8000
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/gateway-db
-      - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
-      - SERVER_NAME=${SERVER_NAME:-Hypernode Server}
-    container_name: gateway
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  coretrust:
-    image: artecoglobalcompany/usee_coretrust:${DOCKER_TAG:-latest}
-    networks:
-      - hypernode-net
-    environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/coretrust-db
       - CERT_PATH=/ssl
       - SERIAL_NUMBER=${SERIAL_NUMBER}
+      - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
+      - SERVER_NAME=${SERVER_NAME:-Hypernode Server}
       - ARTECO_GLOBAL_EMAIL=${ARTECO_GLOBAL_EMAIL}
       - ARTECO_GLOBAL_PASSWORD=${ARTECO_GLOBAL_PASSWORD}
       - SERVER_IP_ADDRESS=${SERVER_IP_ADDRESS}
 
-      - CERTIFICATE_PROVIDER_URL=${CERTIFICATE_PROVIDER_URL}
-      - DNS_PROVIDER_URL=${DNS_PROVIDER_URL}
-      - LICENSE_PROVIDER_URL=${LICENSE_PROVIDER_URL}
-      - UPDATE_PROVIDER_URL=${UPDATE_PROVIDER_URL}
-
-    container_name: coretrust
+    container_name: gateway
     restart: unless-stopped
     depends_on:
       messagebroker:
@@ -71,7 +50,6 @@ services:
       - hypernode_security_shared_files:/ssl
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
 
   storage:
     image: artecoglobalcompany/usee_media_storage:${DOCKER_TAG:-latest}
