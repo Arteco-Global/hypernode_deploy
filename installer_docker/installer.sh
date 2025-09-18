@@ -103,28 +103,55 @@ while [[ "$#" -gt 0 ]]; do
       export SERVER_IP_ADDRESS
       shift 2
       ;;
+
+    -cert-url|--certificate-provider-url)
+      CERTIFICATE_PROVIDER_URL="$2"
+      export CERTIFICATE_PROVIDER_URL
+      shift 2
+      ;;
+    -dns-url|--dns-provider-url)
+      DNS_PROVIDER_URL="$2"
+      export DNS_PROVIDER_URL
+      shift 2
+      ;;
+    -lic-url|--license-provider-url)
+      LICENSE_PROVIDER_URL="$2"
+      export LICENSE_PROVIDER_URL
+      shift 2
+      ;;
+    -upd-url|--update-provider-url)
+      UPDATE_PROVIDER_URL="$2"
+      export UPDATE_PROVIDER_URL
+      shift 2
+      ;;
     -h|--help)
-      echo "Usage: installer.sh [options]"
-      echo ""
-      echo "Network options:"
-      echo "  -p, --port              Set the port for the server (default: 443)"
-      echo "  -t, --tag               Set the docker tag (default: latest)"
-      echo "  -fi, --force-install    Force the installation"
-      echo "  -m, --mode              Set the installation mode"
-      echo "  -host, --host           Set the remote host (e.g., domain:443)"
-      echo "  -pn, --process-name     Set the process name"
-      echo ""
-      echo "Setup info:"
-      echo "  -sn, --serial-number    Set the device serial number"
-      echo "  -tz, --timezone         Set the timezone (e.g., Europe/Rome)"
-      echo "  -in, --internal-name    Set the internal server name"
-      echo "  -email, --email         Set the admin email"
-      echo "  -pass, --password       Set the admin password"
-      echo "  -sip, --server-ip       Set the server IP"
-      echo ""
-      echo "Example:"
-      echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10"
-      exit 0
+    echo "Usage: installer.sh [options]"
+    echo ""
+    echo "Network options:"
+    echo "  -p, --port                    Set the port for the server (default: 443)"
+    echo "  -t, --tag                     Set the docker tag (default: latest)"
+    echo "  -fi, --force-install          Force the installation"
+    echo "  -m, --mode                    Set the installation mode"
+    echo "  -host, --host                 Set the remote host (e.g., domain:443)"
+    echo "  -pn, --process-name           Set the process name"
+    echo ""
+    echo "Setup info:"
+    echo "  -sn, --serial-number          Set the device serial number"
+    echo "  -tz, --timezone               Set the timezone (e.g., Europe/Rome)"
+    echo "  -in, --internal-name          Set the internal server name"
+    echo "  -email, --email               Set the admin email"
+    echo "  -pass, --password             Set the admin password"
+    echo "  -sip, --server-ip             Set the server IP"
+    echo ""
+    echo "Provider URLs:"
+    echo "  -cert-url, --certificate-provider-url   Set the certificate provider URL"
+    echo "  -dns-url, --dns-provider-url           Set the DNS provider URL"
+    echo "  -lic-url, --license-provider-url       Set the license provider URL"
+    echo "  -upd-url, --update-provider-url        Set the update provider URL"
+    echo ""
+    echo "Example:"
+    echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com"
+    exit 0
       ;;
     *)
       echo "Unknown parameter: $1"
