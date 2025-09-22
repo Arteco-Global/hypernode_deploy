@@ -7,7 +7,7 @@ services:
       - RABBITMQ_URI=${RMQ}
       - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/snapshot_${PROCESS_NAME}
       - SNAPSHOT_PATH_TO_SAVE=/snapshot_files
-      - GATEWAY_URI=${GRI:-ws://gateway:8001}
+      - GATEWAY_URI=${GRI:-ws://gateway}
       - SRV_INST_NAME=snapshot_${PROCESS_NAME}
     container_name: snapshot_${PROCESS_NAME}
     restart: unless-stopped
