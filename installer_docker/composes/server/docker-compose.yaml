@@ -43,6 +43,20 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  camera:
+    image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
+      - GATEWAY_URI=ws://127.0.0.1
+      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/camera-db
+    container_name: camera
+    restart: unless-stopped
+    network_mode: "host"
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+
+
   coretrust:
     image: artecoglobalcompany/usee_coretrust:${DOCKER_TAG:-latest}
     networks:
@@ -118,19 +132,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  camera:
-    image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
-    environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
-      - GATEWAY_URI=ws://127.0.0.1
-      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/camera-db
-    container_name: camera
-    restart: unless-stopped
-    network_mode: "host"
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-
   auth:
     image: artecoglobalcompany/usee_id_verifier:${DOCKER_TAG:-latest}
     networks:
@@ -174,6 +175,8 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
+    ports:
+      - "80:80"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]  # O sostituisci con una health API
       interval: 10s
