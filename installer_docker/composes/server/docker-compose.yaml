@@ -25,8 +25,8 @@ services:
     image: artecoglobalcompany/usee_suite_manager:${DOCKER_TAG:-latest}
     networks:
       - hypernode-net
-    ports:
-      - "8000-8020:8000-8020" # NOT WORKING WITH COMPOSE v3+
+    # ports:
+    #   - "8000-8020:8000-8020" # NOT WORKING WITH COMPOSE v3+
     environment:
       - GATEWAY_API_PORT=5001
       - GATEWAY_WS_PORT=8000
