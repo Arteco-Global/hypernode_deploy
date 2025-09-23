@@ -8,7 +8,7 @@ services:
       - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/recording_${PROCESS_NAME}
       - SRV_INST_NAME=recording_${PROCESS_NAME}
       - RECORDING_PATH_TO_SAVE=/recording_files
-      - GATEWAY_URI=${GRI:-ws://gateway}
+      - GATEWAY_URI=${GRI}
     container_name: recording_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"
