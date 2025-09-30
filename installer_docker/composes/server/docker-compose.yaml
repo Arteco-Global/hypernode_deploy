@@ -106,7 +106,8 @@ services:
     container_name: recording
     restart: unless-stopped
     volumes:
-      - hypernode_recording_volume:/recording_files
+      - ${RECORDING_PATH_TO_SAVE_BIND}/recordings:/recording_files
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -155,7 +156,7 @@ services:
       messagebroker:
         condition: service_healthy
     volumes:
-      - hypernode_snapshot_volume:/snapshot_files
+      - ${SNAPSHOT_PATH_TO_SAVE_BIND}/snapshots:/recording_files
     extra_hosts:
       - "host.docker.internal:host-gateway"
       
@@ -205,10 +206,7 @@ services:
 
 volumes:
   rabbitmq_data:
-  mongodb_data:
   hypernode_security_shared_files:
-  hypernode_snapshot_volume:
-  hypernode_recording_volume:
 
 networks:
   hypernode-net:
