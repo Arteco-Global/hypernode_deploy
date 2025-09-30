@@ -13,9 +13,4 @@ services:
     restart: unless-stopped
     network_mode: "host"
     volumes:
-      - hypernode_snapshot_volume:/snapshot_files
-
-volumes:
-  hypernode_snapshot_volume:
-    name: snapshot_${PROCESS_NAME}_hypernode_snapshot_volume
- 
+        - ${SNAPSHOT_PATH_TO_SAVE_BIND}/snapshots:/recording_files

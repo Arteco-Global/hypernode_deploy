@@ -13,8 +13,4 @@ services:
     restart: unless-stopped
     network_mode: "host"
     volumes:
-      - hypernode_recording_volume:/recording_files
-
-volumes:
-  hypernode_recording_volume:
-    name: recording_${PROCESS_NAME}_hypernode_recording_volume
+      - ${RECORDING_PATH_TO_SAVE_BIND}/recordings:/recording_files
