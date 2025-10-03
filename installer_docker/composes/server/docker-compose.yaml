@@ -87,7 +87,7 @@ services:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/storage-db
       - STORAGE_PATH_TO_SAVE=/storage_files
-      - STOAGE_MAX_DISK_SPACE=${STOAGE_MAX_DISK_SPACE:-10000000}    
+      - STORAGE_MAX_DISK_SPACE=${STORAGE_MAX_DISK_SPACE:-10000000}    
     container_name: storage
     restart: unless-stopped
     depends_on:
