@@ -9,6 +9,7 @@ services:
       - SRV_INST_NAME=recording_${PROCESS_NAME}
       - RECORDING_PATH_TO_SAVE=/recording_files
       - GATEWAY_URI=${GRI}
+      - REC_MAX_DISK_SPACE=${REC_MAX_DISK_SPACE:-10000000}
     container_name: recording_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"

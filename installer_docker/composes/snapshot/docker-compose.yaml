@@ -9,6 +9,7 @@ services:
       - SNAPSHOT_PATH_TO_SAVE=/snapshot_files
       - GATEWAY_URI=${GRI}
       - SRV_INST_NAME=snapshot_${PROCESS_NAME}
+      - SNAPSHOT_MAX_DISK_SPACE=${SNAPSHOT_MAX_DISK_SPACE:-10000000}
     container_name: snapshot_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"
