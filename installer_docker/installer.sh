@@ -124,6 +124,36 @@ while [[ "$#" -gt 0 ]]; do
       export UPDATE_PROVIDER_URL
       shift 2
       ;;
+    -rec-path|--recording-path)
+      RECORDING_PATH_TO_SAVE="$2"
+      export RECORDING_PATH_TO_SAVE
+      shift 2
+      ;;
+    -rec-max-disk|--recording-max-disk)
+      REC_MAX_DISK_SPACE="$2"
+      export REC_MAX_DISK_SPACE
+      shift 2
+      ;;
+    -storage-path|--storage-path)
+      STORAGE_PATH_TO_SAVE="$2"
+      export STORAGE_PATH_TO_SAVE
+      shift 2
+      ;;
+    -storage-max-disk|--storage-max-disk)
+      STORAGE_MAX_DISK_SPACE="$2"
+      export STORAGE_MAX_DISK_SPACE
+      shift 2
+      ;;
+    -snapshot-path|--snapshot-path)
+      SNAPSHOT_PATH_TO_SAVE="$2"
+      export SNAPSHOT_PATH_TO_SAVE
+      shift 2
+      ;;
+    -snapshot-max-disk|--snapshot-max-disk)
+      SNAPSHOT_MAX_DISK_SPACE="$2"
+      export SNAPSHOT_MAX_DISK_SPACE
+      shift 2
+      ;;
     -h|--help)
     echo "Usage: installer.sh [options]"
     echo ""
@@ -149,8 +179,16 @@ while [[ "$#" -gt 0 ]]; do
     echo "  -lic-url, --license-provider-url       Set the license provider URL"
     echo "  -upd-url, --update-provider-url        Set the update provider URL"
     echo ""
+    echo "Storage/Recording/Snapshot options:"
+    echo "  -rec-path, --recording-path            Set the path to save recordings (default: /recording_files)"
+    echo "  -rec-max-disk, --recording-max-disk    Set max disk space for recordings in Kbytes (default: 10000000)"
+    echo "  -storage-path, --storage-path          Set the path to save storage files (default: /storage_files)"
+    echo "  -storage-max-disk, --storage-max-disk  Set max disk space for storage in Kbytes (default: 10000000)"
+    echo "  -snapshot-path, --snapshot-path        Set the path to save snapshots (default: /snapshot_files)"
+    echo "  -snapshot-max-disk, --snapshot-max-disk Set max disk space for snapshots in Kbytes (default: 10000000)"
+    echo ""
     echo "Example:"
-    echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com"
+    echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com --recording-path /recording_files --recording-max-disk 10000000 --storage-path /storage_files --storage-max-disk 10000000 --snapshot-path /snapshot_files --snapshot-max-disk 10000000"
     exit 0
       ;;
     *)
