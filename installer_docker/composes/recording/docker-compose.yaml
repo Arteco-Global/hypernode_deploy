@@ -14,4 +14,4 @@ services:
     restart: unless-stopped
     network_mode: "host"
     volumes:
-      - ${RECORDING_PATH_TO_SAVE_BIND}/recordings:/recording_files
+      - ${RECORDING_PATH_TO_SAVE}/recordings:/recording_files
