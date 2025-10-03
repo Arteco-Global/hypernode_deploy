@@ -14,4 +14,4 @@ services:
     restart: unless-stopped
     network_mode: "host"
     volumes:
-        - ${SNAPSHOT_PATH_TO_SAVE}/snapshots:/recording_files
+        - ${SNAPSHOT_PATH_TO_SAVE}/hypernode:/recording_files

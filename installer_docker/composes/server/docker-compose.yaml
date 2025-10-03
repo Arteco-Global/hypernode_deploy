@@ -96,7 +96,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ${STORAGE_PATH_TO_SAVE}/storage:/storage_files
+      - ${STORAGE_PATH_TO_SAVE}/hypernode:/storage_files
 
   recording:
     image: artecoglobalcompany/usee_media_recorder:${DOCKER_TAG:-latest}
@@ -111,7 +111,7 @@ services:
     container_name: recording
     restart: unless-stopped
     volumes:
-      - ${RECORDING_PATH_TO_SAVE}/recordings:/recording_files
+      - ${RECORDING_PATH_TO_SAVE}/hypernode:/recording_files
 
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -162,7 +162,7 @@ services:
       messagebroker:
         condition: service_healthy
     volumes:
-      - ${SNAPSHOT_PATH_TO_SAVE}/snapshots:/recording_files
+      - ${SNAPSHOT_PATH_TO_SAVE}/hypernode:/recording_files
     extra_hosts:
       - "host.docker.internal:host-gateway"
       

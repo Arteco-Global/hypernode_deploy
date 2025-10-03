@@ -12,3 +12,5 @@ services:
     container_name: storage_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"
+    volumes:
+        - ${STORAGE_PATH_TO_SAVE}/hypernode:/storage_files
