@@ -125,33 +125,33 @@ while [[ "$#" -gt 0 ]]; do
       shift 2
       ;;
     -rec-path|--recording-path)
-      RECORDING_PATH_TO_SAVE="$2"
-      export RECORDING_PATH_TO_SAVE
+      RECORDING_PATH="$2"
+      export RECORDING_PATH
       shift 2
       ;;
     -rec-max-disk|--recording-max-disk)
-      REC_MAX_DISK_SPACE="$2"
-      export REC_MAX_DISK_SPACE
+      RECORDING_DISK_SPACE="$2"
+      export RECORDING_DISK_SPACE
       shift 2
       ;;
     -storage-path|--storage-path)
-      STORAGE_PATH_TO_SAVE="$2"
-      export STORAGE_PATH_TO_SAVE
+      STORAGE_PATH="$2"
+      export STORAGE_PATH
       shift 2
       ;;
     -storage-max-disk|--storage-max-disk)
-      STORAGE_MAX_DISK_SPACE="$2"
-      export STORAGE_MAX_DISK_SPACE
+      STORAGE_DISK_SPACE="$2"
+      export STORAGE_DISK_SPACE
       shift 2
       ;;
     -snapshot-path|--snapshot-path)
-      SNAPSHOT_PATH_TO_SAVE="$2"
-      export SNAPSHOT_PATH_TO_SAVE
+      SNAPSHOT_PATH="$2"
+      export SNAPSHOT_PATH
       shift 2
       ;;
     -snapshot-max-disk|--snapshot-max-disk)
-      SNAPSHOT_MAX_DISK_SPACE="$2"
-      export SNAPSHOT_MAX_DISK_SPACE
+      SNAPSHOT_DISK_SPACE="$2"
+      export SNAPSHOT_DISK_SPACE
       shift 2
       ;;
     -h|--help)

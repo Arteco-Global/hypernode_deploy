@@ -7,10 +7,10 @@ services:
       - RABBITMQ_URI=${RMQ}
       - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/storage_${PROCESS_NAME}
       - SRV_INST_NAME=storage_${PROCESS_NAME}
-      - STORAGE_PATH_TO_SAVE=/storage_files
-      - STORAGE_MAX_DISK_SPACE=${STORAGE_MAX_DISK_SPACE:-10000000}
+      - STORAGE_PATH=/storage_files
+      - STORAGE_DISK_SPACE=${STORAGE_DISK_SPACE:-10000000}
     container_name: storage_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"
     volumes:
-        - ${STORAGE_PATH_TO_SAVE}/hypernode:/storage_files
+        - ${STORAGE_PATH}/hypernode:/storage_files

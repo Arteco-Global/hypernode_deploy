@@ -7,11 +7,11 @@ services:
       - RABBITMQ_URI=${RMQ}
       - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/recording_${PROCESS_NAME}
       - SRV_INST_NAME=recording_${PROCESS_NAME}
-      - RECORDING_PATH_TO_SAVE=/recording_files
+      - RECORDING_PATH=/recording_files
       - GATEWAY_URI=${GRI}
-      - REC_MAX_DISK_SPACE=${REC_MAX_DISK_SPACE:-10000000}
+      - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
     container_name: recording_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"
     volumes:
-      - ${RECORDING_PATH_TO_SAVE}/hypernode:/recording_files
+      - ${RECORDING_PATH}/hypernode:/recording_files
