@@ -1,6 +1,31 @@
 #!/bin/bash
 
-# LOCAL INSTALLER TEST |
+# MILESHIGHT INSTALLER TEST |
+
+# sudo bash installer.sh \
+#   --force-install \
+#   --tag latest \
+#   --mode 1 \
+#   --port 443 \
+#   --host "v000001.my.omniaweb.cloud" \
+#   --process-name "gateway" \
+#   --serial-number "A1B2C3D4E5" \
+#   --timezone "Europe/Rome" \
+#   --internal-name "HyperNodeServer01" \
+#   --email "admin@arteco-global.com" \
+#   --password "SuperSecret123" \
+#   --server-ip "192.168.1.100" \
+#   --certificate-provider-url "http://192.168.10.20:3000/certificate" \
+#   --dns-provider-url "http://192.168.0.67:3000/dns-update" \
+#   --license-provider-url "http://192.168.10.20:3000/sites" \
+#   --update-provider-url "http://192.168.10.20:3000/update" \
+#   --recording-path "/mnt/mmc/recqu/recording" \
+#   --recording-max-disk 500000000000 \
+#   --storage-path "/mnt/mmc/recqu/storage" \
+#   --storage-max-disk 100000000000 \
+#   --snapshot-path "/mnt/mmc/recqu/snapshot" \
+#   --snapshot-max-disk 20000000000
+
 
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
