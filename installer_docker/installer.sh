@@ -201,7 +201,7 @@ end_with_message() {
 installLocalDb() {
     printf "\nInstalling local database on port $DB_PORT"
     printf "\nDatabase name: "$ABSOLUTE_PATH/database/docker-compose.yaml""
-    execute_command "$COMPOSE_CMD -f <(wget -qO- \"$ABSOLUTE_PATH/database/docker-compose.yaml\") up -d --build --remove-orphans" \
+    execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$ABSOLUTE_PATH/database/docker-compose.yaml\") up -d --build --remove-orphans" \
         "Installing local database" || return 1
     return 0
 }
@@ -218,20 +218,20 @@ additionalServiceInstall() {
 
     if [ "$SERVICE_NAME" != "server" ] ; then
         printf "\nInstalling additional database for $SERVICE_NAME"
-        execute_command "$COMPOSE_CMD -f <(wget -qO- \"$ABSOLUTE_PATH/database/docker-compose.yaml\") up -d --build --remove-orphans --pull always"
+        execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$ABSOLUTE_PATH/database/docker-compose.yaml\") up -d --build --remove-orphans --pull always"
     fi
 
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
         printf "\nUpdating service: $SERVICE_NAME"
-        execute_command "$COMPOSE_CMD -f <(wget -qO- \"$COMPOSE_FILE\") pull" \
+        execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$COMPOSE_FILE\") pull" \
             "Pulling latest images for $SERVICE_NAME" || return 1
-        execute_command "$COMPOSE_CMD -f <(wget -qO- \"$COMPOSE_FILE\") down" \
+        execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$COMPOSE_FILE\") down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
         execute_command "docker image prune -f >/dev/null 2>&1" \
             "Pruning Docker images" || return 1
     fi
 
-    execute_command "$COMPOSE_CMD -f <(wget -qO- \"$COMPOSE_FILE\") up -d --build --remove-orphans --pull always" \
+    execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$COMPOSE_FILE\") up -d --build --remove-orphans --pull always" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
@@ -241,7 +241,7 @@ additionalServiceInstall() {
 dockerInstall() {
     execute_command "apt-get update -y >/dev/null 2>&1" "Updating packages" || return 1
     execute_command "apt-get install -y apt-transport-https ca-certificates wget software-properties-common >/dev/null 2>&1" "Installing required packages" || return 1
-    execute_command "wget -qO- https://download.docker.com/linux/ubuntu/gpg | apt-key add - >/dev/null 2>&1" "Adding Docker GPG key" || return 1
+    execute_command "wget --no-check-certificate -qO- https://download.docker.com/linux/ubuntu/gpg | apt-key add - >/dev/null 2>&1" "Adding Docker GPG key" || return 1
     execute_command "add-apt-repository 'deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable' -y >/dev/null 2>&1" "Adding Docker repository" || return 1
     execute_command "apt-get update -y >/dev/null 2>&1 && apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
     return 0
