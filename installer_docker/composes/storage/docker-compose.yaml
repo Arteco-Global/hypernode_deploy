@@ -13,4 +13,4 @@ services:
     restart: unless-stopped
     network_mode: "host"
     volumes:
-        - ${STORAGE_PATH}/hypernode:/storage_files
+        - ${STORAGE_PATH}:/storage_files

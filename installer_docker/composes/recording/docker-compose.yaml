@@ -14,4 +14,4 @@ services:
     restart: unless-stopped
     network_mode: "host"
     volumes:
-      - ${RECORDING_PATH}/hypernode:/recording_files
+      - ${RECORDING_PATH}:/recording_files
