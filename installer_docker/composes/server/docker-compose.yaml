@@ -42,7 +42,7 @@ services:
     image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
-      - GATEWAY_URI=ws://127.0.0.1
+      - GATEWAY_URI=ws://127.0.0.1:8181
       - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/camera-db
     container_name: camera
     restart: unless-stopped
@@ -175,8 +175,8 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
-    # ports:
-    #   - "80:80"
+    ports:
+      - "8181:80"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]  # O sostituisci con una health API
       interval: 10s
