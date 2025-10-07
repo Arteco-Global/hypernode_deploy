@@ -9,8 +9,8 @@ services:
       RABBITMQ_DEFAULT_PASS: hypernode
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-    ports:
-      - "5672:5672"
+    # ports:
+    #   - "5672:5672"
     container_name: messagebroker
     restart: unless-stopped
     healthcheck:
@@ -175,8 +175,8 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
-    ports:
-      - "80:80"
+    # ports:
+    #   - "80:80"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]  # O sostituisci con una health API
       interval: 10s
