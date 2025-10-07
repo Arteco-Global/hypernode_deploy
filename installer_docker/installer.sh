@@ -20,12 +20,6 @@ WHITE='\033[1;37m'
 BLUE='\033[0;34m'
 NC='\033[0m' # Color reset
 
-# Check wget availability
-if ! command -v wget &> /dev/null; then
-    echo "❌ wget is required but not installed. Install it with: apt install wget -y"
-    exit 1
-fi
-
 # Default values for input parameters
 SSL_PORT=443
 DOCKER_TAG="latest"
@@ -34,6 +28,8 @@ DB_PORT=27017
 
 PROCESS_NAME="--"
 remote_host="--"   
+
+
 
 
 execute_command() {
@@ -107,6 +103,7 @@ while [[ "$#" -gt 0 ]]; do
       export SERVER_IP_ADDRESS
       shift 2
       ;;
+
     -cert-url|--certificate-provider-url)
       CERTIFICATE_PROVIDER_URL="$2"
       export CERTIFICATE_PROVIDER_URL
@@ -158,8 +155,41 @@ while [[ "$#" -gt 0 ]]; do
       shift 2
       ;;
     -h|--help)
-      echo "Usage: installer.sh [options]"
-      exit 0
+    echo "Usage: installer.sh [options]"
+    echo ""
+    echo "Network options:"
+    echo "  -p, --port                    Set the port for the server (default: 443)"
+    echo "  -t, --tag                     Set the docker tag (default: latest)"
+    echo "  -fi, --force-install          Force the installation"
+    echo "  -m, --mode                    Set the installation mode"
+    echo "  -host, --host                 Set the remote host (e.g., domain:443)"
+    echo "  -pn, --process-name           Set the process name"
+    echo ""
+    echo "Setup info:"
+    echo "  -sn, --serial-number          Set the device serial number"
+    echo "  -tz, --timezone               Set the timezone (e.g., Europe/Rome)"
+    echo "  -in, --internal-name          Set the internal server name"
+    echo "  -email, --email               Set the admin email"
+    echo "  -pass, --password             Set the admin password"
+    echo "  -sip, --server-ip             Set the server IP"
+    echo ""
+    echo "Provider URLs:"
+    echo "  -cert-url, --certificate-provider-url   Set the certificate provider URL"
+    echo "  -dns-url, --dns-provider-url           Set the DNS provider URL"
+    echo "  -lic-url, --license-provider-url       Set the license provider URL"
+    echo "  -upd-url, --update-provider-url        Set the update provider URL"
+    echo ""
+    echo "Storage/Recording/Snapshot options:"
+    echo "  -rec-path, --recording-path            Set the path to save recordings (default: /recording_files)"
+    echo "  -rec-max-disk, --recording-max-disk    Set max disk space for recordings in Kbytes (default: 10000000)"
+    echo "  -storage-path, --storage-path          Set the path to save storage files (default: /storage_files)"
+    echo "  -storage-max-disk, --storage-max-disk  Set max disk space for storage in Kbytes (default: 10000000)"
+    echo "  -snapshot-path, --snapshot-path        Set the path to save snapshots (default: /snapshot_files)"
+    echo "  -snapshot-max-disk, --snapshot-max-disk Set max disk space for snapshots in Kbytes (default: 10000000)"
+    echo ""
+    echo "Example:"
+    echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com --recording-path /recording_files --recording-max-disk 10000000 --storage-path /storage_files --storage-max-disk 10000000 --snapshot-path /snapshot_files --snapshot-max-disk 10000000"
+    exit 0
       ;;
     *)
       echo "Unknown parameter: $1"
@@ -169,8 +199,13 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 
+
+#printf "\nSSL_PORT set to: $SSL_PORT\n"
+#printf "DOCKER_TAG set to: $DOCKER_TAG\n"
+
 export SSL_PORT
 export DOCKER_TAG
+
 
 get_my_local_ip() {
     local ip=$(hostname -I 2>/dev/null | awk '{print $1}')
@@ -187,8 +222,10 @@ end_with_message() {
     local myIp=$(get_my_local_ip)
 
     printf "\r\033[K"
+
     if [ "$success" -eq 0 ]; then
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
+
         if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
             printf "\n You can now access the uSee Configurator at https://$myIp:$SSL_PORT\n"
         fi
@@ -200,9 +237,12 @@ end_with_message() {
 
 installLocalDb() {
     printf "\nInstalling local database on port $DB_PORT"
+
     printf "\nDatabase name: "$ABSOLUTE_PATH/database/docker-compose.yaml""
-    execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$ABSOLUTE_PATH/database/docker-compose.yaml\") up -d --build --remove-orphans" \
+
+    execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" \
         "Installing local database" || return 1
+
     return 0
 }
 
@@ -214,42 +254,60 @@ additionalServiceInstall() {
     getFirstDbPortFree
     installLocalDb
 
+
     printf "\nInstalling '$SERVICE_NAME' on port '$DB_PORT'"
 
+
     if [ "$SERVICE_NAME" != "server" ] ; then
+    
         printf "\nInstalling additional database for $SERVICE_NAME"
-        execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$ABSOLUTE_PATH/database/docker-compose.yaml\") up -d --build --remove-orphans --pull always"
+        execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans --pull always" 
+
     fi
 
+ 
     if [ "$TYPE_OF_INSTALL" == "update" ]; then
         printf "\nUpdating service: $SERVICE_NAME"
-        execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$COMPOSE_FILE\") pull" \
+
+        execute_command "$COMPOSE_CMD -f  <(curl -sSL "$COMPOSE_FILE") pull" \
             "Pulling latest images for $SERVICE_NAME" || return 1
-        execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$COMPOSE_FILE\") down" \
+
+        execute_command "$COMPOSE_CMD -f  <(curl -sSL "$COMPOSE_FILE") down" \
             "Stopping and removing containers for $SERVICE_NAME" || return 1
+
         execute_command "docker image prune -f >/dev/null 2>&1" \
             "Pruning Docker images" || return 1
     fi
 
-    execute_command "$COMPOSE_CMD -f <(wget --no-check-certificate -qO- \"$COMPOSE_FILE\") up -d --build --remove-orphans --pull always" \
+    execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans --pull always" \
         "Installing/updating service: $SERVICE_NAME" || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
+
     return 0
 }
+
+
 
 dockerInstall() {
+
+    # Step 1: Update packages
     execute_command "apt-get update -y >/dev/null 2>&1" "Updating packages" || return 1
-    execute_command "apt-get install -y apt-transport-https ca-certificates wget software-properties-common >/dev/null 2>&1" "Installing required packages" || return 1
-    execute_command "wget --no-check-certificate -qO- https://download.docker.com/linux/ubuntu/gpg | apt-key add - >/dev/null 2>&1" "Adding Docker GPG key" || return 1
+
+    # Step 2: Install required packages
+    execute_command "apt-get install -y apt-transport-https ca-certificates curl software-properties-common >/dev/null 2>&1" "Installing required packages" || return 1
+
+    # Step 3: Add Docker GPG key
+    execute_command "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - >/dev/null 2>&1" "Adding Docker GPG key" || return 1
+
+    # Step 4: Add Docker repository
     execute_command "add-apt-repository 'deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable' -y >/dev/null 2>&1" "Adding Docker repository" || return 1
-    execute_command "apt-get update -y >/dev/null 2>&1 && apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
+
+    # Step 5: Install Docker
+    execute_command "apt-get update -y >/dev/null 2>&1 &&  apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
+
     return 0
 }
-
-# ... (rest of the script remains identical) ...
-# Including show_menu, get_config, dockerNuke, etc.
-
 
 
 show_menu() {
