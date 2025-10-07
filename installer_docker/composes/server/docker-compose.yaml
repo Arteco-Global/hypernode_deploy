@@ -9,8 +9,8 @@ services:
       RABBITMQ_DEFAULT_PASS: hypernode
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-    # ports:
-    #   - "5672:5672"
+    ports:
+      - "5672:5672"
     container_name: messagebroker
     restart: unless-stopped
     healthcheck:
