@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/installer_docker/installer.sh"
+#wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/installer_docker/installer_milesight.sh"
 
 # MILESHIGHT INSTALLER TEST |
 
