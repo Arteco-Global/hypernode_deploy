@@ -6,7 +6,7 @@ This guide explains **exactly what each part of your two commands does**, in pla
 >
 > 1) **Download the installer script**
 > ```bash
-> wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/installer_docker/milesight/installer_milesight.sh"
+> wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/milesight/installer_milesight.sh"
 > ```
 >
 > 2) **Execute the installer with your parameters**
@@ -50,7 +50,7 @@ wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.co
 - `-c` — *Continue mode*. If the download is interrupted, `wget` will try to resume it instead of starting over.
 - `--no-check-certificate` — Skip TLS certificate validation. Useful on minimal systems missing CA bundles or with outdated TLS stacks. **Security trade‑off**: this disables protection against MITM (man‑in‑the‑middle). Use only on trusted networks or when you can verify integrity another way (e.g., checksum/signature).
 - `-O installer.sh` — Save the response as a file named `installer.sh` (instead of using the remote filename).
-- URL — Points at the **Raw** content on GitHub for the `installer_milesight.sh` script, on the `_recording_on_volumes` branch under the `milesight` directory.
+- URL — Points at the **Raw** content on GitHub for the `installer_milesight.sh` script, on the `main` branch under the `milesight` directory.
 
 **Expected result**: a local executable script file named `installer.sh` appears in your current directory.
 
