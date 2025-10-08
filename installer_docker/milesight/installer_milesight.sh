@@ -1,196 +1,676 @@
-# Milesight Installer — Step‑by‑Step Walkthrough
+#!/bin/bash
 
-This guide explains **exactly what each part of your two commands does**, in plain English, and highlights security/operational caveats. It’s written for constrained Linux environments (e.g., BusyBox `wget`) and for devices that will run Dockerized components.
+#wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/milesight/installer_milesight.sh"
 
-> **What you run**
->
-> 1) **Download the installer script**
-> ```bash
-> wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/milesight/installer_milesight.sh"
-> ```
->
-> 2) **Execute the installer with your parameters**
-> ```bash
-> sh installer.sh \
->   --force-install \
->   --tag latest \
->   --mode 1 \
->   --port 445 \
->   --host "V12230451.my.omniaweb.cloud" \
->   --process-name "milesight" \
->   --serial-number "V12230451" \
->   --timezone "Europe/Rome" \
->   --internal-name "milesight" \
->   --email "luca.volta.arteco@gmail.com" \
->   --password "----" \
->   --server-ip "192.168.5.139" \
->   --certificate-provider-url "http://192.168.10.20:3000/certificate" \
->   --dns-provider-url "http://192.168.0.67:3000/dns-update" \
->   --license-provider-url "http://192.168.10.20:3000/sites" \
->   --update-provider-url "http://192.168.10.20:3000/update" \
->   --recording-path "/mnt/mmc/recqu/recording" \
->   --recording-max-disk 500000000000 \
->   --storage-path "/mnt/mmc/recqu/storage" \
->   --storage-max-disk 100000000000 \
->   --snapshot-path "/mnt/mmc/recqu/snapshot" \
->   --snapshot-max-disk 20000000000
-> ```
+# MILESHIGHT INSTALLER TEST |
 
----
-
-## 1) Downloading the script (with `wget`)
-
-Command:
-```bash
-wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/.../installer_milesight.sh"
-```
-
-**Flags explained**
-
-- `-c` — *Continue mode*. If the download is interrupted, `wget` will try to resume it instead of starting over.
-- `--no-check-certificate` — Skip TLS certificate validation. Useful on minimal systems missing CA bundles or with outdated TLS stacks. **Security trade‑off**: this disables protection against MITM (man‑in‑the‑middle). Use only on trusted networks or when you can verify integrity another way (e.g., checksum/signature).
-- `-O installer.sh` — Save the response as a file named `installer.sh` (instead of using the remote filename).
-- URL — Points at the **Raw** content on GitHub for the `installer_milesight.sh` script, on the `_recording_on_volumes` branch under the `milesight` directory.
-
-**Expected result**: a local executable script file named `installer.sh` appears in your current directory.
-
-> **Tip**: On very minimal devices, `wget` might be BusyBox‑based and have limited TLS/SNI support. The flag `--no-check-certificate` helps with missing CA roots but cannot fix an entirely broken TLS stack. If TLS still fails, fetch the file elsewhere and transfer it over SCP, or proxy the request through a machine that can download it.
+# sudo bash installer.sh \
+#   --force-install \
+#   --tag latest \
+#   --mode 1 \
+#   --port 443 \
+#   --host "v000001.my.omniaweb.cloud" \
+#   --process-name "gateway" \
+#   --serial-number "A1B2C3D4E5" \
+#   --timezone "Europe/Rome" \
+#   --internal-name "HyperNodeServer01" \
+#   --email "admin@arteco-global.com" \
+#   --password "SuperSecret123" \
+#   --server-ip "192.168.1.100" \
+#   --certificate-provider-url "http://192.168.10.20:3000/certificate" \
+#   --dns-provider-url "http://192.168.0.67:3000/dns-update" \
+#   --license-provider-url "http://192.168.10.20:3000/sites" \
+#   --update-provider-url "http://192.168.10.20:3000/update" \
+#   --recording-path "/mnt/mmc/recqu/recording" \
+#   --recording-max-disk 500000000000 \
+#   --storage-path "/mnt/mmc/recqu/storage" \
+#   --storage-max-disk 100000000000 \
+#   --snapshot-path "/mnt/mmc/recqu/snapshot" \
+#   --snapshot-max-disk 20000000000
 
 
----
+# Global vars
+SCRIPT_DIR=$(dirname "$0") #local path
+ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes
 
-## 2) Running the installer (with `sh installer.sh …`)
+HYPERNODE_ALREADY_INSTALLED="false"
+DOCKER_ALREADY_INSTALLED="false";
+RUNNING_AS_SUDO="false"
+COMPOSE_CMD="docker compose"
+ARCH=$(uname -m)
 
-You execute the script using the system shell (`sh`) and pass a set of **flags** that control what the installer configures. Here’s what each flag represents and why you might use it.
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+BLUE='\033[0;34m'
+NC='\033[0m' # Color reset
 
-| Flag | Value | What it does | Notes |
-|---|---|---|---|
-| `--force-install` | *(no value)* | Forces a fresh (re)install even if components already exist. | Useful to overwrite old configs/images. May stop existing containers and replace volumes/config files depending on the script’s policy. |
-| `--tag` | `latest` | Docker image tag to deploy. | `latest` pulls the newest tag; for reproducibility on older hardware/OS, consider a pinned tag (e.g., `v1.2.3`). |
-| `--mode` | `1` | Selects an installation preset/profile. | **Script‑specific.** Typically chooses “standard” or “single‑node” mode. Refer to the installer docs if available. |
-| `--port` | `443` | Public HTTPS port to expose. | The installer likely configures a reverse proxy (or app) to listen here. Make sure port 443 is free. |
-| `--host` | `V12230451.my.omniaweb.cloud` | FQDN used for TLS certs and routing. | Make sure DNS points to this device’s public IP (or LAN IP if local only). |
-| `--process-name` | `milesight` | Logical name for services/processes. | Often used for container names, systemd units, or log prefixes. |
-| `--serial-number` | `V12230451` | Device/site identifier. | Often used for licensing, enrollment, and inventory. |
-| `--timezone` | `Europe/Rome` | System/app timezone. | Ensures logs, schedules, and cron jobs use local time. |
-| `--internal-name` | `milesight` | Internal short name. | Used inside configs and paths; cosmetic/organizational. |
-| `--email` | `luca.volta.arteco@gmail.com` | Admin/owner email. | Often used for certificate issuance, alerts, password recovery. |
-| `--password` | `Lv042020Arteco!` | Admin or bootstrap password. | **Highly sensitive.** Exposing it on the CLI can leak via shell history and process lists. See **Security notes** below. |
-| `--server-ip` | `192.168.5.139` | Local IP where services bind or are reachable. | Keeps internal URIs stable on LAN. |
-| `--certificate-provider-url` | `http://192.168.10.20:3000/certificate` | API endpoint to obtain TLS certs. | Using **HTTP** here means the certificate retrieval happens unencrypted on LAN. Prefer HTTPS if the provider supports it. |
-| `--dns-provider-url` | `http://192.168.0.67:3000/dns-update` | API for dynamic DNS updates. | Ensures `--host` resolves correctly. |
-| `--license-provider-url` | `http://192.168.10.20:3000/sites` | API to fetch/apply licenses. | The installer may POST the serial/email to fetch entitlements. |
-| `--update-provider-url` | `http://192.168.10.20:3000/update` | API for software/firmware updates. | Lets the system check for and pull updates. |
-| `--recording-path` | `/mnt/mmc/recqu/recording` | Bind‑mount path for **recordings**. | Must exist and be writable. Prefer a dedicated volume/mount. |
-| `--recording-max-disk` | `500000000000` | Quota for recordings (in **bytes**). | ≈ **500 GB** (decimal) ≈ **465.66 GiB** (binary). |
-| `--storage-path` | `/mnt/mmc/recqu/storage` | Bind‑mount path for **general storage**. | Must exist and be writable. |
-| `--storage-max-disk` | `100000000000` | Quota for storage (in **bytes**). | ≈ **100 GB** ≈ **93.13 GiB**. |
-| `--snapshot-path` | `/mnt/mmc/recqu/snapshot` | Bind‑mount path for **snapshots**. | Must exist and be writable. |
-| `--snapshot-max-disk` | `20000000000` | Quota for snapshots (in **bytes**). | ≈ **20 GB** ≈ **18.63 GiB**. |
+COMPOSE_CACHE_DIR=${COMPOSE_CACHE_DIR:-/tmp/hypernode_composes}
+COMPOSE_CACHE_IS_TEMP="false"
 
-> **What the installer typically does** (based on common patterns):
-> - Installs Docker / Docker Compose if missing.
-> - Pulls the images with the specified `--tag`.
-> - Renders `.env` and `docker-compose.yml` using your flags.
-> - Creates/uses bind mounts for the three storage paths above and enforces quotas (script‑dependent).
-> - Configures a reverse proxy on `--port` with `--host`.
-> - Calls your certificate/DNS/license/update provider endpoints to bootstrap the device.
-> - Enables auto‑start (e.g., via systemd) and health checks.
->
-> Exact behavior can vary by script version; consult the repository’s README if present.
+if command -v mktemp >/dev/null 2>&1; then
+    TMP_DIR=$(mktemp -d /tmp/hypernode_composes_XXXX 2>/dev/null)
+    if [ -n "$TMP_DIR" ]; then
+        COMPOSE_CACHE_DIR="$TMP_DIR"
+        COMPOSE_CACHE_IS_TEMP="true"
+    fi
+fi
 
+mkdir -p "$COMPOSE_CACHE_DIR"
 
----
+cleanup_compose_cache() {
+    if [ "$COMPOSE_CACHE_IS_TEMP" = "true" ] && [ -d "$COMPOSE_CACHE_DIR" ]; then
+        rm -rf "$COMPOSE_CACHE_DIR"
+    fi
+}
 
-## 3) Storage & quotas — sanity checklist
+trap cleanup_compose_cache EXIT
 
-- **Paths exist**: make sure `/mnt/mmc/recqu/{recording,storage,snapshot}` are present and writable by the user running Docker/containers.
-- **Free space**: your quotas must be **≤ available space** on the underlying filesystem. Oversized quotas will fail at runtime.
-- **Media type**: `/mnt/mmc` suggests embedded flash/SD. For heavy, continuous video write loads, consider wear‑resistant storage (SSD/HDD) or at least allocate generous spare area and monitor SMART/lifetime indicators.
-- **Host vs container**: the installer likely uses **bind mounts**, so the quotas pertain to the **host** filesystem usage visible inside containers.
+# Check wget availability
+if ! command -v wget &> /dev/null; then
+    echo "❌ wget is required but not installed. Install it with: apt install wget -y"
+    exit 1
+fi
 
+# Default values for input parameters
+SSL_PORT=443
+DOCKER_TAG="latest"
+FORCE_INSTALL="false"
+DB_PORT=27017
 
----
-
-## 4) Post‑install verification (quick checks)
-
-Run these after the script completes:
-
-```bash
-# Check containers are up
-docker ps
-
-# Tail the logs of the main service (replace with actual container name if different)
-docker logs -f milesight
-
-# Verify the HTTPS endpoint responds (certificate may not be trusted yet depending on your provider)
-curl -k https://V12230451.my.omniaweb.cloud:443/ -I
-
-# Check that storage paths are mounted in the container(s)
-docker exec -it milesight sh -lc 'df -h | grep -E "recording|storage|snapshot"'
-```
-
-If DNS propagation is involved, verify that `V12230451.my.omniaweb.cloud` resolves to the correct IP (public or LAN depending on your topology).
+PROCESS_NAME="--"
+remote_host="--"   
 
 
----
+execute_command() {
+    local COMMAND=$1
+    local MESSAGE=$2
 
-## 5) Security notes (important)
+    eval "$COMMAND" 
+    local COMMAND_STATUS=$?
 
-- **Plain‑text password on CLI**: Anything passed on the command line can leak via shell history and `ps` process listings.
-  - Prefer reading secrets from **environment variables** or **files** (e.g., `.env`) consumed by the installer.
-  - If you must use CLI flags, clear your shell history afterward (`history -c` on Bash) and restrict local access.
-- **`--no-check-certificate`**: Bypassing TLS verification is risky. Consider downloading from a trusted intermediary host with full CA bundle support, then copying the file over SCP.
-- **HTTP provider URLs**: Your `certificate`, `dns-update`, `sites`, and `update` endpoints use `http://`. If supported, migrate them to `https://` and use tokens/keys with least privilege.
+    if [ $COMMAND_STATUS -eq 0 ]; then
+        printf "\r✅ %s - Done.\n" "$MESSAGE"
+    else
+        printf "\r❌ %s - Failed.\n" "$MESSAGE"
+        exit 1
+    fi
+}
+
+download_compose_file() {
+    local REMOTE_PATH=$1
+    local OUTPUT_PATH=$2
+    local LABEL=$3
+
+    if [ -z "$REMOTE_PATH" ] || [ -z "$OUTPUT_PATH" ]; then
+        printf "❌ Missing parameters for download_compose_file.\n"
+        exit 1
+    fi
+
+    LABEL=${LABEL:-"Downloading compose: $REMOTE_PATH"}
+    mkdir -p "$(dirname "$OUTPUT_PATH")"
+    rm -f "$OUTPUT_PATH"
+
+    execute_command "wget --no-check-certificate -q -O '$OUTPUT_PATH' '$ABSOLUTE_PATH/$REMOTE_PATH'" "$LABEL"
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -fi|--force-install)
+      FORCE_INSTALL="true"
+      shift
+      ;;
+    -p|--port)
+      SSL_PORT="$2"
+      shift 2
+      ;;
+    -t|--tag)
+      DOCKER_TAG="$2"
+      shift 2
+      ;;
+    -m|--mode)
+      INSTALL_OPTION="$2"
+      shift 2
+      ;;
+    -host|--host)
+      remote_host="$2"
+      shift 2
+      ;;
+    -pn|--process-name)
+      PROCESS_NAME="$2"
+      shift 2
+      ;;
+    -sn|--serial-number)
+      SERIAL_NUMBER="$2"
+      export SERIAL_NUMBER
+      shift 2
+      ;;
+    -tz|--timezone)
+      SERVER_TIMEZONE="$2"
+      export SERVER_TIMEZONE
+      shift 2
+      ;;
+    -in|--internal-name)
+      SERVER_NAME="$2"
+      export SERVER_NAME
+      shift 2
+      ;;
+    -email|--email)
+      ARTECO_GLOBAL_EMAIL="$2"
+      export ARTECO_GLOBAL_EMAIL
+      shift 2
+      ;;
+    -pass|--password)
+      ARTECO_GLOBAL_PASSWORD="$2"
+      export ARTECO_GLOBAL_PASSWORD
+      shift 2
+      ;;
+    -sip|--server-ip)
+      SERVER_IP_ADDRESS="$2"
+      export SERVER_IP_ADDRESS
+      shift 2
+      ;;
+    -cert-url|--certificate-provider-url)
+      CERTIFICATE_PROVIDER_URL="$2"
+      export CERTIFICATE_PROVIDER_URL
+      shift 2
+      ;;
+    -dns-url|--dns-provider-url)
+      DNS_PROVIDER_URL="$2"
+      export DNS_PROVIDER_URL
+      shift 2
+      ;;
+    -lic-url|--license-provider-url)
+      LICENSE_PROVIDER_URL="$2"
+      export LICENSE_PROVIDER_URL
+      shift 2
+      ;;
+    -upd-url|--update-provider-url)
+      UPDATE_PROVIDER_URL="$2"
+      export UPDATE_PROVIDER_URL
+      shift 2
+      ;;
+    -rec-path|--recording-path)
+      RECORDING_PATH="$2"
+      export RECORDING_PATH
+      shift 2
+      ;;
+    -rec-max-disk|--recording-max-disk)
+      RECORDING_DISK_SPACE="$2"
+      export RECORDING_DISK_SPACE
+      shift 2
+      ;;
+    -storage-path|--storage-path)
+      STORAGE_PATH="$2"
+      export STORAGE_PATH
+      shift 2
+      ;;
+    -storage-max-disk|--storage-max-disk)
+      STORAGE_DISK_SPACE="$2"
+      export STORAGE_DISK_SPACE
+      shift 2
+      ;;
+    -snapshot-path|--snapshot-path)
+      SNAPSHOT_PATH="$2"
+      export SNAPSHOT_PATH
+      shift 2
+      ;;
+    -snapshot-max-disk|--snapshot-max-disk)
+      SNAPSHOT_DISK_SPACE="$2"
+      export SNAPSHOT_DISK_SPACE
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: installer.sh [options]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown parameter: $1"
+      shift
+      ;;
+  esac
+done
 
 
----
+export SSL_PORT
+export DOCKER_TAG
 
-## 6) Troubleshooting
+get_my_local_ip() {
+    local ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    if [[ -z "$ip" ]]; then
+        echo "127.0.0.1" 
+    else
+        echo "$ip"
+    fi
+}
 
-- **Download fails (TLS / reset by peer)**: On minimal distros, BusyBox `wget` may not support modern TLS/SNI. Options:
-  - Use `--no-check-certificate` (already present) *and* ensure the device’s clock is correct (`date`/NTP).
-  - Download on another machine and `scp installer.sh <device>:`.
-- **Port 443 already in use**: Free the port (`lsof -i :443`) or change `--port`.
-- **Missing storage paths**: Create them with correct ownership/permissions:
-  ```bash
-  mkdir -p /mnt/mmc/recqu/{recording,storage,snapshot}
-  chown -R root:root /mnt/mmc/recqu
-  chmod -R 755 /mnt/mmc/recqu
-  ```
-- **DNS not updating**: Ensure the device can reach `--dns-provider-url` and that the token/credentials (if any) are valid.
-- **Certificates not issued**: Confirm reachability of `--certificate-provider-url`, check logs for CSR/ACME errors, and verify that `--host` resolves to this device.
+end_with_message() {
+    local message=$1
+    local success=$2
+    local myIp=$(get_my_local_ip)
+
+    printf "\r\033[K"
+    if [ "$success" -eq 0 ]; then
+        printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
+        if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
+            printf "\n You can now access the uSee Configurator at https://$myIp:$SSL_PORT\n"
+        fi
+    else
+        printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
+        exit 1
+    fi
+}
+
+installLocalDb() {
+    printf "\nInstalling local database on port $DB_PORT"
+    printf "\nDatabase compose source: $ABSOLUTE_PATH/database/docker-compose.yaml"
+
+    local DATABASE_COMPOSE_LOCAL="$COMPOSE_CACHE_DIR/database-docker-compose.yaml"
+    download_compose_file "database/docker-compose.yaml" "$DATABASE_COMPOSE_LOCAL" "Downloading database compose"
+
+    execute_command "$COMPOSE_CMD -f '$DATABASE_COMPOSE_LOCAL' up -d --build --remove-orphans" \
+        "Installing local database" || return 1
+    return 0
+}
+
+additionalServiceInstall() {
+    local SERVICE_NAME=$1
+    local TYPE_OF_INSTALL=${2:-"install"} 
+    local REMOTE_COMPOSE_PATH="$SERVICE_NAME/docker-compose.yaml"
+    local COMPOSE_FILE_LOCAL="$COMPOSE_CACHE_DIR/${SERVICE_NAME//\//_}-docker-compose.yaml"
+
+    getFirstDbPortFree
+    installLocalDb
+
+    printf "\nInstalling '$SERVICE_NAME' on port '$DB_PORT'"
+
+    if [ "$SERVICE_NAME" != "server" ] ; then
+        printf "\nInstalling additional database for $SERVICE_NAME"
+        local DATABASE_COMPOSE_LOCAL="$COMPOSE_CACHE_DIR/database-docker-compose.yaml"
+        download_compose_file "database/docker-compose.yaml" "$DATABASE_COMPOSE_LOCAL" "Updating database compose"
+        execute_command "$COMPOSE_CMD -f '$DATABASE_COMPOSE_LOCAL' up -d --build --remove-orphans --pull always"
+    fi
+
+    download_compose_file "$REMOTE_COMPOSE_PATH" "$COMPOSE_FILE_LOCAL" "Downloading compose for $SERVICE_NAME"
+
+    if [ "$TYPE_OF_INSTALL" == "update" ]; then
+        printf "\nUpdating service: $SERVICE_NAME"
+        download_compose_file "$REMOTE_COMPOSE_PATH" "$COMPOSE_FILE_LOCAL" "Refreshing compose for $SERVICE_NAME"
+        execute_command "$COMPOSE_CMD -f '$COMPOSE_FILE_LOCAL' pull" \
+            "Pulling latest images for $SERVICE_NAME" || return 1
+        execute_command "$COMPOSE_CMD -f '$COMPOSE_FILE_LOCAL' down" \
+            "Stopping and removing containers for $SERVICE_NAME" || return 1
+        execute_command "docker image prune -f >/dev/null 2>&1" \
+            "Pruning Docker images" || return 1
+    fi
+
+    execute_command "$COMPOSE_CMD -f '$COMPOSE_FILE_LOCAL' up -d --build --remove-orphans --pull always" \
+        "Installing/updating service: $SERVICE_NAME" || return 1
+
+    printf "\nInstallation/Update completed for $SERVICE_NAME."
+    return 0
+}
+
+dockerInstall() {
+    execute_command "apt-get update -y >/dev/null 2>&1" "Updating packages" || return 1
+    execute_command "apt-get install -y apt-transport-https ca-certificates wget software-properties-common >/dev/null 2>&1" "Installing required packages" || return 1
+    execute_command "wget --no-check-certificate -qO- https://download.docker.com/linux/ubuntu/gpg | apt-key add - >/dev/null 2>&1" "Adding Docker GPG key" || return 1
+    execute_command "add-apt-repository 'deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable' -y >/dev/null 2>&1" "Adding Docker repository" || return 1
+    execute_command "apt-get update -y >/dev/null 2>&1 && apt-get install -y docker-ce >/dev/null 2>&1" "Installing Docker" || return 1
+    return 0
+}
+
+# ... (rest of the script remains identical) ...
+# Including show_menu, get_config, dockerNuke, etc.
 
 
----
 
-## 7) Re‑running and cleanup
+show_menu() {
+    local mode=$1
+if [ "$mode" == "install" ]; then        
+    echo ""
+    echo ""
+    echo -e "${WHITE}"
+    echo "  ┌───────────────────────────────────────────────────────────┐"
+    echo "  │               uSee Service suite | Installation           │"
+    echo "  └───────────────────────────────────────────────────────────┘"
+    echo -e "  ${NC}"
+    echo -e "  ${GREEN}INSTALL NEW:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC}  1. ${GREEN}Suite${NC}"
+    echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  3. ${GREEN}ID Verifier{NC}"
+    echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager{NC}"
+    echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage service${NC}"
+    echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
 
-- Re‑run with `--force-install` to refresh containers/configs as the script allows.
-- To remove containers/images/volumes (destructive):
-  ```bash
-  docker compose down -v    # from the deployment folder
-  docker system prune -af   # removes dangling images/containers
-  ```
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${BLUE}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Storage service${NC}"
+    echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC} 99. ${RED}Clean everything (remove all containers and db)${NC}"
+    echo -e "  ${CYAN}  │${NC}  0. ${WHITE}EXIT${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo ""
+else
+    echo ""
+    echo ""
+    echo -e "${WHITE}"
+    echo "  ┌───────────────────────────────────────────────────────────┐"
+    echo "  |          uSee Service suite | Manage installation         │"
+    echo "  └───────────────────────────────────────────────────────────┘"
+    echo -e "  ${NC}"
+    echo -e "  ${GREEN}ADD NEW SERVICES:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"    
+    echo -e "  ${CYAN}  │${NC}  2. ${GREEN}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  3. ${GREEN}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage service${NC}"
+    echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Recording${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC}  8. ${BLUE}All the Service Suite${NC}"
+    echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Live streamer${NC}"
+    echo -e "  ${CYAN}  │${NC}  10. ${BLUE}ID Verifier${NC}"
+    echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Event Manager${NC}"
+    echo -e "  ${CYAN}  │${NC} 12. ${BLUE}Storage service${NC}"
+    echo -e "  ${CYAN}  │${NC} 13. ${BLUE}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC} 14. ${BLUE}Recording${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
+    echo -e "  ${CYAN}  ┌─────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${CYAN}  │${NC} 99. ${RED}Clean everything (remove all containers and db)${NC}"
+    echo -e "  ${CYAN}  │${NC}  0. ${WHITE}EXIT${NC}"
+    echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo ""
+fi
+}
 
----
+getFirstDbPortFree() {
+    local DEFAULT_PORT=27017
+    local MAX_TRIES=100
+    local attempt=0
 
-## Appendix: Byte conversions used
+    # Se DB_PORT non è settata, iniziamo dalla default
+    if [ -z "$DB_PORT" ]; then
+        DB_PORT=$DEFAULT_PORT
+    fi
 
-- `500000000000` bytes ≈ **500 GB** (decimal) ≈ **465.66 GiB** (binary).
-- `100000000000` bytes ≈ **100 GB** ≈ **93.13 GiB**.
-- `20000000000` bytes ≈ **20 GB** ≈ **18.63 GiB**.
+    while [ $attempt -lt $MAX_TRIES ]; do
+        if ss -ltnp | grep ":$DB_PORT " > /dev/null 2>&1; then
+            # Porta occupata, proviamo la prossima
+            echo "Port $DB_PORT is in use."
+            DB_PORT=$((DB_PORT + 1))
+            attempt=$((attempt + 1))
+        else
+            # Porta libera
+            export DB_PORT
+            echo "Using port $DB_PORT for the database."
+            return 0
+        fi
+    done
 
-> **Formula**: `GiB = bytes / 1,073,741,824` (2^30), `GB = bytes / 1,000,000,000`.
+    echo "No free port found after $MAX_TRIES attempts!"
+    return 1
+}
 
----
 
-### Final checklist before you run
 
-- [ ] Correct hostname and DNS routing for `V12230451.my.omniaweb.cloud`.
-- [ ] Port **443** is available.
-- [ ] Storage paths exist and have enough free space for your quotas.
-- [ ] Network can reach certificate/DNS/license/update provider URLs.
-- [ ] You’re comfortable with the security trade‑offs (or have mitigations in place).
 
-All set—run the commands in order and watch the logs.
+
+
+get_config() {
+
+
+    if [ "$HYPERNODE_ALREADY_INSTALLED" != "true" ]; then
+    
+        show_menu "install"
+
+    else
+        show_menu "update"
+        
+    fi
+
+ 
+    if [ "$FORCE_INSTALL" == "true" ]; then
+        printf "\nForce install mode enabled. Skipping menu.\n"
+    else
+        read -p "Enter the option: " INSTALL_OPTION
+        INSTALL_OPTION=${INSTALL_OPTION:-1}
+    fi
+
+    printf "\nYou selected option: $INSTALL_OPTION\n"
+
+
+
+    case $INSTALL_OPTION in
+    1 | 8)
+    
+        # Install the complete suite (Gateway Mode)
+
+        RMQ="amqp://hypernode:hypernode@messagebroker:5672"
+        export DB_NAME='USS_SERVER'
+        export RMQ
+
+        ;;
+    2 | 3 | 4 | 5 | 6 | 7)
+       
+
+        if [ "$FORCE_INSTALL" == "false" ]; then
+            # Install single services (Runner Mode)
+            read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud:443): " remote_host
+            read -p "Type the service name to update: " PROCESS_NAME
+
+        fi
+
+        REMOTE_GATEWAY_URL="$remote_host"
+     
+        export PROCESS_NAME=additional-${PROCESS_NAME}
+        export DB_NAME=database-for-${PROCESS_NAME}
+        export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
+        export RMQ="amqps://hypernode:hypernode@$remote_host"
+        export GRI="wss://$remote_host"
+        printf "\nGateway set as $remote_host"
+        printf "\nPROCESS_NAME set as $PROCESS_NAME"
+        printf "\nDB_NAME set as $DB_NAME"
+        printf "\nDATABASE_URI set as $DATABASE_URI"
+        printf "\nRMQ set as $RMQ"
+        printf "\nGRI set as $GRI"
+
+        if [ "$FORCE_INSTALL" == "false" ]; then
+            read -p $'\nPress enter to continue ...'
+        fi
+        ;;
+
+      8 | 9 | 10 | 11 | 12)
+
+        # Update single services (Runner Mode)
+        read -p "Type the service name to update: " PROCESS_NAME
+        read -p "Insert uSee Gateway url (VXXXXXX.my|lan.omniaweb.cloud:443): " remote_host
+     
+        export PROCESS_NAME=additional-${PROCESS_NAME}
+        export DB_NAME=database-for-${PROCESS_NAME}
+        export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
+        export RMQ="amqps://hypernode:hypernode@$remote_host"
+        export GRI="wss://$remote_host"
+
+        printf "\nGateway set as $remote_host"
+        printf "\nPROCESS_NAME set as $PROCESS_NAME"
+        printf "\nDB_NAME set as $DB_NAME"
+        printf "\nDATABASE_URI set as $DATABASE_URI"
+        printf "\nRMQ set as $RMQ"
+        printf "\nGRI set as $GRI"
+
+        if [ "$FORCE_INSTALL" == "false" ]; then
+            read -p $'\nPress enter to continue ...'
+        fi
+        
+        ;;  
+        
+    99)
+        ;;
+    0)
+        printf "\nExiting."
+        exit 0
+        ;;
+    *)
+        printf "\nOption unavailable."
+        exit 1
+        ;;
+    esac
+
+    export INSTALL_OPTION
+
+    printf "\nINSTALL_OPTION: $INSTALL_OPTION"
+
+
+}
+
+
+dockerNuke() {
+    printf "\nAre you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) \n\n[there's no going back]"
+    read -r confirmation
+
+    if [[ "$confirmation" == "y" || "$confirmation" == "Y" ]]; then
+        printf "\nStopping and removing all containers, images, networks, and volumes...\n"
+
+        # Stop containers
+        execute_command "docker stop \$(docker ps -q) >/dev/null 2>&1" \
+            "Stopping containers" || return 1
+
+        # Remove containers
+        execute_command "docker rm -f \$(docker ps -aq) >/dev/null 2>&1" \
+            "Removing containers" || return 1
+
+        # Remove images
+        execute_command "docker rmi -f \$(docker images -q) >/dev/null 2>&1" \
+            "Removing Docker images" || return 1
+
+        # Rimuove tutti i volumi manualmente
+        execute_command "docker volume ls -q | xargs -r docker volume rm" \
+            "Removing Docker volumes" || return 1
+
+        # Esegue il prune finale (opzionale)
+        execute_command "docker system prune -a --volumes -f" \
+            "Pruning Docker system" || return 1
+
+        end_with_message "Docker cleanup completed successfully" 0
+    else
+        printf "\nOperation canceled.\n"
+        return 1
+    fi
+}
+
+
+checkIfHypernodeIsInstalled() {
+    local container_name="gateway"
+
+    if docker ps | grep -qw "$container_name"; then
+        HYPERNODE_ALREADY_INSTALLED="true"
+    else
+        printf "\nNo Suite Manager detected. \nInstall the complete suite (Gateway Mode) or single services. (Runner Mode)\n"
+        HYPERNODE_ALREADY_INSTALLED="false"
+    fi
+}
+
+
+check_docker_installed() {
+    if ! command -v docker &> /dev/null; then       
+        DOCKER_ALREADY_INSTALLED="false"
+    else
+        DOCKER_ALREADY_INSTALLED="true"
+    fi
+}
+
+
+# detectSudo(){
+    
+#     if [ "$EUID" -ne 0 ]; then
+#         printf "\nThis script is not running as root/sudo.\n" 
+#         exit 1
+#     fi
+# }
+
+detectDockerCompose(){
+    # Step 2: Check if 'docker compose' (plugin) or 'docker-compose' (legacy) is available
+    if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+        COMPOSE_CMD="docker compose"
+    elif command -v docker-compose &> /dev/null; then
+        COMPOSE_CMD="docker-compose"
+    else
+        printf "❌ Neither 'docker compose' nor 'docker-compose' found. Please install the required tool.\n"
+        exit 1
+    fi
+
+}
+
+# *****************************************************************
+# STEP BY STEP INSTALLATION
+# *****************************************************************
+
+#a. Welcome step
+
+#clear
+
+#detectSudo
+detectDockerCompose
+check_docker_installed # Check if docker is installed
+checkIfHypernodeIsInstalled # Check if hypernode is already installed
+get_config # Get the configuration from the user
+clear
+
+
+
+if [ "$DOCKER_ALREADY_INSTALLED" != "true" ]; then
+ 
+   dockerInstall
+
+fi
+
+
+if [ "$INSTALL_OPTION" -eq 1 ]; then    
+    additionalServiceInstall "server" && end_with_message "Server installation" 0 || end_with_message "Server installation" 1
+elif [ "$INSTALL_OPTION" -eq 2 ]; then
+    additionalServiceInstall "camera" && end_with_message "Camera service installation" 0 || end_with_message "Camera service installation" 1
+elif [ "$INSTALL_OPTION" -eq 3 ]; then
+    additionalServiceInstall "auth" && end_with_message "Auth service installation" 0 || end_with_message "Auth service installation" 1
+elif [ "$INSTALL_OPTION" -eq 4 ]; then
+    additionalServiceInstall "event" && end_with_message "Event service installation" 0 || end_with_message "Event service installation" 1
+elif [ "$INSTALL_OPTION" -eq 5 ]; then
+    additionalServiceInstall "storage" && end_with_message "Storage service installation" 0 || end_with_message "Storage service installation" 1
+elif [ "$INSTALL_OPTION" -eq 6 ]; then
+    additionalServiceInstall "snapshot" && end_with_message "Snapshot service installation" 0 || end_with_message "Snapshot service installation" 1
+elif [ "$INSTALL_OPTION" -eq 7 ]; then
+    additionalServiceInstall "recording" && end_with_message "Recording service installation" 0 || end_with_message "Recording service installation" 1
+elif [ "$INSTALL_OPTION" -eq 8 ]; then
+    additionalServiceInstall "server" "update" && end_with_message "Server update" 0 || end_with_message "Server update" 1
+elif [ "$INSTALL_OPTION" -eq 9 ]; then
+    additionalServiceInstall "camera" "update" && end_with_message "Camera service update" 0 || end_with_message "Camera service update" 1
+elif [ "$INSTALL_OPTION" -eq 10 ]; then
+    additionalServiceInstall "auth" "update" && end_with_message "Auth service update" 0 || end_with_message "Auth service update" 1
+elif [ "$INSTALL_OPTION" -eq 11 ]; then
+    additionalServiceInstall "event" "update" && end_with_message "Event service update" 0 || end_with_message "Event service update" 1
+elif [ "$INSTALL_OPTION" -eq 12 ]; then
+    additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
+elif [ "$INSTALL_OPTION" -eq 13 ]; then
+    additionalServiceInstall "snapshot" "update" && end_with_message "Snapshot service update" 0 || end_with_message "Snapshot service update" 1
+elif [ "$INSTALL_OPTION" -eq 99 ]; then
+    dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
+fi
