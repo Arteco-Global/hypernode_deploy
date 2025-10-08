@@ -6,7 +6,7 @@ This guide explains **exactly what each part of your two commands does**, in pla
 >
 > 1) **Download the installer script**
 > ```bash
-> wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/milesight/installer_milesight.sh"
+> wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/installer_docker/milesight/installer_milesight.sh"
 > ```
 >
 > 2) **Execute the installer with your parameters**
