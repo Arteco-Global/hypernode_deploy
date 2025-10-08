@@ -6,7 +6,6 @@
 
 # sudo bash installer.sh \
 #   --force-install \
-#   --tag latest \
 #   --mode 1 \
 #   --port 443 \
 #   --host "v000001.my.omniaweb.cloud" \
@@ -77,7 +76,7 @@ fi
 
 # Default values for input parameters
 SSL_PORT=443
-DOCKER_TAG="latest"
+DOCKER_TAG="milesight"
 FORCE_INSTALL="false"
 DB_PORT=27017
 
@@ -127,10 +126,10 @@ while [[ "$#" -gt 0 ]]; do
       SSL_PORT="$2"
       shift 2
       ;;
-    -t|--tag)
-      DOCKER_TAG="$2"
-      shift 2
-      ;;
+    # -t|--tag)
+    #   DOCKER_TAG="$2"
+    #   shift 2
+    #   ;;
     -m|--mode)
       INSTALL_OPTION="$2"
       shift 2
