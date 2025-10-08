@@ -1,8 +1,12 @@
+
+#wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/milesight/installer_milesight.sh"
+
+
 sh installer.sh \
   --force-install \
   --tag latest \
   --mode 1 \
-  --port 443 \
+  --port 445 \
   --host "V12230451.my.omniaweb.cloud" \
   --process-name "milesight" \
   --serial-number "V12230451" \
@@ -22,6 +26,4 @@ sh installer.sh \
   --snapshot-path "/mnt/mmc/recqu/snapshot" \
   --snapshot-max-disk 20000000000
 
-
-https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/milesight/installer_milesight.sh
 
