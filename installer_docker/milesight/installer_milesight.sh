@@ -29,9 +29,10 @@
 #   --snapshot-max-disk 20000000000
 
 
+
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
-ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes
+ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/_recording_on_volumes/installer_docker/composes
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
