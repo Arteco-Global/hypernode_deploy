@@ -15,7 +15,7 @@ This guide explains **exactly what each part of your two commands does**, in pla
 >   --force-install \
 >   --tag latest \
 >   --mode 1 \
->   --port 443 \
+>   --port 445 \
 >   --host "V12230451.my.omniaweb.cloud" \
 >   --process-name "milesight" \
 >   --serial-number "V12230451" \
