@@ -507,7 +507,7 @@ get_config() {
         
         ;;  
         
-    99)
+    99 | 666)
         ;;
     0)
         printf "\nExiting."
@@ -528,8 +528,15 @@ get_config() {
 
 
 dockerNuke() {
-    printf "\nAre you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) \n\n[there's no going back]"
-    read -r confirmation
+    local skip_confirmation=${1:-false}
+    local confirmation
+
+    if [ "$skip_confirmation" == "true" ]; then
+        confirmation="y"
+    else
+        printf "\nAre you sure you want to stop and remove all containers, images, networks, and volumes? (y/n) \n\n[there's no going back]"
+        read -r confirmation
+    fi
 
     if [[ "$confirmation" == "y" || "$confirmation" == "Y" ]]; then
         printf "\nStopping and removing all containers, images, networks, and volumes...\n"
@@ -656,4 +663,6 @@ elif [ "$INSTALL_OPTION" -eq 13 ]; then
     additionalServiceInstall "snapshot" "update" && end_with_message "Snapshot service update" 0 || end_with_message "Snapshot service update" 1
 elif [ "$INSTALL_OPTION" -eq 99 ]; then
     dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
+elif [ "$INSTALL_OPTION" -eq 666 ]; then
+    dockerNuke "true" && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
 fi
