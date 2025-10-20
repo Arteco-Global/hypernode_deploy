@@ -13,7 +13,6 @@ This guide explains **exactly what each part of your two commands does**, in pla
 > ```bash
 > sh installer.sh \
 >   --force-install \
->   --tag latest \
 >   --mode 1 \
 >   --port 445 \
 >   --host "V12230451.my.omniaweb.cloud" \
