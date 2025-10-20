@@ -1,0 +1,84 @@
+services:
+  
+  database:
+    image: artecoglobalcompany/usee_database:milesight
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db_hypernode_database
+    container_name: hypernode_database
+    restart: unless-stopped
+    
+  messagebroker:
+    image: artecoglobalcompany/usee_message_broker:milesight
+    networks:
+      - hypernode-net
+    environment:
+      RABBITMQ_DEFAULT_USER: hypernode
+      RABBITMQ_DEFAULT_PASS: hypernode
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+    container_name: messagebroker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      
+  webserver:
+    image: artecoglobalcompany/usee_web_server:milesight
+    container_name: webserver
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+    ports:
+      - "8181:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]  # O sostituisci con una health API
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  configurator:
+    image: artecoglobalcompany/usee_configurator:milesight
+    container_name: configurator
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+
+  portbroker:
+    image: artecoglobalcompany/usee_port_broker:milesight
+    container_name: portbroker
+    ports:
+      - "445:443"
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+      webserver:  # Aspetta che il container "webserver" venga avviato
+        condition: service_healthy
+    volumes:
+      - hypernode_security_shared_files:/ssl
+
+volumes:
+  rabbitmq_data:
+  hypernode_security_shared_files:
+  mongodb_data:
+      name: database_for_hypernode_database  # Nome unico per il volume
+
+networks:
+  hypernode-net:
+    driver: bridge
