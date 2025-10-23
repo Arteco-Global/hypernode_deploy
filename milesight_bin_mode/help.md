@@ -37,6 +37,9 @@ Downloads (https://github.com/FerretDB/FerretDB/releases/)
 
     wget -c --no-check-certificate -O ferretdb-arm64-linux https://github.com/FerretDB/FerretDB/releases/download/v1.19.0/ferretdb-linux-arm64
 
+
+wget -c --no-check-certificate -O installer https://install.fastnetmon.com/installer_arm64
+
     o in alternativa
 
     scp -O -P 6022 /Users/marcodalprato/Downloads/ferretdb-linux-arm64_1_9_0 root@192.168.5.139:/mnt/mmc/SERVER/ferretdb-linux-arm64_1_9_0
@@ -84,3 +87,23 @@ sudo chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
 # Verifica
 ffmpeg -version
 ffprobe -version
+
+
+scp -O -P 6022 /Users/marcodalprato/Downloads/ferretdb root@192.168.5.139:/mnt/mmc/SERVER/ferretdb/ferretdb
+
+
+./ferretdb --handler=sqlite --sqlite-url=file:ferret.db --listen-addr=0.0.0.0:27017
+
+FERRETDB_HANDLER=sqlite \
+FERRETDB_SQLITE_URL=file:ferret.db \
+FERRETDB_LISTEN_ADDR=0.0.0.0:27017 \
+./ferretdb
+
+
+scp -O -P 6022 /Users/marcodalprato/Downloads/ferretdb root@192.168.5.139:/mnt/mmc/SERVER/ferretdb2
+
+scp -P 6022 -r root@192.168.5.139:/mnt/mmc/SERVER ~/Downloads/
+scp -P 6022 root@192.168.5.139:/mnt/mmc/server_backup.tar.gz ~/Downloads/
+
+
+scp -O -P 6022 -r root@192.168.5.139:/mnt/mmc/SERVER ~/Downloads/
