@@ -6,18 +6,30 @@ on:
       BRANCH_CONFIGURATOR_REF:
         description: 'Checkout branch Configurator (Client) (default: release_candidate)'
         required: true
-        default: 'release_candidate'      
+        default: 'release_candidate'
       TAG_REF:
         description: 'Tag to push on Docker Hub (default: latest)'
         required: true
         default: 'latest'
-        
+      PLATFORMS:
+        description: 'Select target platform(s)'
+        required: true
+        default: 'linux/amd64,linux/arm64'
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/amd64,linux/arm64
+          - linux/arm/v7
+          - linux/arm/v6
+
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
 
     env:
-      TAG: latest  # Puoi modificarlo dinamicamente con un timestamp o SHA se vuoi
+      TAG: ${{ github.event.inputs.TAG_REF }}
+      PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
 
     steps:
       - name: Checkout deploy repo
@@ -53,7 +65,7 @@ jobs:
       - name: Build hypernode_server_gui
         run: |
           docker buildx build \
-            --platform=linux/amd64,linux/arm64 \
+            --platform=${{ env.PLATFORMS }} \
             -f hypernode_server_gui/configurator.Dockerfile \
-            -t artecoglobalcompany/usee_configurator:${{ github.event.inputs.TAG_REF }} \
+            -t artecoglobalcompany/usee_configurator:${{ env.TAG }} \
             --push hypernode_server_gui
