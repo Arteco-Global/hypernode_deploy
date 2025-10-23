@@ -1,4 +1,4 @@
-name: Push on Docker Hub
+name: Push on Docker Hub ( -- DO NOT USE -- )
 
 on:
   workflow_dispatch:
