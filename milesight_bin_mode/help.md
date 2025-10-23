@@ -66,3 +66,21 @@ Downloads (https://github.com/FerretDB/FerretDB/releases/)
  wget -c --no-check-certificate -O libc6_2.31-0ubuntu9.9_arm64.deb  http://launchpadlibrarian.net/596549974/libc6_2.31-0ubuntu9.9_arm64.deb
 cp /mnt/mmc/SERVER/mongo/lib/lib/aarch64-linux-gnu/libresolv.so.2 /mnt/mmc/SERVER/mongo/lib/
 cp lib/aarch64-linux-gnu/libresolv.so.2 .
+
+
+# Scarica ffmpeg per linux-arm64 (versione 6.1)
+wget https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v6.1/ffmpeg-6.1-linux-arm-64.zip
+# Scarica ffprobe per linux-arm64
+wget https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v6.1/ffprobe-6.1-linux-arm-64.zip
+
+# Estrai e installa
+unzip ffmpeg-6.1-linux-arm-64.zip -d ffmpeg-bin
+unzip ffprobe-6.1-linux-arm-64.zip -d ffprobe-bin
+
+sudo mv ffmpeg-bin/ffmpeg /usr/local/bin/
+sudo mv ffprobe-bin/ffprobe /usr/local/bin/
+sudo chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
+
+# Verifica
+ffmpeg -version
+ffprobe -version
