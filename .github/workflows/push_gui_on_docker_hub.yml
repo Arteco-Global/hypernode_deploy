@@ -1,4 +1,4 @@
-name: Push only Configurator
+name: Push only Configurator ( -- DO NOT USE -- )
 
 on:
   workflow_dispatch:
