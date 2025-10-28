@@ -2,11 +2,17 @@
 set -euo pipefail
 
 # Percorso del JSON generato da dump-container-versions.sh
-JSON_FILE=${JSON_FILE:-"./container_versions.json"}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+JSON_FILE=${JSON_FILE:-"$SCRIPT_DIR/container_versions.json"}
 
-# Credenziali Docker (per esempio; in produzione usare variabili d'ambiente o secret manager)
-DOCKER_USERNAME=${DOCKER_USERNAME:-artecoglobalcompany}
-DOCKER_PASSWORD=${DOCKER_PASSWORD:-dckr_oat_1q1A2y6TGAmi3BjpcYnpBgKbx3voQd_k}
+# Credenziali Docker (da passare tramite variabili d'ambiente)
+DOCKER_USERNAME=${DOCKER_USERNAME:-}
+DOCKER_PASSWORD=${DOCKER_PASSWORD:-}
+
+if [[ -z "$DOCKER_USERNAME" || -z "$DOCKER_PASSWORD" ]]; then
+  echo "❌ Variabili DOCKER_USERNAME/DOCKER_PASSWORD non valorizzate." >&2
+  exit 1
+fi
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "❌ Comando 'jq' mancante. Installalo per continuare." >&2
