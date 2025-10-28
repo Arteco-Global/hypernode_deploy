@@ -255,7 +255,7 @@ additionalServiceInstall() {
     installLocalDb
 
 
-    printf "\nInstalling '$SERVICE_NAME' on port '$DB_PORT'"
+    printf "\nInstalling '$SERVICE_NAME'"
 
 
     if [ "$SERVICE_NAME" != "server" ] ; then
