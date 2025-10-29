@@ -22,11 +22,15 @@ Gli script coinvolti sono:
    ```bash
    chmod +x dump-container-versions.sh check-container-updates.sh run-hypernode-update-check.sh
    ```
-2. Lancia `run-hypernode-update-check.sh` fornendo credenziali e intervallo:
+2. Lancia `run-hypernode-update-check.sh` fornendo credenziali, parametri licensing e intervallo:
    ```bash
    ./run-hypernode-update-check.sh \
      --docker-username=artecoglobalcompany \
      --docker-password=TOKEN \
+     --user-login=utente@example.com \
+     --user-password=PASSWORD \
+     --serial=SERIALE_HARDWARE \
+     --licensing-url=https://licensing.example.com \
      --interval=30m
    ```
    - L’intervallo accetta numeri con suffisso `s`, `m`, `h`, `d` (default minuti se omesso). Esempi: `45m`, `2h`, `1d`.
@@ -44,10 +48,10 @@ Gli script coinvolti sono:
   /bin/bash -lc '"/home/arteco/installer_docker/run-hypernode-update-check.sh" --use-config'
   ```
 - Ad ogni invocazione lo script:
-  - carica credenziali e intervallo dal file di configurazione,
+  - carica credenziali, parametri licensing e intervallo dal file di configurazione,
   - verifica da `.hypernode-update-check.state` da quanto tempo è passato,
   - se non è trascorso l’intervallo richiesto, esce e logga “Esecuzione saltata…“,
-  - altrimenti ripete dump e check, aggiorna il timestamp e registra l’attività nel log.
+  - altrimenti ripete dump e check, aggiorna il timestamp, invia il payload JSON all’endpoint `LICENSING_URL/update` e registra l’attività nel log.
 
 ## Rilanci manuali
 
@@ -72,9 +76,37 @@ Eseguire:
 | File | Descrizione |
 | ---- | ----------- |
 | `container_versions.json` | Snapshot corrente delle immagini uSee in esecuzione. |
-| `.hypernode-update-check.conf` | Credenziali e intervallo salvati (permessi 600). |
+| `container_update_report.json` | Risultati del confronto remoto, con `uptodate` per ogni servizio. |
+| `.hypernode-update-check.conf` | Credenziali, parametri licensing e intervallo salvati (permessi 600). |
 | `.hypernode-update-check.state` | Timestamp Unix dell’ultima esecuzione riuscita. |
-| `hypernode-update-check.log` | Storico dettagliato delle esecuzioni e delle azioni cron. |
+| `hypernode-update-check.log` | Storico dettagliato delle esecuzioni, degli invii e delle azioni cron. |
+
+## Payload inviato
+
+Il payload JSON spedito a `LICENSING_URL/update` ha la forma:
+
+```json
+{
+  "user_login": "utente@example.com",
+  "user_password": "PASSWORD",
+  "serial": "SERIALE_HARDWARE",
+  "server": {
+    "services": [
+      {
+        "name": "gateway",
+        "image": "artecoglobalcompany/usee_suite_manager:latest",
+        "digest": "artecoglobalcompany/usee_suite_manager@sha256:...",
+        "tag": "latest",
+        "version": "unknown",
+        "created": "2025-10-08T15:18:55.494809839Z",
+        "uptodate": true
+      }
+    ]
+  }
+}
+```
+
+Il campo `uptodate` è `true` se il digest remoto coincide con quello in esecuzione, `false` in caso contrario o se il digest non è recuperabile. Eventuali errori di fetch vengono salvati nel campo opzionale `check_error` dentro ogni servizio e registrati nel log.
 
 Il log può essere consultato con:
 ```bash

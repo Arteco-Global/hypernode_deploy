@@ -9,9 +9,14 @@ JSON_FILE="$SCRIPT_DIR/container_versions.json"
 CONFIG_FILE="$SCRIPT_DIR/.hypernode-update-check.conf"
 STATE_FILE="$SCRIPT_DIR/.hypernode-update-check.state"
 LOG_FILE=${LOG_FILE:-"$SCRIPT_DIR/hypernode-update-check.log"}
+REPORT_FILE="$SCRIPT_DIR/container_update_report.json"
 
 DOCKER_USERNAME=""
 DOCKER_PASSWORD=""
+USER_LOGIN=""
+USER_PASSWORD=""
+SERIAL=""
+LICENSING_URL=""
 INTERVAL_SPEC=""
 INTERVAL_SECONDS=""
 USE_CONFIG="false"
@@ -73,6 +78,22 @@ while [[ $# -gt 0 ]]; do
       DOCKER_PASSWORD="${1#*=}"
       shift
       ;;
+    --user-login=*)
+      USER_LOGIN="${1#*=}"
+      shift
+      ;;
+    --user-password=*)
+      USER_PASSWORD="${1#*=}"
+      shift
+      ;;
+    --serial=*)
+      SERIAL="${1#*=}"
+      shift
+      ;;
+    --licensing-url=*)
+      LICENSING_URL="${1#*=}"
+      shift
+      ;;
     --interval=*)
       INTERVAL_SPEC="${1#*=}"
       shift
@@ -120,6 +141,11 @@ if [[ "$REMOVE_SCHEDULE" != "true" ]]; then
       exit 1
     fi
     log "Intervallo recuperato dalla configurazione: ${INTERVAL_SECONDS}s"
+    if [[ -z "${USER_LOGIN:-}" || -z "${USER_PASSWORD:-}" || -z "${SERIAL:-}" || -z "${LICENSING_URL:-}" ]]; then
+      log "Configurazione salvata priva dei parametri licensing (user_login/user_password/serial/licensing_url)"
+      echo "❌ La configurazione salvata non contiene tutti i parametri licensing." >&2
+      exit 1
+    fi
   else
     log "Modalità manuale (parametri CLI) richiesta"
     if [[ -z "$DOCKER_USERNAME" || -z "$DOCKER_PASSWORD" ]]; then
@@ -142,6 +168,11 @@ if [[ "$REMOVE_SCHEDULE" != "true" ]]; then
       log "Intervallo impostato da CLI: $INTERVAL_SPEC (${INTERVAL_SECONDS}s)"
     else
       log "Nessun intervallo specificato: esecuzione singola senza pianificazione"
+    fi
+    if [[ -z "$USER_LOGIN" || -z "$USER_PASSWORD" || -z "$SERIAL" || -z "$LICENSING_URL" ]]; then
+      log "Parametri licensing mancanti nei parametri CLI"
+      echo "❌ Specifica --user-login, --user-password, --serial e --licensing-url." >&2
+      exit 1
     fi
   fi
 
@@ -216,6 +247,10 @@ write_config() {
   {
     printf 'DOCKER_USERNAME=%q\n' "$DOCKER_USERNAME"
     printf 'DOCKER_PASSWORD=%q\n' "$DOCKER_PASSWORD"
+    printf 'USER_LOGIN=%q\n' "$USER_LOGIN"
+    printf 'USER_PASSWORD=%q\n' "$USER_PASSWORD"
+    printf 'SERIAL=%q\n' "$SERIAL"
+    printf 'LICENSING_URL=%q\n' "$LICENSING_URL"
     printf 'INTERVAL_SECONDS=%q\n' "$INTERVAL_SECONDS"
     printf 'SCRIPT_PATH=%q\n' "$SCRIPT_PATH"
   } > "$tmp_file"
@@ -269,6 +304,72 @@ remove_cron_job() {
   log "Voce cron rimossa"
 }
 
+send_payload() {
+  if [[ ! -f "$REPORT_FILE" ]]; then
+    log "Report $REPORT_FILE inesistente; salto invio payload"
+    return 1
+  fi
+
+  if ! command -v jq >/dev/null 2>&1; then
+    log "jq non disponibile durante la costruzione del payload; richiesta non inviata"
+    return 1
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    log "curl non disponibile; impossibile inviare il payload"
+    return 1
+  fi
+
+  local service_count
+  service_count=$(jq '.services | length' "$REPORT_FILE" 2>/dev/null || echo 0)
+
+  local endpoint
+  endpoint="${LICENSING_URL%/}/update"
+
+  local payload
+  payload=$(jq -n \
+    --arg login "$USER_LOGIN" \
+    --arg password "$USER_PASSWORD" \
+    --arg serial "$SERIAL" \
+    --argfile report "$REPORT_FILE" \
+    '{
+      user_login: $login,
+      user_password: $password,
+      serial: $serial,
+      server: { services: $report.services }
+    }')
+
+  log "Invio payload di aggiornamento a $endpoint (serial: $SERIAL, servizi: $service_count)"
+
+  local response_file error_file http_code
+  response_file=$(mktemp)
+  error_file=$(mktemp)
+
+  local http_code
+  if ! http_code=$(curl -sS -o "$response_file" -w '%{http_code}' \
+    -X POST "$endpoint" \
+    -H 'Content-Type: application/json' \
+    -d "$payload" 2>"$error_file"); then
+    local curl_exit=$?
+    local curl_err
+    curl_err=$(cat "$error_file")
+    log "Errore curl (exit $curl_exit) durante l'invio: $curl_err"
+    rm -f "$response_file" "$error_file"
+    return 1
+  fi
+
+  if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+    log "Payload inviato con successo (HTTP $http_code)"
+  else
+    local body
+    body=$(cat "$response_file")
+    log "Errore dal licensing endpoint (HTTP $http_code): $body"
+  fi
+
+  rm -f "$response_file" "$error_file"
+  return 0
+}
+
 if [[ "$REMOVE_SCHEDULE" == "true" ]]; then
   log "Richiesta di rimozione pianificazione ricevuta"
   remove_cron_job
@@ -299,7 +400,11 @@ fi
 
 chmod +x "$CHECK_SCRIPT"
 log "Esecuzione di $CHECK_SCRIPT"
-DOCKER_USERNAME="$DOCKER_USERNAME" DOCKER_PASSWORD="$DOCKER_PASSWORD" JSON_FILE="$JSON_FILE" "$CHECK_SCRIPT"
+DOCKER_USERNAME="$DOCKER_USERNAME" DOCKER_PASSWORD="$DOCKER_PASSWORD" JSON_FILE="$JSON_FILE" REPORT_FILE="$REPORT_FILE" "$CHECK_SCRIPT"
+
+if ! send_payload; then
+  log "Invio payload non riuscito (verificare log precedente)"
+fi
 
 update_last_run
 
