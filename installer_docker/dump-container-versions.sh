@@ -31,10 +31,12 @@ fi
     fi
 
     digest=$(docker image inspect --format '{{join .RepoDigests ", "}}' "$image_id" 2>/dev/null || true)
+    config_digest=$(docker image inspect --format '{{.Id}}' "$image_id" 2>/dev/null || true)
     version=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' "$image_id" 2>/dev/null || true)
     created=$(docker image inspect --format '{{.Created}}' "$image_id")
 
     digest=${digest:-unknown}
+    config_digest=${config_digest:-unknown}
     version=${version:-unknown}
     tag="unknown"
     if [[ "$image" == *:* ]]; then
@@ -49,6 +51,7 @@ fi
     printf '  "%s": {\n' "$name"
     printf '    "image": "%s",\n' "$image"
     printf '    "digest": "%s",\n' "$digest"
+    printf '    "config_digest": "%s",\n' "$config_digest"
     printf '    "tag": "%s",\n' "$tag"
     printf '    "version": "%s",\n' "$version"
     printf '    "created": "%s"\n' "$created"

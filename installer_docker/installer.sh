@@ -251,7 +251,17 @@ additionalServiceInstall() {
     local TYPE_OF_INSTALL=${2:-"install"} 
     local COMPOSE_FILE="$ABSOLUTE_PATH/$SERVICE_NAME/docker-compose.yaml"
 
-    getFirstDbPortFree
+    if [ "$TYPE_OF_INSTALL" == "update" ]; then
+        if reuseExistingDbPort "$DB_NAME"; then
+            printf "\nFound existing database port %s for %s.\n" "$DB_PORT" "$SERVICE_NAME"
+        else
+            printf "\nExisting database for %s not found. Searching for a free port.\n" "$SERVICE_NAME"
+            getFirstDbPortFree
+        fi
+    else
+        getFirstDbPortFree
+    fi
+
     installLocalDb
 
 
@@ -411,6 +421,26 @@ getFirstDbPortFree() {
     done
 
     echo "No free port found after $MAX_TRIES attempts!"
+    return 1
+}
+
+reuseExistingDbPort() {
+    local container_name=$1
+
+    if [ -z "$container_name" ]; then
+        return 1
+    fi
+
+    local host_port
+    host_port=$(docker inspect -f '{{range $port, $bindings := .NetworkSettings.Ports}}{{if eq $port "27017/tcp"}}{{(index $bindings 0).HostPort}}{{end}}{{end}}' "$container_name" 2>/dev/null)
+
+    if [[ -n "$host_port" ]]; then
+        DB_PORT=$host_port
+        export DB_PORT
+        echo "Reusing existing database mapped port $DB_PORT for $container_name."
+        return 0
+    fi
+
     return 1
 }
 
