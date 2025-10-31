@@ -8,11 +8,6 @@ REPORT_FILE=${REPORT_FILE:-"$SCRIPT_DIR/container_update_report.json"}
 DOCKER_USERNAME=${DOCKER_USERNAME:-}
 DOCKER_PASSWORD=${DOCKER_PASSWORD:-}
 
-if [[ -z "$DOCKER_USERNAME" || -z "$DOCKER_PASSWORD" ]]; then
-  echo "❌ Variabili DOCKER_USERNAME/DOCKER_PASSWORD non valorizzate." >&2
-  exit 1
-fi
-
 if ! command -v jq >/dev/null 2>&1; then
   echo "❌ Comando 'jq' mancante. Installalo per continuare." >&2
   exit 1
@@ -28,8 +23,14 @@ if [ ! -f "$JSON_FILE" ]; then
   exit 1
 fi
 
-echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin >/dev/null
-trap 'docker logout >/dev/null 2>&1 || true' EXIT
+LOGIN_PERFORMED="false"
+if [[ -n "$DOCKER_USERNAME" && -n "$DOCKER_PASSWORD" ]]; then
+  echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin >/dev/null
+  LOGIN_PERFORMED="true"
+else
+  echo "ℹ️  Credenziali Docker non fornite: eseguo il check senza login." >&2
+fi
+trap 'if [[ "$LOGIN_PERFORMED" == "true" ]]; then docker logout >/dev/null 2>&1 || true; fi' EXIT
 
 export DOCKER_CLI_EXPERIMENTAL=enabled
 SERVICES_JSON='[]'

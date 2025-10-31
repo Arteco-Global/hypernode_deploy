@@ -124,12 +124,6 @@ if [[ "$REMOVE_SCHEDULE" != "true" ]]; then
     # shellcheck source=/dev/null
     source "$CONFIG_FILE"
 
-    if [[ -z "${DOCKER_USERNAME:-}" || -z "${DOCKER_PASSWORD:-}" ]]; then
-      log "Configurazione salvata priva delle credenziali Docker"
-      echo "❌ La configurazione salvata non contiene le credenziali Docker." >&2
-      exit 1
-    fi
-
     if [[ -z "${INTERVAL_SECONDS:-}" ]]; then
       log "Configurazione salvata priva dell'intervallo"
       echo "❌ La configurazione salvata non contiene l'intervallo." >&2
@@ -148,13 +142,7 @@ if [[ "$REMOVE_SCHEDULE" != "true" ]]; then
     fi
   else
     log "Modalità manuale (parametri CLI) richiesta"
-    if [[ -z "$DOCKER_USERNAME" || -z "$DOCKER_PASSWORD" ]]; then
-      log "Credenziali mancanti nei parametri CLI"
-      echo "❌ Specifica --docker-username e --docker-password." >&2
-      exit 1
-    fi
-
-    if [[ -n "$INTERVAL_SPEC" ]]; then
+  if [[ -n "$INTERVAL_SPEC" ]]; then
       if ! INTERVAL_SECONDS=$(parse_interval_to_seconds "$INTERVAL_SPEC"); then
         log "Intervallo CLI non valido: $INTERVAL_SPEC"
         echo "❌ Valore di --interval non valido. Usa numeri con suffisso opzionale s|m|h|d (es. 30m, 2h)." >&2
