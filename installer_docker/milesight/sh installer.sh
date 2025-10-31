@@ -1,0 +1,22 @@
+ sh installer.sh \
+   --force-install \
+   --mode 1 \
+   --port 445 \
+   --host "V12230451.my.omniaweb.cloud" \
+   --process-name "milesight" \
+   --serial-number "V12230451" \
+   --timezone "Europe/Rome" \
+   --internal-name "milesight" \
+   --email "luca.volta.arteco@gmail.com" \
+   --password "********" \
+   --server-ip "192.168.5.139" \
+   --certificate-provider-url "http://192.168.10.20:3000/certificate" \
+   --dns-provider-url "http://192.168.0.67:3000/dns-update" \
+   --license-provider-url "http://192.168.10.20:3000/sites" \
+   --update-provider-url "http://192.168.10.20:3000/update" \
+   --recording-path "/mnt/mmc/recqu/recording" \
+   --recording-max-disk 50000000 \
+   --storage-path "/mnt/mmc/recqu/storage" \
+   --storage-max-disk 50000000 \
+   --snapshot-path "/mnt/mmc/recqu/snapshot" \
+   --snapshot-max-disk 50000000

@@ -47,6 +47,11 @@ for service in "${SERVICES[@]}"; do
     continue
   fi
 
+  service_json=$(jq -c --arg s "$service" 'if has($s) then .[$s] else null end' "$JSON_FILE")
+  if [[ "$service_json" == "null" ]]; then
+    continue
+  fi
+
   if [[ "$image" != artecoglobalcompany/usee_* ]]; then
     continue
   fi
