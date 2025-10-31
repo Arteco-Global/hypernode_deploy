@@ -326,8 +326,7 @@ send_payload() {
       serial: $serial,
       server: { services: $report.services }
     }')
-
-  log "Payload JSON: $payload"
+  
   log "Invio payload di aggiornamento a $endpoint (serial: $SERIAL, servizi: $service_count)"
 
   local response_file error_file http_code
