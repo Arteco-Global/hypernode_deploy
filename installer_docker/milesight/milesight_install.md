@@ -23,10 +23,10 @@ This guide explains **exactly what each part of your two commands does**, in pla
 >   --email "luca.volta.arteco@gmail.com" \
 >   --password "********" \
 >   --server-ip "192.168.5.139" \
->   --certificate-provider-url "http://192.168.10.20:3000/certificate" \
->   --dns-provider-url "http://192.168.10.20:3000/dns-update" \
->   --license-provider-url "http://192.168.10.20:3000/sites" \
->   --update-provider-url "http://192.168.10.20:3000/update" \
+>   --certificate-provider-url "http://95.242.106.77:53000/certificate" \
+>   --dns-provider-url "http://95.242.106.77:53000/dns-update" \
+>   --license-provider-url "http://95.242.106.77:53000/sites" \
+>   --update-provider-url "http://95.242.106.77:53000/update" \
 >   --recording-path "/mnt/mmc/recqu/recording" \
 >   --recording-max-disk 500000000000 \
 >   --storage-path "/mnt/mmc/recqu/storage" \
