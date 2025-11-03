@@ -24,7 +24,7 @@ This guide explains **exactly what each part of your two commands does**, in pla
 >   --password "********" \
 >   --server-ip "192.168.5.139" \
 >   --certificate-provider-url "http://192.168.10.20:3000/certificate" \
->   --dns-provider-url "http://192.168.0.67:3000/dns-update" \
+>   --dns-provider-url "http://192.168.10.20:3000/dns-update" \
 >   --license-provider-url "http://192.168.10.20:3000/sites" \
 >   --update-provider-url "http://192.168.10.20:3000/update" \
 >   --recording-path "/mnt/mmc/recqu/recording" \
