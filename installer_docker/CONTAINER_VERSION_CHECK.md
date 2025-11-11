@@ -60,6 +60,11 @@ Gli script coinvolti sono:
   ./run-hypernode-update-check.sh --use-config
   ```
   (continua comunque a rispettare l’intervallo).
+- Per inviare immediatamente il payload ignorando l’intervallo e registrando il JSON (con la password oscurata) nel log per debugging:
+  ```bash
+  ./run-hypernode-update-check.sh --use-config --force-send
+  ```
+  Utile quando il licensing service va in errore ma vuoi verificare i dati effettivamente spediti; l’intervallo e gli eventuali salti basati sui dati vengono ignorati solo per quella run.
 - Per modificare l’intervallo, rilancia lo script fornendo un nuovo `--interval`; la configurazione e la voce cron verranno aggiornate.
 
 ## Disattivazione e pulizia
@@ -79,7 +84,7 @@ Eseguire:
 | `container_update_report.json` | Risultati del confronto remoto, con `uptodate` per ogni servizio. |
 | `.hypernode-update-check.conf` | Credenziali, parametri licensing e intervallo salvati (permessi 600). |
 | `.hypernode-update-check.state` | Timestamp Unix dell’ultima esecuzione riuscita. |
-| `hypernode-update-check.log` | Storico dettagliato delle esecuzioni, degli invii e delle azioni cron. |
+| `hypernode-update-check.log` | Storico dettagliato delle esecuzioni, degli invii e delle azioni cron; lo script conserva automaticamente ~24h di righe (configurabile con `LOG_RETENTION_SECONDS`). |
 
 ## Payload inviato
 

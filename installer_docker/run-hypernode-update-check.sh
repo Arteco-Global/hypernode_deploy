@@ -10,6 +10,8 @@ CONFIG_FILE="$SCRIPT_DIR/.hypernode-update-check.conf"
 STATE_FILE="$SCRIPT_DIR/.hypernode-update-check.state"
 LOG_FILE=${LOG_FILE:-"$SCRIPT_DIR/hypernode-update-check.log"}
 REPORT_FILE="$SCRIPT_DIR/container_update_report.json"
+LOG_RETENTION_SECONDS=${LOG_RETENTION_SECONDS:-86400}
+LOG_PRUNE_NOTICE=""
 
 DOCKER_USERNAME=""
 DOCKER_PASSWORD=""
@@ -21,6 +23,7 @@ INTERVAL_SPEC=""
 INTERVAL_SECONDS=""
 USE_CONFIG="false"
 REMOVE_SCHEDULE="false"
+FORCE_SEND="false"
 
 log() {
   local ts message
@@ -38,7 +41,59 @@ ensure_log_file() {
   chmod 600 "$LOG_FILE" 2>/dev/null || true
 }
 
+prune_log_file() {
+  if [[ ! -f "$LOG_FILE" ]]; then
+    return
+  fi
+
+  local retention="$LOG_RETENTION_SECONDS"
+  if ! [[ "$retention" =~ ^[0-9]+$ ]] || (( retention <= 0 )); then
+    return
+  fi
+
+  local now cutoff
+  now=$(date +%s)
+  cutoff=$((now - retention))
+  if (( cutoff <= 0 )); then
+    return
+  fi
+
+  local tmp_file trimmed="false"
+  tmp_file=$(mktemp)
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ ^\[([0-9]{4}-[0-9]{2}-[0-9]{2})\ ([0-9]{2}:[0-9]{2}:[0-9]{2})\] ]]; then
+      local ts="${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
+      local line_epoch
+      if line_epoch=$(date -d "$ts" +%s 2>/dev/null); then
+        if (( line_epoch >= cutoff )); then
+          printf '%s\n' "$line" >> "$tmp_file"
+        else
+          trimmed="true"
+        fi
+      else
+        printf '%s\n' "$line" >> "$tmp_file"
+      fi
+    else
+      printf '%s\n' "$line" >> "$tmp_file"
+    fi
+  done < "$LOG_FILE"
+
+  if [[ "$trimmed" == "true" ]]; then
+    mv "$tmp_file" "$LOG_FILE"
+    chmod 600 "$LOG_FILE" 2>/dev/null || true
+    LOG_PRUNE_NOTICE="Log ripulito: rimossi eventi precedenti a $(date -d "@$cutoff" '+%Y-%m-%d %H:%M:%S')"
+  else
+    rm -f "$tmp_file"
+  fi
+}
+
 ensure_log_file
+prune_log_file
+if [[ -n "$LOG_PRUNE_NOTICE" ]]; then
+  log "$LOG_PRUNE_NOTICE"
+  LOG_PRUNE_NOTICE=""
+fi
 log "---- Avvio script run-hypernode-update-check.sh"
 
 parse_interval_to_seconds() {
@@ -104,6 +159,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --remove-schedule)
       REMOVE_SCHEDULE="true"
+      shift
+      ;;
+    --force-send|--force-send=true)
+      FORCE_SEND="true"
+      shift
+      ;;
+    --force-send=false)
+      FORCE_SEND="false"
       shift
       ;;
     *)
@@ -184,6 +247,11 @@ if [[ "$REMOVE_SCHEDULE" != "true" ]]; then
 fi
 
 maybe_skip_for_interval() {
+  if [[ "$FORCE_SEND" == "true" ]]; then
+    log "--force-send attivo: ignoro l'intervallo minimo"
+    return 0
+  fi
+
   if [[ -z "$INTERVAL_SECONDS" || "$USE_CONFIG" != "true" ]]; then
     return 0
   fi
@@ -314,18 +382,34 @@ send_payload() {
   local endpoint
   endpoint="${LICENSING_URL%/}/update"
 
-  local payload
-  payload=$(jq -n -c \
+  local payload jq_error_file
+  jq_error_file=$(mktemp)
+  if ! payload=$(jq -c \
     --arg login "$USER_LOGIN" \
     --arg password "$USER_PASSWORD" \
     --arg serial "$SERIAL" \
-    --argfile report "$REPORT_FILE" \
     '{
       user_login: $login,
       user_password: $password,
       serial: $serial,
-      server: { services: $report.services }
-    }')
+      server: { services: (.services // []) }
+    }' "$REPORT_FILE" 2>"$jq_error_file"); then
+    local jq_err
+    jq_err=$(cat "$jq_error_file")
+    rm -f "$jq_error_file"
+    log "Impossibile costruire il payload da $REPORT_FILE: ${jq_err:-errore jq sconosciuto}"
+    return 1
+  fi
+  rm -f "$jq_error_file"
+
+  if [[ "$FORCE_SEND" == "true" ]]; then
+    local payload_for_log
+    if payload_for_log=$(jq '.user_password = "***redacted***"' <<<"$payload" 2>/dev/null); then
+      log "Payload forzato (--force-send): $payload_for_log"
+    else
+      log "Payload forzato (--force-send) non processabile da jq, contenuto raw: $payload"
+    fi
+  fi
   
   log "Invio payload di aggiornamento a $endpoint (serial: $SERIAL, servizi: $service_count)"
 
