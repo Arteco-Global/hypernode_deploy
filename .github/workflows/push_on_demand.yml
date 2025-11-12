@@ -33,6 +33,7 @@ on:
           - database
           - media_storage
           - configurator
+          - coretrust
         default: 'all'
       PLATFORMS:
         description: 'Architettura target Docker (piattaforma di build)'
@@ -142,6 +143,15 @@ jobs:
             --platform=${{ env.PLATFORMS }} \
             -f hypernode-server/docker/gateway.Dockerfile \
             -t artecoglobalcompany/usee_suite_manager:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildCoreTrust 
+        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'coretrust' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            -f hypernode-server/docker/coretrust.Dockerfile \
+            -t artecoglobalcompany/usee_coretrust:${{ env.TAG }} \
             --push hypernode-server
 
       - name: BuildMediaRecorder

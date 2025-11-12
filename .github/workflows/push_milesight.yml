@@ -21,6 +21,7 @@ on:
                     - id_verifier
                     - event_manager
                     - suite_manager
+                    - coretrust       # 👈 nuovo servizio aggiunto
                     - media_recorder
                     - snapshot_recorder
                     - web_server
@@ -127,6 +128,15 @@ jobs:
                     --platform=${{ env.PLATFORMS }} \
                     -f hypernode-server/docker/gateway.Dockerfile \
                     -t artecoglobalcompany/usee_suite_manager:${{ env.TAG }} \
+                    --push hypernode-server
+
+            - name: BuildCoreTrust      # 👈 nuovo step aggiunto
+              if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'coretrust' }}
+              run: |
+                  docker buildx build \
+                    --platform=${{ env.PLATFORMS }} \
+                    -f hypernode-server/docker/coretrust.Dockerfile \
+                    -t artecoglobalcompany/usee_coretrust:${{ env.TAG }} \
                     --push hypernode-server
 
             - name: BuildMediaRecorder
