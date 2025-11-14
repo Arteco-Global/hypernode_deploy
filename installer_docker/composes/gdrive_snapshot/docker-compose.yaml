@@ -29,3 +29,8 @@ services:
       - SNAPSHOT_PATH=/snapshot_files
     network_mode: "host"
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"

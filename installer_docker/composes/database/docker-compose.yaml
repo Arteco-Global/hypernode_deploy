@@ -10,7 +10,12 @@ services:
       - mongodb_data:/data/db_${DB_NAME}
     container_name: ${DB_NAME}
     restart: unless-stopped
-    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        
 volumes:
   mongodb_data:
       name: database_for_${DB_NAME}  # Nome unico per il volume
