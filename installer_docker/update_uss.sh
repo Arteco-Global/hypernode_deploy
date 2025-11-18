@@ -68,6 +68,17 @@ watchtower_args=(
   -v "/var/run/docker.sock:/var/run/docker.sock"
 )
 
+# Docker 25+ removes support for API versions < 1.44. The bundled
+# watchtower image still defaults to 1.25, so explicitly use the server
+# API level to avoid "client version ... is too old" errors after an
+# apt upgrade.
+DOCKER_SERVER_API_VERSION="$(docker version --format '{{.Server.APIVersion}}' 2>/dev/null || true)"
+if [[ -n "$DOCKER_SERVER_API_VERSION" ]]; then
+  watchtower_args+=(
+    -e "DOCKER_API_VERSION=$DOCKER_SERVER_API_VERSION"
+  )
+fi
+
 if [[ -d "$DOCKER_CONFIG_DIR" && -f "$DOCKER_CONFIG_DIR/config.json" ]]; then
   watchtower_args+=(
     -v "$DOCKER_CONFIG_DIR:/config:ro"
