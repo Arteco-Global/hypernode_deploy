@@ -4,7 +4,7 @@
 
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
-ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes
+ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/DBVolumeFix/installer_docker/composes
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
