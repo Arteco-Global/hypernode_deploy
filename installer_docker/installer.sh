@@ -227,7 +227,7 @@ end_with_message() {
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
 
         if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
-            printf "\n You can now access the uSee Configurator at https://$myIp:$SSL_PORT\n"
+            printf "\n Hey You can now access the uSee Configurator at https://$myIp:$SSL_PORT\n"
         fi
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
