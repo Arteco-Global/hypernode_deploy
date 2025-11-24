@@ -4,7 +4,7 @@
 
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
-ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/DBVolumeFix/installer_docker/composes
+ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
@@ -227,7 +227,7 @@ end_with_message() {
         printf "\n🎉 %s: Operation completed successfully!\n\n" "$message"
 
         if [[ "$message" == "Server installation" || "$message" == "Server update" ]]; then
-            printf "\n Hey You can now access the uSee Configurator at https://$myIp:$SSL_PORT\n"
+            printf "\n You can now access the uSee Configurator at https://$myIp:$SSL_PORT\n"
         fi
     else
         printf "\n❌ %s: Operation failed. Please check the logs.\n\n" "$message"
