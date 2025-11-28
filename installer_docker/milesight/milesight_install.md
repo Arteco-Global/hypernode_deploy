@@ -8,8 +8,12 @@ This guide explains **exactly what each part of your two commands does**, in pla
 > ```bash
 > wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/milesight/installer_milesight.sh"
 > ```
+
+> 1) **Docker login**
+
+echo PASSWORD | docker login --username USER --password-stdin
 >
-> 2) **Execute the installer with your parameters**
+> 3) **Execute the installer with your parameters**
 > ```bash
 > sh installer.sh \
 >   --force-install \
