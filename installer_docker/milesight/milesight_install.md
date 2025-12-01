@@ -62,34 +62,6 @@ wget -c --no-check-certificate -O installer.sh "https://raw.githubusercontent.co
 
 ---
 
-## 2) Running the installer (with `sh installer.sh …`)
-
-You execute the script using the system shell (`sh`) and pass a set of **flags** that control what the installer configures. Here’s what each flag represents and why you might use it.
-
-| Flag | Value | What it does | Notes |
-|---|---|---|---|
-| `--force-install` | *(no value)* | Forces a fresh (re)install even if components already exist. | Useful to overwrite old configs/images. May stop existing containers and replace volumes/config files depending on the script’s policy. |
-| `--tag` | `latest` | Docker image tag to deploy. | `latest` pulls the newest tag; for reproducibility on older hardware/OS, consider a pinned tag (e.g., `v1.2.3`). |
-| `--mode` | `1` | Selects an installation preset/profile. | **Script‑specific.** Typically chooses “standard” or “single‑node” mode. Refer to the installer docs if available. |
-| `--port` | `443` | Public HTTPS port to expose. | The installer likely configures a reverse proxy (or app) to listen here. Make sure port 443 is free. |
-| `--host` | `V12230451.my.omniaweb.cloud` | FQDN used for TLS certs and routing. | Make sure DNS points to this device’s public IP (or LAN IP if local only). |
-| `--process-name` | `milesight` | Logical name for services/processes. | Often used for container names, systemd units, or log prefixes. |
-| `--serial-number` | `V12230451` | Device/site identifier. | Often used for licensing, enrollment, and inventory. |
-| `--timezone` | `Europe/Rome` | System/app timezone. | Ensures logs, schedules, and cron jobs use local time. |
-| `--internal-name` | `milesight` | Internal short name. | Used inside configs and paths; cosmetic/organizational. |
-| `--email` | `luca.volta.arteco@gmail.com` | Admin/owner email. | Often used for certificate issuance, alerts, password recovery. |
-| `--password` | `Lv042020Arteco!` | Admin or bootstrap password. | **Highly sensitive.** Exposing it on the CLI can leak via shell history and process lists. See **Security notes** below. |
-| `--server-ip` | `192.168.5.139` | Local IP where services bind or are reachable. | Keeps internal URIs stable on LAN. |
-| `--certificate-provider-url` | `http://192.168.10.20:3000/certificate` | API endpoint to obtain TLS certs. | Using **HTTP** here means the certificate retrieval happens unencrypted on LAN. Prefer HTTPS if the provider supports it. |
-| `--dns-provider-url` | `http://192.168.0.67:3000/dns-update` | API for dynamic DNS updates. | Ensures `--host` resolves correctly. |
-| `--license-provider-url` | `http://192.168.10.20:3000/sites` | API to fetch/apply licenses. | The installer may POST the serial/email to fetch entitlements. |
-| `--update-provider-url` | `http://192.168.10.20:3000/update` | API for software/firmware updates. | Lets the system check for and pull updates. |
-| `--recording-path` | `/mnt/mmc/recqu/recording` | Bind‑mount path for **recordings**. | Must exist and be writable. Prefer a dedicated volume/mount. |
-| `--recording-max-disk` | `500000000000` | Quota for recordings (in **bytes**). | ≈ **500 GB** (decimal) ≈ **465.66 GiB** (binary). |
-| `--storage-path` | `/mnt/mmc/recqu/storage` | Bind‑mount path for **general storage**. | Must exist and be writable. |
-| `--storage-max-disk` | `100000000000` | Quota for storage (in **bytes**). | ≈ **100 GB** ≈ **93.13 GiB**. |
-| `--snapshot-path` | `/mnt/mmc/recqu/snapshot` | Bind‑mount path for **snapshots**. | Must exist and be writable. |
-| `--snapshot-max-disk` | `20000000000` | Quota for snapshots (in **bytes**). | ≈ **20 GB** ≈ **18.63 GiB**. |
 
 > **What the installer typically does** (based on common patterns):
 > - Installs Docker / Docker Compose if missing.
