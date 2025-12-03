@@ -23,6 +23,14 @@
 
   - MongoDB (port 27017)
     - Check if mongo respond on port (127.0.0.1:27017)
+    - stop mongo
+    - run mongo with: ' /mnt/mmc/tools/mongodb/bin/mongod \
+  --dbpath /mnt/mmc/tools/mongodb/data/db \
+  --fork \
+  --logpath /mnt/mmc/tools/mongodb/mongod.log \
+  --bind_ip 0.0.0.0 \
+  --port 27017' in order to allow external connections
+
   
   - Nginx
     - Upload della nuova configurazione di nginx col comando 'scp -r -O -P 6022 ./nginx.conf root@192.168.5.139:/tools/nginx/conf/nginx.conf'
@@ -45,9 +53,12 @@
 
   - Configurator
     - run 'npm run build' from the 'hypernode_server_gui/configurator' folder.
-    - run 'scp -r -O -P 6022 ../../hypernode_server_gui/configurator/dist/* root@192.168.5.139:/tools/nginx/html'
+    - run 'scp -r -O -P 6022 ../../hypernode_server_gui/configurator/dist/* root@192.168.5.139:/tools/nginx/html/'
 
 
+
+
+scp -r -O -P 6022 /Users/marcodalprato/Downloads/ffmpeg/* root@192.168.5.139:/mnt/mmc/hypernodefull/pkg/ffmpeg
 
 
 scp -r -O -P 6022 ../../hypernode_server_gui/configurator/dist root@192.168.5.139:/tools/nginx/html
