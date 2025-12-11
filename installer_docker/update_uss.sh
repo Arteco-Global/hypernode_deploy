@@ -6,6 +6,10 @@ CONFIG_FILE="$SCRIPT_DIR/.hypernode-update-check.conf"
 STATE_FILE="$SCRIPT_DIR/.hypernode-update-check.state"
 RUN_CHECK_SCRIPT="$SCRIPT_DIR/run-hypernode-update-check.sh"
 WATCHTOWER_IMAGE="containrrr/watchtower:1.7.1"
+COMPOSE_FILE="$SCRIPT_DIR/composes/server/docker-compose.yaml"
+ABSOLUTE_PATH="${ABSOLUTE_PATH:-https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes}"
+COMPOSE_URL="${COMPOSE_URL:-$ABSOLUTE_PATH/server/docker-compose.yaml}"
+DEBUG_LOG="${DEBUG_LOG:-0}"
 
 DOCKER_USERNAME="${DOCKER_USERNAME:-}"
 DOCKER_PASSWORD="${DOCKER_PASSWORD:-}"
@@ -17,6 +21,7 @@ LICENSING_URL="${LICENSING_URL:-}"
 INTERVAL_SECONDS="${INTERVAL_SECONDS:-}"
 LOGIN_PERFORMED="false"
 TEMP_CONFIG_DIR=""
+COMPOSE_TMP=""
 
 if [[ -f "$CONFIG_FILE" ]]; then
   # shellcheck disable=SC1090
@@ -36,6 +41,7 @@ fi
 if [[ -n "$DOCKER_USERNAME" && -n "$DOCKER_PASSWORD" ]]; then
   echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin >/dev/null
   LOGIN_PERFORMED="true"
+  echo "ℹ️  Login Docker effettuato con l'utente $DOCKER_USERNAME."
 else
   echo "ℹ️  Nessuna credenziale Docker fornita: salto il login." >&2
 fi
@@ -44,12 +50,279 @@ cleanup() {
   if [[ -n "$TEMP_CONFIG_DIR" && -d "$TEMP_CONFIG_DIR" ]]; then
     rm -rf "$TEMP_CONFIG_DIR"
   fi
+  if [[ -n "$COMPOSE_TMP" && -f "$COMPOSE_TMP" ]]; then
+    rm -f "$COMPOSE_TMP"
+  fi
   if [[ "$LOGIN_PERFORMED" == "true" ]]; then
     docker logout >/dev/null 2>&1 || true
   fi
 }
 
 trap cleanup EXIT
+
+if [[ "$DEBUG_LOG" == "1" ]]; then
+  set -x
+fi
+echo "▶️  Avvio update_uss.sh"
+
+HYPERNODE_CONTAINERS=()
+BROKER_CONTAINER="messagebroker"
+PORTBROKER_CONTAINER="portbroker"
+WEBSERVER_CONTAINER="webserver"
+COMPOSE_SOURCE=""
+
+load_compose_source() {
+  if [[ -f "$COMPOSE_FILE" ]]; then
+    COMPOSE_SOURCE="$COMPOSE_FILE"
+    echo "ℹ️  Uso il compose locale: $COMPOSE_FILE"
+    return 0
+  fi
+
+  COMPOSE_TMP=$(mktemp)
+  if curl -fsSL "$COMPOSE_URL" -o "$COMPOSE_TMP"; then
+    COMPOSE_SOURCE="$COMPOSE_TMP"
+    echo "ℹ️  Compose scaricato da $COMPOSE_URL"
+    return 0
+  else
+    echo "⚠️  Impossibile scaricare il compose da $COMPOSE_URL" >&2
+    COMPOSE_SOURCE=""
+    return 1
+  fi
+}
+
+parse_compose_container_names() {
+  local file="$1"
+  local in_services="false"
+  local current_service=""
+  local current_container=""
+
+  [[ -f "$file" ]] || return
+
+  while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+
+    if [[ "$line" =~ ^services: ]]; then
+      in_services="true"
+      continue
+    fi
+
+    if [[ "$in_services" == "false" ]]; then
+      continue
+    fi
+
+    if [[ "$line" =~ ^[[:alnum:]_].* ]]; then
+      break
+    fi
+
+    if [[ "$line" =~ ^[[:space:]]{2}([A-Za-z0-9._-]+):[[:space:]]*$ ]]; then
+      if [[ -n "$current_service" ]]; then
+        local name="${current_container:-$current_service}"
+        HYPERNODE_CONTAINERS+=("$name")
+        if [[ "$current_service" == "messagebroker" ]]; then
+          BROKER_CONTAINER="$name"
+        elif [[ "$current_service" == "portbroker" ]]; then
+          PORTBROKER_CONTAINER="$name"
+        elif [[ "$current_service" == "webserver" ]]; then
+          WEBSERVER_CONTAINER="$name"
+        fi
+      fi
+      current_service="${BASH_REMATCH[1]}"
+      current_container=""
+      continue
+    fi
+
+    if [[ -n "$current_service" && "$line" =~ ^[[:space:]]{4}container_name:[[:space:]]*([^[:space:]]+) ]]; then
+      current_container="${BASH_REMATCH[1]}"
+    fi
+  done < "$file"
+
+  if [[ -n "$current_service" ]]; then
+    local name="${current_container:-$current_service}"
+    HYPERNODE_CONTAINERS+=("$name")
+    if [[ "$current_service" == "messagebroker" ]]; then
+      BROKER_CONTAINER="$name"
+    elif [[ "$current_service" == "portbroker" ]]; then
+      PORTBROKER_CONTAINER="$name"
+    elif [[ "$current_service" == "webserver" ]]; then
+      WEBSERVER_CONTAINER="$name"
+    fi
+  fi
+}
+
+container_exists() {
+  docker ps -aq -f "name=^${1}$" | grep -q .
+}
+
+container_running() {
+  docker ps -q -f "name=^${1}$" | grep -q .
+}
+
+wait_for_container_ready() {
+  local name="$1"
+  local timeout="${2:-180}"
+  local start now status health last_log
+
+  echo "⏳ Attendo che $name diventi pronto (timeout ${timeout}s)..."
+
+  start=$(date +%s)
+  last_log="$start"
+  while true; do
+    if ! container_exists "$name"; then
+      echo "ℹ️  Container $name non trovato durante l'attesa." >&2
+      return 1
+    fi
+
+    IFS="|" read -r status health <<< "$(docker inspect --format '{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$name" 2>/dev/null || echo "unknown|")"
+
+    if [[ "$health" == "healthy" ]] || { [[ "$status" == "running" ]] && [[ -z "$health" ]]; }; then
+      echo "✅ $name pronto (stato: ${health:-$status})."
+      return 0
+    fi
+
+    now=$(date +%s)
+    if (( now - last_log >= 5 )); then
+      echo "⏳ $name ancora in stato ${health:-$status}..."
+      last_log="$now"
+    fi
+    if (( now - start >= timeout )); then
+      echo "❌ Timeout in attesa che $name sia pronto (stato: ${health:-$status})." >&2
+      return 1
+    fi
+    sleep 2
+  done
+}
+
+ensure_container_running() {
+  local name="$1"
+
+  if ! container_exists "$name"; then
+    return 1
+  fi
+
+  if ! container_running "$name"; then
+    echo "🔄 Avvio $name (era fermo)..."
+    docker start "$name" >/dev/null
+  fi
+
+  wait_for_container_ready "$name"
+}
+
+restart_container_ordered() {
+  local name="$1"
+
+  if ! container_exists "$name"; then
+    echo "ℹ️  Container $name non presente, salto." >&2
+    return 0
+  fi
+
+  if container_running "$name"; then
+    echo "🔄 Riavvio $name..."
+    docker restart "$name" >/dev/null
+  else
+    echo "🔄 Avvio $name..."
+    docker start "$name" >/dev/null
+  fi
+
+  wait_for_container_ready "$name"
+}
+
+containers_restarted_since() {
+  local since_ts="$1"
+  local container started started_ts
+
+  for container in "${HYPERNODE_CONTAINERS[@]}"; do
+    started=$(docker inspect -f '{{.State.StartedAt}}' "$container" 2>/dev/null || true)
+    if [[ -z "$started" ]]; then
+      continue
+    fi
+    started_ts=$(date -d "$started" +%s 2>/dev/null || true)
+    if [[ -n "$started_ts" && "$started_ts" -ge "$since_ts" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+restart_stack_in_dependency_order() {
+  local services=()
+
+  # Usa l'ordine del compose (HYPERNODE_CONTAINERS) escludendo broker e portbroker
+  for svc in "${HYPERNODE_CONTAINERS[@]}"; do
+    if [[ "$svc" == "$BROKER_CONTAINER" || "$svc" == "$PORTBROKER_CONTAINER" ]]; then
+      continue
+    fi
+    services+=("$svc")
+  done
+
+  if [[ ${#services[@]} -eq 0 ]]; then
+    services=(
+      gateway
+      camera
+      coretrust
+      storage
+      recording
+      event
+      auth
+      snapshot
+      webserver
+      configurator
+    )
+  fi
+
+  if ! container_exists "$BROKER_CONTAINER"; then
+    echo "ℹ️  Nessun container $BROKER_CONTAINER trovato: riavvio ordinato non eseguito." >&2
+    return
+  fi
+
+  echo "ℹ️  Riavvio ordinato dei container per rispettare le dipendenze..."
+
+  ensure_container_running "$BROKER_CONTAINER"
+
+  for service in "${services[@]}"; do
+    restart_container_ordered "$service"
+  done
+
+  if container_exists "$PORTBROKER_CONTAINER"; then
+    wait_for_container_ready "$BROKER_CONTAINER"
+    if container_exists "$WEBSERVER_CONTAINER"; then
+      wait_for_container_ready "$WEBSERVER_CONTAINER"
+    fi
+    restart_container_ordered "$PORTBROKER_CONTAINER"
+  fi
+}
+
+run_with_spinner() {
+  local message="$1"
+  shift
+
+  local spin='|/-\\'
+  local i=0
+  local pid status
+
+  "$@" &
+  pid=$!
+
+  while kill -0 "$pid" 2>/dev/null; do
+    printf "\r[%c] %s" "${spin:i%4:1}" "$message"
+    sleep 0.2
+    ((i++))
+  done
+
+  # Non far fallire lo script con set -e se il comando termina con errore
+  status=0
+  if ! wait "$pid"; then
+    status=$?
+  fi
+
+  if [[ $status -eq 0 ]]; then
+    printf "\r✅ %s\n" "$message"
+  else
+    printf "\r❌ %s (exit %s)\n" "$message" "$status"
+  fi
+
+  return $status
+}
 
 if [[ -z "$DOCKER_CONFIG_DIR" ]]; then
   if [[ -n "${DOCKER_CONFIG:-}" ]]; then
@@ -104,7 +377,54 @@ else
   echo "⚠️  Config Docker non trovato in $DOCKER_CONFIG_DIR/config.json e nessuna credenziale disponibile per generarlo: eseguo watchtower senza credenziali." >&2
 fi
 
-docker run "${watchtower_args[@]}" "$WATCHTOWER_IMAGE" --run-once
+load_compose_source || true
+if [[ -n "$COMPOSE_SOURCE" ]]; then
+  echo "ℹ️  Carico servizi dal compose: $COMPOSE_SOURCE"
+  if ! parse_compose_container_names "$COMPOSE_SOURCE"; then
+    echo "⚠️  Impossibile leggere il compose (codice $?): userò elenco statico." >&2
+  fi
+else
+  echo "⚠️  Nessun compose disponibile: userò elenco statico." >&2
+fi
+
+if [[ ${#HYPERNODE_CONTAINERS[@]} -eq 0 ]]; then
+  HYPERNODE_CONTAINERS=(
+    messagebroker
+    gateway
+    camera
+    coretrust
+    storage
+    recording
+    event
+    auth
+    snapshot
+    webserver
+    configurator
+    portbroker
+  )
+  BROKER_CONTAINER="messagebroker"
+  PORTBROKER_CONTAINER="portbroker"
+  echo "⚠️  Impossibile leggere i servizi dal compose: uso l'elenco statico." >&2
+else
+  echo "ℹ️  Servizi rilevati dal compose (${#HYPERNODE_CONTAINERS[@]}): ${HYPERNODE_CONTAINERS[*]}"
+fi
+
+WATCHTOWER_START_TS=$(date +%s)
+echo "🚀 Lancio watchtower (one-shot)..."
+WATCHTOWER_EXIT=0
+if ! run_with_spinner "Watchtower in esecuzione..." docker run "${watchtower_args[@]}" "$WATCHTOWER_IMAGE" --run-once; then
+  WATCHTOWER_EXIT=$?
+  echo "❌ Watchtower terminato con errore (exit $WATCHTOWER_EXIT)."
+else
+  echo "✅ Watchtower terminato."
+fi
+
+if containers_restarted_since "$WATCHTOWER_START_TS"; then
+  echo "ℹ️  Aggiornamenti rilevati: eseguo riavvio ordinato."
+  restart_stack_in_dependency_order
+else
+  echo "ℹ️  Nessun container aggiornato da watchtower: salto il riavvio ordinato." >&2
+fi
 
 if [[ -n "$DOCKER_USERNAME" && -n "$DOCKER_PASSWORD" && -n "$USER_LOGIN" && -n "$USER_PASSWORD" && -n "$SERIAL" && -n "$LICENSING_URL" ]]; then
   "$RUN_CHECK_SCRIPT" \
