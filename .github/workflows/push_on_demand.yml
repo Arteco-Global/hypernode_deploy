@@ -53,6 +53,7 @@ jobs:
     env:
       TAG: ${{ github.event.inputs.TAG_REF }}
       PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+      IMAGE_VERSION: ""  # valorizzato dallo step "Compute image version"
 
     steps:
       - name: Checkout deploy repo
@@ -84,6 +85,21 @@ jobs:
           path: hypernode_server_gui
           token: ${{ secrets.GIT_PAT }}
 
+      - name: Compute image version
+        run: |
+          VERSION=""
+          if [ "${TAG}" != "latest" ]; then
+            VERSION="${TAG}"
+          elif [ -d hypernode-server ]; then
+            VERSION="$(git -C hypernode-server rev-parse --short HEAD)"
+          elif [ -d hypernode_server_gui ]; then
+            VERSION="$(git -C hypernode_server_gui rev-parse --short HEAD)"
+          else
+            VERSION="$(date +%Y%m%d%H%M%S)"
+          fi
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Image version: ${VERSION}"
+
       # ------------------------
       # COMMON SETUP
       # ------------------------
@@ -114,6 +130,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/camera.Dockerfile \
             -t artecoglobalcompany/usee_live_streamer:${{ env.TAG }} \
             --push hypernode-server
@@ -123,6 +141,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/auth.Dockerfile \
             -t artecoglobalcompany/usee_id_verifier:${{ env.TAG }} \
             --push hypernode-server
@@ -132,6 +152,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/event.Dockerfile \
             -t artecoglobalcompany/usee_event_manager:${{ env.TAG }} \
             --push hypernode-server
@@ -141,6 +163,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/gateway.Dockerfile \
             -t artecoglobalcompany/usee_suite_manager:${{ env.TAG }} \
             --push hypernode-server
@@ -150,6 +174,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/coretrust.Dockerfile \
             -t artecoglobalcompany/usee_coretrust:${{ env.TAG }} \
             --push hypernode-server
@@ -159,6 +185,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/recording.Dockerfile \
             -t artecoglobalcompany/usee_media_recorder:${{ env.TAG }} \
             --push hypernode-server
@@ -168,6 +196,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/snapshot.Dockerfile \
             -t artecoglobalcompany/usee_snapshot_recorder:${{ env.TAG }} \
             --push hypernode-server
@@ -177,6 +207,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/webserver/nginx.Dockerfile \
             -t artecoglobalcompany/usee_web_server:${{ env.TAG }} \
             --push hypernode-server
@@ -186,6 +218,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/portbroker/portBroker.Dockerfile \
             -t artecoglobalcompany/usee_port_broker:${{ env.TAG }} \
             --push hypernode-server
@@ -195,6 +229,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/messagebroker/messageBroker.Dockerfile \
             -t artecoglobalcompany/usee_message_broker:${{ env.TAG }} \
             --push hypernode-server
@@ -204,6 +240,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/database/database.Dockerfile \
             -t artecoglobalcompany/usee_database:${{ env.TAG }} \
             --push hypernode-server
@@ -213,6 +251,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/storage.Dockerfile \
             -t artecoglobalcompany/usee_media_storage:${{ env.TAG }} \
             --push hypernode-server
@@ -225,6 +265,8 @@ jobs:
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode_server_gui/configurator.Dockerfile \
             -t artecoglobalcompany/usee_configurator:${{ env.TAG }} \
             --push hypernode_server_gui
