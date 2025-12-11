@@ -6,9 +6,15 @@ CONFIG_FILE="$SCRIPT_DIR/.hypernode-update-check.conf"
 STATE_FILE="$SCRIPT_DIR/.hypernode-update-check.state"
 RUN_CHECK_SCRIPT="$SCRIPT_DIR/run-hypernode-update-check.sh"
 WATCHTOWER_IMAGE="containrrr/watchtower:1.7.1"
-COMPOSE_FILE="$SCRIPT_DIR/composes/server/docker-compose.yaml"
 ABSOLUTE_PATH="${ABSOLUTE_PATH:-https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes}"
-COMPOSE_URL="${COMPOSE_URL:-$ABSOLUTE_PATH/server/docker-compose.yaml}"
+COMPOSE_FILES=(
+  "$SCRIPT_DIR/composes/server/docker-compose.yaml"
+  "$SCRIPT_DIR/composes/database/docker-compose.yaml"
+)
+COMPOSE_URLS=(
+  "$ABSOLUTE_PATH/server/docker-compose.yaml"
+  "$ABSOLUTE_PATH/database/docker-compose.yaml"
+)
 DEBUG_LOG="${DEBUG_LOG:-0}"
 
 DOCKER_USERNAME="${DOCKER_USERNAME:-}"
@@ -21,7 +27,7 @@ LICENSING_URL="${LICENSING_URL:-}"
 INTERVAL_SECONDS="${INTERVAL_SECONDS:-}"
 LOGIN_PERFORMED="false"
 TEMP_CONFIG_DIR=""
-COMPOSE_TMP=""
+COMPOSE_TMP_FILES=()
 
 if [[ -f "$CONFIG_FILE" ]]; then
   # shellcheck disable=SC1090
@@ -50,9 +56,9 @@ cleanup() {
   if [[ -n "$TEMP_CONFIG_DIR" && -d "$TEMP_CONFIG_DIR" ]]; then
     rm -rf "$TEMP_CONFIG_DIR"
   fi
-  if [[ -n "$COMPOSE_TMP" && -f "$COMPOSE_TMP" ]]; then
-    rm -f "$COMPOSE_TMP"
-  fi
+  for tmp in "${COMPOSE_TMP_FILES[@]:-}"; do
+    [[ -f "$tmp" ]] && rm -f "$tmp"
+  done
   if [[ "$LOGIN_PERFORMED" == "true" ]]; then
     docker logout >/dev/null 2>&1 || true
   fi
@@ -69,25 +75,49 @@ HYPERNODE_CONTAINERS=()
 BROKER_CONTAINER="messagebroker"
 PORTBROKER_CONTAINER="portbroker"
 WEBSERVER_CONTAINER="webserver"
-COMPOSE_SOURCE=""
+DATABASE_CONTAINER="USS_SERVER"
+INDEPENDENT_CONTAINERS=()
+COMPOSE_SOURCES=()
+UPDATED_INDEPENDENT="false"
 
-load_compose_source() {
-  if [[ -f "$COMPOSE_FILE" ]]; then
-    COMPOSE_SOURCE="$COMPOSE_FILE"
-    echo "ℹ️  Uso il compose locale: $COMPOSE_FILE"
-    return 0
-  fi
+load_compose_sources() {
+  local idx file url tmp
+  for idx in "${!COMPOSE_FILES[@]}"; do
+    file="${COMPOSE_FILES[$idx]}"
+    url="${COMPOSE_URLS[$idx]}"
 
-  COMPOSE_TMP=$(mktemp)
-  if curl -fsSL "$COMPOSE_URL" -o "$COMPOSE_TMP"; then
-    COMPOSE_SOURCE="$COMPOSE_TMP"
-    echo "ℹ️  Compose scaricato da $COMPOSE_URL"
-    return 0
-  else
-    echo "⚠️  Impossibile scaricare il compose da $COMPOSE_URL" >&2
-    COMPOSE_SOURCE=""
-    return 1
-  fi
+    if [[ -f "$file" ]]; then
+      COMPOSE_SOURCES+=("$file")
+      echo "ℹ️  Uso il compose locale: $file"
+      continue
+    fi
+
+    tmp=$(mktemp)
+    if curl -fsSL "$url" -o "$tmp"; then
+      COMPOSE_SOURCES+=("$tmp")
+      COMPOSE_TMP_FILES+=("$tmp")
+      echo "ℹ️  Compose scaricato da $url"
+    else
+      echo "⚠️  Impossibile scaricare il compose da $url" >&2
+      rm -f "$tmp"
+    fi
+  done
+}
+
+dedupe_arrays() {
+  local -n arr_ref=$1
+  local -A seen=()
+  local new_arr=()
+
+  for item in "${arr_ref[@]}"; do
+    [[ -z "$item" ]] && continue
+    if [[ -z "${seen[$item]:-}" ]]; then
+      new_arr+=("$item")
+      seen[$item]=1
+    fi
+  done
+
+  arr_ref=("${new_arr[@]}")
 }
 
 parse_compose_container_names() {
@@ -124,6 +154,9 @@ parse_compose_container_names() {
           PORTBROKER_CONTAINER="$name"
         elif [[ "$current_service" == "webserver" ]]; then
           WEBSERVER_CONTAINER="$name"
+        elif [[ "$current_service" == "database" ]]; then
+          DATABASE_CONTAINER="$name"
+          INDEPENDENT_CONTAINERS+=("$name")
         fi
       fi
       current_service="${BASH_REMATCH[1]}"
@@ -145,6 +178,9 @@ parse_compose_container_names() {
       PORTBROKER_CONTAINER="$name"
     elif [[ "$current_service" == "webserver" ]]; then
       WEBSERVER_CONTAINER="$name"
+    elif [[ "$current_service" == "database" ]]; then
+      DATABASE_CONTAINER="$name"
+      INDEPENDENT_CONTAINERS+=("$name")
     fi
   fi
 }
@@ -228,7 +264,13 @@ restart_container_ordered() {
 
 containers_restarted_since() {
   local since_ts="$1"
-  local container started started_ts
+  local container started started_ts updated_independent="false"
+  local -A independent_map=()
+  local updated_stack="false"
+
+  for container in "${INDEPENDENT_CONTAINERS[@]}"; do
+    independent_map["$container"]=1
+  done
 
   for container in "${HYPERNODE_CONTAINERS[@]}"; do
     started=$(docker inspect -f '{{.State.StartedAt}}' "$container" 2>/dev/null || true)
@@ -237,9 +279,21 @@ containers_restarted_since() {
     fi
     started_ts=$(date -d "$started" +%s 2>/dev/null || true)
     if [[ -n "$started_ts" && "$started_ts" -ge "$since_ts" ]]; then
-      return 0
+      if [[ -n "${independent_map[$container]:-}" ]]; then
+        updated_independent="true"
+      else
+        updated_stack="true"
+      fi
     fi
   done
+
+  if [[ "$updated_stack" == "true" ]]; then
+    return 0
+  fi
+
+  if [[ "$updated_independent" == "true" ]]; then
+    UPDATED_INDEPENDENT="true"
+  fi
 
   return 1
 }
@@ -377,15 +431,20 @@ else
   echo "⚠️  Config Docker non trovato in $DOCKER_CONFIG_DIR/config.json e nessuna credenziale disponibile per generarlo: eseguo watchtower senza credenziali." >&2
 fi
 
-load_compose_source || true
-if [[ -n "$COMPOSE_SOURCE" ]]; then
-  echo "ℹ️  Carico servizi dal compose: $COMPOSE_SOURCE"
-  if ! parse_compose_container_names "$COMPOSE_SOURCE"; then
-    echo "⚠️  Impossibile leggere il compose (codice $?): userò elenco statico." >&2
-  fi
+load_compose_sources || true
+if [[ ${#COMPOSE_SOURCES[@]} -gt 0 ]]; then
+  for compose in "${COMPOSE_SOURCES[@]}"; do
+    echo "ℹ️  Carico servizi dal compose: $compose"
+    if ! parse_compose_container_names "$compose"; then
+      echo "⚠️  Impossibile leggere il compose $compose: userò elenco statico se nessun servizio viene trovato." >&2
+    fi
+  done
 else
   echo "⚠️  Nessun compose disponibile: userò elenco statico." >&2
 fi
+
+dedupe_arrays HYPERNODE_CONTAINERS
+dedupe_arrays INDEPENDENT_CONTAINERS
 
 if [[ ${#HYPERNODE_CONTAINERS[@]} -eq 0 ]]; then
   HYPERNODE_CONTAINERS=(
@@ -404,6 +463,8 @@ if [[ ${#HYPERNODE_CONTAINERS[@]} -eq 0 ]]; then
   )
   BROKER_CONTAINER="messagebroker"
   PORTBROKER_CONTAINER="portbroker"
+  DATABASE_CONTAINER="USS_SERVER"
+  INDEPENDENT_CONTAINERS=("$DATABASE_CONTAINER")
   echo "⚠️  Impossibile leggere i servizi dal compose: uso l'elenco statico." >&2
 else
   echo "ℹ️  Servizi rilevati dal compose (${#HYPERNODE_CONTAINERS[@]}): ${HYPERNODE_CONTAINERS[*]}"
@@ -423,6 +484,9 @@ if containers_restarted_since "$WATCHTOWER_START_TS"; then
   echo "ℹ️  Aggiornamenti rilevati: eseguo riavvio ordinato."
   restart_stack_in_dependency_order
 else
+  if [[ "$UPDATED_INDEPENDENT" == "true" ]]; then
+    echo "ℹ️  Aggiornamenti rilevati solo su container indipendenti (es. database): nessun riavvio dello stack necessario."
+  fi
   echo "ℹ️  Nessun container aggiornato da watchtower: salto il riavvio ordinato." >&2
 fi
 
