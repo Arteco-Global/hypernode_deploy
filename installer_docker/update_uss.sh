@@ -353,15 +353,29 @@ run_with_spinner() {
   local spin='|/-\\'
   local i=0
   local pid status
+  local is_tty=1
+
+  if [[ ! -t 1 ]]; then
+    is_tty=0
+  fi
 
   "$@" &
   pid=$!
 
-  while kill -0 "$pid" 2>/dev/null; do
-    printf "\r[%c] %s" "${spin:i%4:1}" "$message"
-    sleep 0.2
-    ((i++))
-  done
+  if [[ "$is_tty" -eq 1 ]]; then
+    while kill -0 "$pid" 2>/dev/null; do
+      printf "\r[%c] %s" "${spin:i%4:1}" "$message"
+      sleep 0.2
+      ((i++))
+    done
+  else
+    printf "%s" "$message"
+    while kill -0 "$pid" 2>/dev/null; do
+      printf "."
+      sleep 2
+    done
+    printf "\n"
+  fi
 
   # Non far fallire lo script con set -e se il comando termina con errore
   status=0
@@ -369,10 +383,18 @@ run_with_spinner() {
     status=$?
   fi
 
-  if [[ $status -eq 0 ]]; then
-    printf "\r✅ %s\n" "$message"
+  if [[ "$is_tty" -eq 1 ]]; then
+    if [[ $status -eq 0 ]]; then
+      printf "\r✅ %s\n" "$message"
+    else
+      printf "\r❌ %s (exit %s)\n" "$message" "$status"
+    fi
   else
-    printf "\r❌ %s (exit %s)\n" "$message" "$status"
+    if [[ $status -eq 0 ]]; then
+      printf "✅ %s\n" "$message"
+    else
+      printf "❌ %s (exit %s)\n" "$message" "$status"
+    fi
   fi
 
   return $status
