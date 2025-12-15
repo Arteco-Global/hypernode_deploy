@@ -495,7 +495,7 @@ fi
 WATCHTOWER_START_TS=$(date +%s)
 echo "🚀 Lancio watchtower (one-shot)..."
 WATCHTOWER_EXIT=0
-if ! run_with_spinner "Watchtower in esecuzione..." docker run "${watchtower_args[@]}" "$WATCHTOWER_IMAGE" --run-once; then
+if ! run_with_spinner "Watchtower in esecuzione..." docker run "${watchtower_args[@]}" "$WATCHTOWER_IMAGE" --run-once --include-stopped --include-restarting --revive-stopped; then
   WATCHTOWER_EXIT=$?
   echo "❌ Watchtower terminato con errore (exit $WATCHTOWER_EXIT)."
 else
