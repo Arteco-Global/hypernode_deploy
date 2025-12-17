@@ -42,6 +42,41 @@ subsection() {
   echo "-- $* --"
 }
 
+check_prerequisites() {
+  section "0) PREREQUISITI"
+  local missing=0
+
+  check_tool() {
+    local tool="$1" optional="${2:-false}" note="${3:-}"
+    if command -v "$tool" >/dev/null 2>&1; then
+      ok "$tool disponibile${note:+ ($note)}"
+    else
+      if [[ "$optional" == "true" ]]; then
+        warn "$tool non trovato${note:+ ($note)}"
+      else
+        error "$tool non trovato${note:+ ($note)}"
+        missing=1
+      fi
+    fi
+  }
+
+  check_tool "curl"
+  check_tool "openssl"
+  check_tool "python3"
+  check_tool "timeout" true "opzionale (timeout openssl/curl)"
+  check_tool "wget" true "opzionale (solo per scaricare lo script via wget)"
+  check_tool "dig" true "opzionale (DNS)"
+  check_tool "nslookup" true "opzionale (DNS)"
+  check_tool "host" true "opzionale (DNS)"
+  check_tool "getent" true "opzionale (DNS)"
+  check_tool "jq" true "opzionale (non richiesto attualmente)"
+
+  if (( missing > 0 )); then
+    error "Prerequisiti mancanti: installare gli strumenti sopra e riprovare."
+    exit 1
+  fi
+}
+
 cleanup() {
   for tmp in "${TMP_COMPOSES[@]:-}"; do
     [[ -f "$tmp" ]] && rm -f "$tmp"
@@ -652,6 +687,8 @@ PY
   [[ -n "$parse_out" ]] && echo "$parse_out"
   rm -f "$tmp_body" "$tmp_err"
 }
+
+check_prerequisites
 
 section "1) DOCKER"
 ensure_docker_running
