@@ -22,11 +22,25 @@ LICENSING_URL_VALUE=""
 SITE_PORT=""
 SITE_LAN_PORT=""
 SERIAL_LOWER=""
+SITE_STATUS=""
+SITE_IS_USS=""
+REACH_LAN_OK="false"
+REACH_WAN_OK="false"
 
 info() { echo "ℹ️  $*"; }
 warn() { echo "⚠️  $*" >&2; }
 error() { echo "❌ $*" >&2; }
 ok() { echo "✅ $*"; }
+
+section() {
+  echo ""
+  echo "=== $* ==="
+}
+
+subsection() {
+  echo ""
+  echo "-- $* --"
+}
 
 cleanup() {
   for tmp in "${TMP_COMPOSES[@]:-}"; do
@@ -457,9 +471,6 @@ PY
     parsed=$(parse_licensing_ports "$response_file" "$serial")
     while IFS= read -r line; do
       case "$line" in
-        MSG:*)
-          echo "${line#MSG:}"
-          ;;
         SITE_PORT:*)
           SITE_PORT="${line#SITE_PORT:}"
           ;;
@@ -467,8 +478,10 @@ PY
           SITE_LAN_PORT="${line#SITE_LAN_PORT:}"
           ;;
         STATUS:*)
+          SITE_STATUS="${line#STATUS:}"
           ;;
         IS_USS:*)
+          SITE_IS_USS="${line#IS_USS:}"
           ;;
         *)
           ;;
@@ -551,11 +564,6 @@ diag_api_check() {
 
   info "Verifica API diagnostica $label: $url"
 
-  # Per WAN: se non risponde, è possibile che non sia esposto. In tal caso niente certificato.
-  if [[ "$label" != "WAN" ]]; then
-    check_https_certificate "$host" "$port" || true
-  fi
-
   tmp_body=$(mktemp)
   tmp_err=$(mktemp)
   http_code=$(curl -k -sS -o "$tmp_body" -w '%{http_code}' \
@@ -563,17 +571,20 @@ diag_api_check() {
 
   if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
     ok "API diagnostica $label raggiungibile (HTTP $http_code)."
-    # Per WAN, ora che risponde, verifichiamo anche il certificato.
-    if [[ "$label" == "WAN" ]]; then
-      check_https_certificate "$host" "$port" || true
+    if [[ "$label" == "LAN" ]]; then
+      REACH_LAN_OK="true"
+    else
+      REACH_WAN_OK="true"
     fi
   else
     if [[ "$label" == "WAN" ]]; then
       warn "API diagnostica WAN non raggiungibile (HTTP ${http_code:-n/d}): $(cat "$tmp_err")"
+      REACH_WAN_OK="false"
       rm -f "$tmp_body" "$tmp_err"
       return 0
     fi
     warn "API diagnostica $label non raggiungibile/errore (HTTP ${http_code:-n/d}): $(cat "$tmp_err")"
+    [[ "$label" == "LAN" ]] && REACH_LAN_OK="false"
     rm -f "$tmp_body" "$tmp_err"
     return 1
   fi
@@ -642,6 +653,7 @@ PY
   rm -f "$tmp_body" "$tmp_err"
 }
 
+section "1) DOCKER"
 ensure_docker_running
 
 download_compose_sources
@@ -651,6 +663,7 @@ done
 dedupe_array CONTAINERS
 check_container_statuses || true
 
+section "2) SCRIPT NECESSARI"
 if find_hypernode_dir; then
   ok "Cartella hypernode_deploy trovata: $HYPERNODE_DIR"
 else
@@ -681,22 +694,29 @@ else
   warn "Impossibile leggere SERIAL da $CONFIG_FILE."
 fi
 
-# Ripristino check DNS/IP LAN/WAN
+section "3) NETWORK"
+subsection "3.1) IP"
+
+LOCAL_IP=$(current_local_ip || true)
+PUBLIC_IP=$(current_public_ip || true)
+[[ -n "$LOCAL_IP" ]] && info "IP locale corrente: $LOCAL_IP" || warn "IP locale non determinato."
+[[ -n "$PUBLIC_IP" ]] && info "IP pubblico corrente: $PUBLIC_IP" || warn "IP pubblico non determinato."
+
+subsection "3.2) DNS"
 if [[ -n "$SERIAL_LOWER" ]]; then
   LOCAL_HOST="${SERIAL_LOWER}.lan.omniaweb.cloud"
   PUBLIC_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
-
-  LOCAL_IP=$(current_local_ip || true)
-  PUBLIC_IP=$(current_public_ip || true)
-
-  [[ -n "$LOCAL_IP" ]] && info "IP locale corrente: $LOCAL_IP" || warn "IP locale non determinato."
-  [[ -n "$PUBLIC_IP" ]] && info "IP pubblico corrente: $PUBLIC_IP" || warn "IP pubblico non determinato."
-
   compare_dns_ip "DNS LAN" "$LOCAL_HOST" "$LOCAL_IP"
   compare_dns_ip "DNS pubblico" "$PUBLIC_HOST" "$PUBLIC_IP"
+else
+  warn "Seriale non disponibile: impossibile verificare il DNS."
 fi
 
+subsection "3.3) PORTS"
 licensing_sites_check "$LICENSING_URL_VALUE" "$USER_LOGIN_VALUE" "$USER_PASSWORD_VALUE" "$SERIAL_VALUE"
+if [[ -n "$SITE_PORT" || -n "$SITE_LAN_PORT" ]]; then
+  ok "serial ${SERIAL_VALUE:-n/d}: site_port=${SITE_PORT:-n/d}, site_lan_port=${SITE_LAN_PORT:-n/d}, status=${SITE_STATUS:-n/d}, is_uss=${SITE_IS_USS:-n/d}"
+fi
 
 LAN_HOST=""
 WAN_HOST=""
@@ -705,16 +725,39 @@ if [[ -n "$SERIAL_LOWER" ]]; then
   WAN_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
 fi
 
+subsection "3.4) REACHABILITY"
+subsection "3.4.1) LAN"
 if [[ -n "$SERIAL_VALUE" && -n "$SITE_LAN_PORT" && "$SITE_LAN_PORT" != "n/d" ]]; then
   diag_api_check "$SERIAL_VALUE" "$LAN_HOST" "$SITE_LAN_PORT" "LAN"
 else
   warn "Porta LAN o seriale non disponibili: salto diagnostica LAN."
 fi
 
+subsection "3.4.2) WAN"
 if [[ -n "$SERIAL_VALUE" && -n "$SITE_PORT" && "$SITE_PORT" != "n/d" ]]; then
   diag_api_check "$SERIAL_VALUE" "$WAN_HOST" "$SITE_PORT" "WAN"
 else
   warn "Porta WAN o seriale non disponibili: salto diagnostica WAN."
 fi
 
+subsection "3.5) CERTIFICATE"
+if [[ -n "$LAN_HOST" && -n "$SITE_LAN_PORT" && "$SITE_LAN_PORT" != "n/d" ]]; then
+  if [[ "$REACH_LAN_OK" == "true" ]]; then
+    check_https_certificate "$LAN_HOST" "$SITE_LAN_PORT" || true
+  else
+    warn "Certificato LAN non verificato: API LAN non raggiungibile."
+  fi
+else
+  warn "Certificato LAN non verificabile: host/porta mancanti."
+fi
+
+if [[ -n "$WAN_HOST" && -n "$SITE_PORT" && "$SITE_PORT" != "n/d" ]]; then
+  if [[ "$REACH_WAN_OK" == "true" ]]; then
+    check_https_certificate "$WAN_HOST" "$SITE_PORT" || true
+  else
+    info "Certificato WAN non verificato: endpoint non raggiungibile."
+  fi
+fi
+
+subsection "3.6) UPDATES"
 run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"

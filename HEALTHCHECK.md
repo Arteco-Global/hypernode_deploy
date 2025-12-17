@@ -23,6 +23,7 @@ Script: `installer_docker/uss_healthcheck.sh`
    - Usa `sudo` per avere accesso al socket Docker.
 
 ## Cosa aspettarsi in output
+- Output strutturato in sezioni numerate (Docker, Script necessari, Network con IP/DNS/Ports/Reachability/Certificate, Updates).
 - Messaggi `✅`/`⚠️`/`❌`.
 - Stato/health dei container dai compose.
 - Presenza dei file attesi in `hypernode_deploy`.
