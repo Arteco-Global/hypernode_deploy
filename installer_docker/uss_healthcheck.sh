@@ -16,6 +16,9 @@ TMP_COMPOSES=()
 COMPOSE_SOURCES=()
 CONTAINERS=()
 HYPERNODE_DIR=""
+USER_LOGIN_VALUE=""
+USER_PASSWORD_VALUE=""
+LICENSING_URL_VALUE=""
 
 info() { echo "ℹ️  $*"; }
 warn() { echo "⚠️  $*" >&2; }
@@ -230,28 +233,6 @@ check_required_files() {
   return $missing
 }
 
-read_serial_from_config() {
-  local file="$1" line value
-  line=$(grep -E '^[[:space:]]*(export[[:space:]]+)?SERIAL=' "$file" | tail -n 1 || true)
-  if [[ -z "$line" ]]; then
-    return 1
-  fi
-
-  value="${line#*=}"
-  value="$(printf '%s' "$value" | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//')"
-  value="${value#\"}"
-  value="${value%\"}"
-  value="${value#\'}"
-  value="${value%\'}"
-
-  if [[ -n "$value" ]]; then
-    echo "$value"
-    return 0
-  fi
-
-  return 1
-}
-
 resolve_host() {
   local host="$1" ip=""
 
@@ -350,6 +331,132 @@ run_update_check() {
   fi
 }
 
+read_config_var() {
+  local file="$1" var_name="$2" result=""
+  if [[ ! -f "$file" ]]; then
+    return 1
+  fi
+
+  # Usa una subshell bash per interpretare gli escape come farebbe la shell.
+  result=$(bash -c 'set -a; source "$1"; v="$2"; printf "%s" "${!v}"' bash "$file" "$var_name" 2>/dev/null || true)
+  if [[ -n "$result" ]]; then
+    echo "$result"
+    return 0
+  fi
+
+  return 1
+}
+
+parse_licensing_ports() {
+  local response_file="$1" serial="$2"
+
+  if [[ -z "$serial" ]]; then
+    warn "Seriale non disponibile per l'analisi del payload /sites."
+    return 1
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    warn "python3 non disponibile: impossibile analizzare la risposta /sites."
+    return 1
+  fi
+
+  local output
+  output=$(python3 - "$response_file" "$serial" <<'PY'
+import json, sys
+
+resp_file, serial = sys.argv[1], sys.argv[2]
+serial_norm = serial.strip().lower()
+
+def walk(obj):
+    if isinstance(obj, dict):
+        yield obj
+        for v in obj.values():
+            yield from walk(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            yield from walk(item)
+
+try:
+    with open(resp_file, "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+except Exception as exc:
+    print(f"⚠️  Impossibile leggere/parsare la risposta /sites: {exc}", file=sys.stdout)
+    sys.exit(1)
+
+match = None
+for obj in walk(data):
+    if not isinstance(obj, dict):
+        continue
+    serial_val = str(obj.get("serialno") or obj.get("serial") or "").strip().lower()
+    if serial_val == serial_norm:
+        site_port = obj.get("site_port", "n/d")
+        site_lan_port = obj.get("site_lan_port", "n/d")
+        status = obj.get("status", "n/d")
+        is_uss = obj.get("is_uss", "n/d")
+        print(f"✅ Licensing /sites -> serial {serial}: site_port={site_port}, site_lan_port={site_lan_port}, status={status}, is_uss={is_uss}", file=sys.stdout)
+        sys.exit(0)
+
+print(f"⚠️  Nessun record con serial '{serial}' trovato nella risposta /sites.", file=sys.stdout)
+sys.exit(1)
+PY
+  ) || true
+
+  if [[ -n "$output" ]]; then
+    echo "$output"
+  fi
+}
+
+licensing_sites_check() {
+  local url="$1" login="$2" password="$3" serial="$4"
+  if [[ -z "$url" || -z "$login" || -z "$password" || -z "$serial" ]]; then
+    warn "Parametri licensing incompleti: salto chiamata /sites."
+    return 1
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    warn "curl non disponibile: salto chiamata /sites."
+    return 1
+  fi
+
+  local endpoint payload response_file error_file http_code masked_login masked_serial
+  endpoint="${url%/}/sites"
+
+  masked_login="$login"
+  masked_serial="$serial"
+  payload=$(USS_LOGIN="$login" USS_PASSWORD="$password" USS_SERIAL="$serial" python3 - <<'PY'
+import json, os
+print(json.dumps({
+    "user_login": os.environ.get("USS_LOGIN", ""),
+    "user_password": os.environ.get("USS_PASSWORD", ""),
+    "serial": os.environ.get("USS_SERIAL", ""),
+}))
+PY
+  ) || {
+    warn "Impossibile costruire il payload JSON per /sites."
+    return 1
+  }
+
+  response_file=$(mktemp)
+  error_file=$(mktemp)
+
+  http_code=$(curl -sS -o "$response_file" -w '%{http_code}' \
+    -X POST "$endpoint" \
+    -H 'Content-Type: application/json' \
+    -d "$payload" 2>"$error_file" || true)
+
+  if [[ "$http_code" == "200" ]]; then
+    ok "Licensing /sites OK (HTTP 200) per serial $masked_serial, login $masked_login."
+    parse_licensing_ports "$response_file" "$serial"
+  else
+    local curl_err body
+    curl_err=$(cat "$error_file")
+    body=$(cat "$response_file")
+    warn "Licensing /sites non OK (HTTP ${http_code:-n/d}) - err: ${curl_err:-n/d} body: ${body:-n/d}"
+  fi
+
+  rm -f "$response_file" "$error_file"
+}
+
 ensure_docker_running
 
 download_compose_sources
@@ -370,8 +477,15 @@ check_required_files "$HYPERNODE_DIR" || true
 
 CONFIG_FILE="$HYPERNODE_DIR/.hypernode-update-check.conf"
 SERIAL_VALUE=""
+USER_LOGIN_VALUE=""
+USER_PASSWORD_VALUE=""
+LICENSING_URL_VALUE=""
+
 if [[ -f "$CONFIG_FILE" ]]; then
-  SERIAL_VALUE=$(read_serial_from_config "$CONFIG_FILE" || true)
+  SERIAL_VALUE=$(read_config_var "$CONFIG_FILE" "SERIAL" || true)
+  USER_LOGIN_VALUE=$(read_config_var "$CONFIG_FILE" "USER_LOGIN" || true)
+  USER_PASSWORD_VALUE=$(read_config_var "$CONFIG_FILE" "USER_PASSWORD" || true)
+  LICENSING_URL_VALUE=$(read_config_var "$CONFIG_FILE" "LICENSING_URL" || true)
 else
   warn "File di configurazione $CONFIG_FILE mancante."
 fi
@@ -393,5 +507,7 @@ if [[ -n "$SERIAL_VALUE" ]]; then
 else
   warn "Impossibile leggere SERIAL da $CONFIG_FILE."
 fi
+
+licensing_sites_check "$LICENSING_URL_VALUE" "$USER_LOGIN_VALUE" "$USER_PASSWORD_VALUE" "$SERIAL_VALUE"
 
 run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"

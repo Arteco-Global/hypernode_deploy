@@ -7,7 +7,8 @@ Script: `installer_docker/uss_healthcheck.sh`
 - Scarica i compose server/database (fallback ai locali se presenti) per ricavare i nomi dei container e ne mostra stato/health.
 - Cerca la cartella `hypernode_deploy` nel sistema e controlla la presenza dei file attesi (log, config, script update).
 - Legge `SERIAL` da `.hypernode-update-check.conf`, controlla la risoluzione DNS di `SERIAL.lan.omniaweb.cloud` verso l'IP locale e `serial.my.omniaweb.cloud` verso l'IP pubblico.
-- Esegue `run-hypernode-update-check.sh --use-config --force-send` per inviare il payload.
+- Effettua una chiamata POST a `${LICENSING_URL}/sites` con credenziali/serial del config, verifica HTTP 200 ed estrae `site_port`/`site_lan_port` (per il serial in uso).
+- Esegue `run-hypernode-update-check.sh --use-config --force-send` per inviare il payload (se disponibile).
 
 ## Come lanciarlo (supporto)
 1) Accedi alla macchina via SSH (es. `ssh user@<ip>`).  
@@ -19,10 +20,11 @@ Script: `installer_docker/uss_healthcheck.sh`
    - Usa `sudo` per avere accesso al socket Docker.
 
 ## Cosa aspettarsi in output
-- Messaggi `✅` per successi, `⚠️` per avvisi, `❌` per errori bloccanti.
+- Messaggi `✅`/`⚠️`/`❌`.
 - Elenco container con stato/health e indicazione running sì/no.
 - Percorso della cartella `hypernode_deploy` trovata e presenza dei file attesi (con permessi/dimensioni).
-- SERIAL letto e risultati delle risoluzioni DNS LAN/pubblica confrontate con IP locale/pubblico rilevati.
+- SERIAL letto e risultati delle risoluzioni DNS LAN/pubblica confrontate con IP locale/pubblico.
+- Esito della chiamata licensing `/sites` (HTTP 200 atteso) con `site_port`/`site_lan_port` per il serial in uso.
 - Risultato dell'esecuzione di `run-hypernode-update-check.sh`.
 
 ## Note e prerequisiti
