@@ -21,6 +21,7 @@ USER_PASSWORD_VALUE=""
 LICENSING_URL_VALUE=""
 SITE_PORT=""
 SITE_LAN_PORT=""
+SERIAL_LOWER=""
 
 info() { echo "ℹ️  $*"; }
 warn() { echo "⚠️  $*" >&2; }
@@ -538,21 +539,22 @@ PY
 }
 
 diag_api_check() {
-  local serial="$1" site_lan_port="$2"
+  local serial="$1" host="$2" port="$3" label="$4"
 
-  if [[ -z "$serial" || -z "$site_lan_port" ]]; then
-    warn "Parametri mancanti per diagnostica API (serial/port)."
+  if [[ -z "$serial" || -z "$host" || -z "$port" ]]; then
+    warn "Parametri mancanti per diagnostica API ($label: serial/host/port)."
     return 1
   fi
 
-  local serial_lower host url tmp_body tmp_err http_code
-  serial_lower=$(echo "$serial" | tr '[:upper:]' '[:lower:]')
-  host="${serial_lower}.lan.omniaweb.cloud"
-  url="https://${host}:${site_lan_port}/api/v1/"
+  local url tmp_body tmp_err http_code
+  url="https://${host}:${port}/api/v1/"
 
-  info "Verifica API diagnostica: $url"
+  info "Verifica API diagnostica $label: $url"
 
-  check_https_certificate "$host" "$site_lan_port" || true
+  # Per WAN: se non risponde, è possibile che non sia esposto. In tal caso niente certificato.
+  if [[ "$label" != "WAN" ]]; then
+    check_https_certificate "$host" "$port" || true
+  fi
 
   tmp_body=$(mktemp)
   tmp_err=$(mktemp)
@@ -560,9 +562,18 @@ diag_api_check() {
     --connect-timeout 10 --max-time 20 --location "$url" 2>"$tmp_err" || true)
 
   if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
-    ok "API diagnostica raggiungibile (HTTP $http_code)."
+    ok "API diagnostica $label raggiungibile (HTTP $http_code)."
+    # Per WAN, ora che risponde, verifichiamo anche il certificato.
+    if [[ "$label" == "WAN" ]]; then
+      check_https_certificate "$host" "$port" || true
+    fi
   else
-    warn "API diagnostica non raggiungibile/errore (HTTP ${http_code:-n/d}): $(cat "$tmp_err")"
+    if [[ "$label" == "WAN" ]]; then
+      warn "API diagnostica WAN non raggiungibile (HTTP ${http_code:-n/d}): $(cat "$tmp_err")"
+      rm -f "$tmp_body" "$tmp_err"
+      return 0
+    fi
+    warn "API diagnostica $label non raggiungibile/errore (HTTP ${http_code:-n/d}): $(cat "$tmp_err")"
     rm -f "$tmp_body" "$tmp_err"
     return 1
   fi
@@ -631,16 +642,14 @@ PY
   rm -f "$tmp_body" "$tmp_err"
 }
 
-# ---- Modalità: licensing + diagnostica API (altri check commentati) ----
-# if false; then
-#   ensure_docker_running
-#   download_compose_sources
-#   for compose in "${COMPOSE_SOURCES[@]:-}"; do
-#     parse_compose_container_names "$compose"
-#   done
-#   dedupe_array CONTAINERS
-#   check_container_statuses || true
-# fi
+ensure_docker_running
+
+download_compose_sources
+for compose in "${COMPOSE_SOURCES[@]:-}"; do
+  parse_compose_container_names "$compose"
+done
+dedupe_array CONTAINERS
+check_container_statuses || true
 
 if find_hypernode_dir; then
   ok "Cartella hypernode_deploy trovata: $HYPERNODE_DIR"
@@ -649,9 +658,7 @@ else
   exit 1
 fi
 
-# if false; then
-#   check_required_files "$HYPERNODE_DIR" || true
-# fi
+check_required_files "$HYPERNODE_DIR" || true
 
 CONFIG_FILE="$HYPERNODE_DIR/.hypernode-update-check.conf"
 SERIAL_VALUE=""
@@ -668,30 +675,46 @@ else
   warn "File di configurazione $CONFIG_FILE mancante."
 fi
 
-# if false; then
-#   if [[ -n "$SERIAL_VALUE" ]]; then
-#     ok "SERIAL rilevato: $SERIAL_VALUE"
-#     SERIAL_LOWER=$(echo "$SERIAL_VALUE" | tr '[:upper:]' '[:lower:]')
-#     LOCAL_HOST="${SERIAL_LOWER}.lan.omniaweb.cloud"
-#     PUBLIC_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
-#
-#     LOCAL_IP=$(current_local_ip || true)
-#     PUBLIC_IP=$(current_public_ip || true)
-#
-#     [[ -n "$LOCAL_IP" ]] && info "IP locale corrente: $LOCAL_IP" || warn "IP locale non determinato."
-#     [[ -n "$PUBLIC_IP" ]] && info "IP pubblico corrente: $PUBLIC_IP" || warn "IP pubblico non determinato."
-#
-#     compare_dns_ip "DNS LAN" "$LOCAL_HOST" "$LOCAL_IP"
-#     compare_dns_ip "DNS pubblico" "$PUBLIC_HOST" "$PUBLIC_IP"
-#   else
-#     warn "Impossibile leggere SERIAL da $CONFIG_FILE."
-#   fi
-# fi
+if [[ -n "$SERIAL_VALUE" ]]; then
+  SERIAL_LOWER=$(echo "$SERIAL_VALUE" | tr '[:upper:]' '[:lower:]')
+else
+  warn "Impossibile leggere SERIAL da $CONFIG_FILE."
+fi
+
+# Ripristino check DNS/IP LAN/WAN
+if [[ -n "$SERIAL_LOWER" ]]; then
+  LOCAL_HOST="${SERIAL_LOWER}.lan.omniaweb.cloud"
+  PUBLIC_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
+
+  LOCAL_IP=$(current_local_ip || true)
+  PUBLIC_IP=$(current_public_ip || true)
+
+  [[ -n "$LOCAL_IP" ]] && info "IP locale corrente: $LOCAL_IP" || warn "IP locale non determinato."
+  [[ -n "$PUBLIC_IP" ]] && info "IP pubblico corrente: $PUBLIC_IP" || warn "IP pubblico non determinato."
+
+  compare_dns_ip "DNS LAN" "$LOCAL_HOST" "$LOCAL_IP"
+  compare_dns_ip "DNS pubblico" "$PUBLIC_HOST" "$PUBLIC_IP"
+fi
 
 licensing_sites_check "$LICENSING_URL_VALUE" "$USER_LOGIN_VALUE" "$USER_PASSWORD_VALUE" "$SERIAL_VALUE"
 
-diag_api_check "$SERIAL_VALUE" "$SITE_LAN_PORT"
+LAN_HOST=""
+WAN_HOST=""
+if [[ -n "$SERIAL_LOWER" ]]; then
+  LAN_HOST="${SERIAL_LOWER}.lan.omniaweb.cloud"
+  WAN_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
+fi
 
-# if false; then
-#   run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"
-# fi
+if [[ -n "$SERIAL_VALUE" && -n "$SITE_LAN_PORT" && "$SITE_LAN_PORT" != "n/d" ]]; then
+  diag_api_check "$SERIAL_VALUE" "$LAN_HOST" "$SITE_LAN_PORT" "LAN"
+else
+  warn "Porta LAN o seriale non disponibili: salto diagnostica LAN."
+fi
+
+if [[ -n "$SERIAL_VALUE" && -n "$SITE_PORT" && "$SITE_PORT" != "n/d" ]]; then
+  diag_api_check "$SERIAL_VALUE" "$WAN_HOST" "$SITE_PORT" "WAN"
+else
+  warn "Porta WAN o seriale non disponibili: salto diagnostica WAN."
+fi
+
+run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"

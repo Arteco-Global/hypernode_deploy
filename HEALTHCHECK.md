@@ -2,10 +2,16 @@
 
 Script: `installer_docker/uss_healthcheck.sh`
 
-## Cosa fa (modalità attuale)
-- Usa `.hypernode-update-check.conf` per chiamare `${LICENSING_URL}/sites`, verifica HTTP 200 ed estrae `site_port`/`site_lan_port` per il serial in uso.
-- Con le porte recuperate, interroga `https://<serial>.lan.omniaweb.cloud:<site_lan_port>/api/v1/`, verifica raggiungibilità, controlla il certificato HTTPS (validità e scadenza) e che `server.serial` nella risposta coincida con il serial del config.
-- Gli altri controlli (Docker, compose, container health, file check, DNS/IP, run-update-check) restano nel codice ma sono commentati: scommentarli quando servono di nuovo.
+## Cosa fa
+- Verifica che Docker sia disponibile e in esecuzione; legge i compose server/database (remoti o locali) per ricavare i container e ne stampa stato/health.
+- Cerca la cartella `hypernode_deploy` nel sistema e controlla la presenza dei file attesi (log, config, script update).
+- Legge `SERIAL` da `.hypernode-update-check.conf`, controlla la risoluzione DNS di `SERIAL.lan.omniaweb.cloud` verso l'IP locale e `serial.my.omniaweb.cloud` verso l'IP pubblico.
+- Chiama `${LICENSING_URL}/sites` con credenziali/serial del config, verifica HTTP 200 ed estrae `site_port`/`site_lan_port` per il serial in uso.
+- Con le porte recuperate, interroga:
+  - `https://<serial>.lan.omniaweb.cloud:<site_lan_port>/api/v1/` (LAN)
+  - `https://<serial>.my.omniaweb.cloud:<site_port>/api/v1/` (WAN)
+  Verifica raggiungibilità, controlla il certificato HTTPS (validità e scadenza) e che `server.serial` nella risposta coincida con il serial del config. Se WAN non risponde, segnala che non è esposto e prosegue.
+- Esegue `run-hypernode-update-check.sh --use-config --force-send` per inviare il payload (se disponibile).
 
 ## Come lanciarlo (supporto)
 1) Accedi alla macchina via SSH (es. `ssh user@<ip>`).  
@@ -18,10 +24,13 @@ Script: `installer_docker/uss_healthcheck.sh`
 
 ## Cosa aspettarsi in output
 - Messaggi `✅`/`⚠️`/`❌`.
+- Stato/health dei container dai compose.
+- Presenza dei file attesi in `hypernode_deploy`.
+- DNS LAN/Pubblico vs IP locali/pubblici.
 - Esito licensing `/sites` (HTTP 200 atteso) con `site_port`/`site_lan_port` per il serial in uso.
-- Risultato verifica certificato HTTPS e scadenza su `<serial>.lan.omniaweb.cloud:<site_lan_port>`.
-- Esito reachability API e confronto `server.serial`.
-- Gli altri output (container, file, DNS/IP, run-update-check) torneranno quando le sezioni saranno scommentate.
+- Verifica certificato HTTPS e scadenza su LAN/WAN (WAN solo se raggiungibile).
+- Esito reachability API (LAN/WAN) e confronto `server.serial`.
+- Risultato dell'esecuzione di `run-hypernode-update-check.sh`.
 
 ## Note e prerequisiti
 - Servono: Docker installato e in esecuzione; `wget` (o `curl`), `sudo`; strumenti DNS (`getent`/`dig`/`nslookup`/`host`) opzionali ma utili.
