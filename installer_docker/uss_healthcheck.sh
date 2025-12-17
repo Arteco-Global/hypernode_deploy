@@ -19,6 +19,8 @@ HYPERNODE_DIR=""
 USER_LOGIN_VALUE=""
 USER_PASSWORD_VALUE=""
 LICENSING_URL_VALUE=""
+SITE_PORT=""
+SITE_LAN_PORT=""
 
 info() { echo "ℹ️  $*"; }
 warn() { echo "⚠️  $*" >&2; }
@@ -393,10 +395,14 @@ for obj in walk(data):
         site_lan_port = obj.get("site_lan_port", "n/d")
         status = obj.get("status", "n/d")
         is_uss = obj.get("is_uss", "n/d")
-        print(f"✅ Licensing /sites -> serial {serial}: site_port={site_port}, site_lan_port={site_lan_port}, status={status}, is_uss={is_uss}", file=sys.stdout)
+        print(f"MSG:✅ Licensing /sites -> serial {serial}: site_port={site_port}, site_lan_port={site_lan_port}, status={status}, is_uss={is_uss}")
+        print(f"SITE_PORT:{site_port}")
+        print(f"SITE_LAN_PORT:{site_lan_port}")
+        print(f"STATUS:{status}")
+        print(f"IS_USS:{is_uss}")
         sys.exit(0)
 
-print(f"⚠️  Nessun record con serial '{serial}' trovato nella risposta /sites.", file=sys.stdout)
+print(f"MSG:⚠️  Nessun record con serial '{serial}' trovato nella risposta /sites.")
 sys.exit(1)
 PY
   ) || true
@@ -446,7 +452,27 @@ PY
 
   if [[ "$http_code" == "200" ]]; then
     ok "Licensing /sites OK (HTTP 200) per serial $masked_serial, login $masked_login."
-    parse_licensing_ports "$response_file" "$serial"
+    local parsed line
+    parsed=$(parse_licensing_ports "$response_file" "$serial")
+    while IFS= read -r line; do
+      case "$line" in
+        MSG:*)
+          echo "${line#MSG:}"
+          ;;
+        SITE_PORT:*)
+          SITE_PORT="${line#SITE_PORT:}"
+          ;;
+        SITE_LAN_PORT:*)
+          SITE_LAN_PORT="${line#SITE_LAN_PORT:}"
+          ;;
+        STATUS:*)
+          ;;
+        IS_USS:*)
+          ;;
+        *)
+          ;;
+      esac
+    done <<< "${parsed:-}"
   else
     local curl_err body
     curl_err=$(cat "$error_file")
@@ -457,14 +483,164 @@ PY
   rm -f "$response_file" "$error_file"
 }
 
-ensure_docker_running
+check_https_certificate() {
+  local host="$1" port="$2"
+  if [[ -z "$host" || -z "$port" ]]; then
+    warn "Parametri mancanti per verifica certificato ($host:$port)."
+    return 1
+  fi
 
-download_compose_sources
-for compose in "${COMPOSE_SOURCES[@]:-}"; do
-  parse_compose_container_names "$compose"
-done
-dedupe_array CONTAINERS
-check_container_statuses || true
+  local s_client_cmd output not_after verify_line verify_code expiry_info
+  s_client_cmd="openssl s_client -servername \"$host\" -connect \"$host:$port\" < /dev/null"
+  if command -v timeout >/dev/null 2>&1; then
+    s_client_cmd="timeout 10 $s_client_cmd"
+  fi
+
+  output=$(bash -c "$s_client_cmd" 2>/dev/null || true)
+  if [[ -z "$output" ]]; then
+    warn "Impossibile leggere il certificato da $host:$port (handshake fallito)."
+    return 1
+  fi
+
+  # Prova a estrarre la data di scadenza dal certificato.
+  not_after=$(printf '%s\n' "$output" | openssl x509 -noout -enddate 2>/dev/null | sed 's/^notAfter=//')
+  if [[ -z "$not_after" ]]; then
+    not_after=$(printf '%s\n' "$output" | awk '/notAfter=/{print $0; exit}' | sed 's/ *notAfter=//')
+  fi
+  verify_line=$(printf '%s\n' "$output" | grep -m1 'Verify return code')
+  verify_code=$(echo "$verify_line" | awk -F: '{print $2}' | awk '{print $1}')
+
+  if [[ -n "$not_after" ]] && command -v python3 >/dev/null 2>&1; then
+    expiry_info=$(python3 - <<PY
+import sys
+from datetime import datetime, timezone
+
+not_after = """$not_after"""
+try:
+    exp = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    delta = exp - now
+    days = delta.days
+    print(f"{not_after} (tra {days} giorni)")
+except Exception as exc:
+    print(not_after)
+PY
+    )
+  else
+    expiry_info="$not_after"
+  fi
+
+  if [[ "${verify_code:-1}" == "0" ]]; then
+    ok "Certificato HTTPS valido per $host:$port (scadenza: ${expiry_info:-n/d})"
+  else
+    warn "Certificato HTTPS NON valido per $host:$port (verify code ${verify_code:-n/d}, scadenza: ${expiry_info:-n/d})"
+  fi
+}
+
+diag_api_check() {
+  local serial="$1" site_lan_port="$2"
+
+  if [[ -z "$serial" || -z "$site_lan_port" ]]; then
+    warn "Parametri mancanti per diagnostica API (serial/port)."
+    return 1
+  fi
+
+  local serial_lower host url tmp_body tmp_err http_code
+  serial_lower=$(echo "$serial" | tr '[:upper:]' '[:lower:]')
+  host="${serial_lower}.lan.omniaweb.cloud"
+  url="https://${host}:${site_lan_port}/api/v1/"
+
+  info "Verifica API diagnostica: $url"
+
+  check_https_certificate "$host" "$site_lan_port" || true
+
+  tmp_body=$(mktemp)
+  tmp_err=$(mktemp)
+  http_code=$(curl -k -sS -o "$tmp_body" -w '%{http_code}' \
+    --connect-timeout 10 --max-time 20 --location "$url" 2>"$tmp_err" || true)
+
+  if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+    ok "API diagnostica raggiungibile (HTTP $http_code)."
+  else
+    warn "API diagnostica non raggiungibile/errore (HTTP ${http_code:-n/d}): $(cat "$tmp_err")"
+    rm -f "$tmp_body" "$tmp_err"
+    return 1
+  fi
+
+  local parse_out
+  parse_out=$(python3 - "$tmp_body" "$serial" <<'PY'
+import json, sys
+
+body_file, serial = sys.argv[1], sys.argv[2]
+serial_norm = serial.strip().lower()
+
+def walk(obj):
+    if isinstance(obj, dict):
+        yield obj
+        for v in obj.values():
+            yield from walk(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            yield from walk(item)
+
+try:
+    with open(body_file, "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+except Exception as exc:
+    print(f"⚠️  Impossibile leggere/parsare la risposta API: {exc}")
+    sys.exit(1)
+
+# Prova percorsi noti prima di ricorrere alla ricerca.
+candidates = []
+if isinstance(data, dict):
+    if isinstance(data.get("server"), dict):
+        candidates.append(data["server"])
+    if isinstance(data.get("root"), dict) and isinstance(data["root"].get("server"), dict):
+        candidates.append(data["root"]["server"])
+
+server_serial = ""
+for cand in candidates:
+    val = str(cand.get("serial") or "").strip().lower()
+    if val:
+        server_serial = val
+        break
+
+if not server_serial:
+    for obj in walk(data):
+        if not isinstance(obj, dict):
+            continue
+        val = str(obj.get("serial") or "").strip().lower()
+        if val:
+            server_serial = val
+            break
+
+if not server_serial:
+    print("⚠️  Campo server.serial assente nella risposta API.")
+    sys.exit(1)
+
+if server_serial == serial_norm:
+    print(f"✅ API diagnostica: server.serial combacia ({server_serial}).")
+    sys.exit(0)
+else:
+    print(f"⚠️  API diagnostica: server.serial={server_serial} non combacia con {serial_norm}.")
+    sys.exit(1)
+PY
+  ) || true
+
+  [[ -n "$parse_out" ]] && echo "$parse_out"
+  rm -f "$tmp_body" "$tmp_err"
+}
+
+# ---- Modalità: licensing + diagnostica API (altri check commentati) ----
+# if false; then
+#   ensure_docker_running
+#   download_compose_sources
+#   for compose in "${COMPOSE_SOURCES[@]:-}"; do
+#     parse_compose_container_names "$compose"
+#   done
+#   dedupe_array CONTAINERS
+#   check_container_statuses || true
+# fi
 
 if find_hypernode_dir; then
   ok "Cartella hypernode_deploy trovata: $HYPERNODE_DIR"
@@ -473,7 +649,9 @@ else
   exit 1
 fi
 
-check_required_files "$HYPERNODE_DIR" || true
+# if false; then
+#   check_required_files "$HYPERNODE_DIR" || true
+# fi
 
 CONFIG_FILE="$HYPERNODE_DIR/.hypernode-update-check.conf"
 SERIAL_VALUE=""
@@ -490,24 +668,30 @@ else
   warn "File di configurazione $CONFIG_FILE mancante."
 fi
 
-if [[ -n "$SERIAL_VALUE" ]]; then
-  ok "SERIAL rilevato: $SERIAL_VALUE"
-  SERIAL_LOWER=$(echo "$SERIAL_VALUE" | tr '[:upper:]' '[:lower:]')
-  LOCAL_HOST="${SERIAL_LOWER}.lan.omniaweb.cloud"
-  PUBLIC_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
-
-  LOCAL_IP=$(current_local_ip || true)
-  PUBLIC_IP=$(current_public_ip || true)
-
-  [[ -n "$LOCAL_IP" ]] && info "IP locale corrente: $LOCAL_IP" || warn "IP locale non determinato."
-  [[ -n "$PUBLIC_IP" ]] && info "IP pubblico corrente: $PUBLIC_IP" || warn "IP pubblico non determinato."
-
-  compare_dns_ip "DNS LAN" "$LOCAL_HOST" "$LOCAL_IP"
-  compare_dns_ip "DNS pubblico" "$PUBLIC_HOST" "$PUBLIC_IP"
-else
-  warn "Impossibile leggere SERIAL da $CONFIG_FILE."
-fi
+# if false; then
+#   if [[ -n "$SERIAL_VALUE" ]]; then
+#     ok "SERIAL rilevato: $SERIAL_VALUE"
+#     SERIAL_LOWER=$(echo "$SERIAL_VALUE" | tr '[:upper:]' '[:lower:]')
+#     LOCAL_HOST="${SERIAL_LOWER}.lan.omniaweb.cloud"
+#     PUBLIC_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
+#
+#     LOCAL_IP=$(current_local_ip || true)
+#     PUBLIC_IP=$(current_public_ip || true)
+#
+#     [[ -n "$LOCAL_IP" ]] && info "IP locale corrente: $LOCAL_IP" || warn "IP locale non determinato."
+#     [[ -n "$PUBLIC_IP" ]] && info "IP pubblico corrente: $PUBLIC_IP" || warn "IP pubblico non determinato."
+#
+#     compare_dns_ip "DNS LAN" "$LOCAL_HOST" "$LOCAL_IP"
+#     compare_dns_ip "DNS pubblico" "$PUBLIC_HOST" "$PUBLIC_IP"
+#   else
+#     warn "Impossibile leggere SERIAL da $CONFIG_FILE."
+#   fi
+# fi
 
 licensing_sites_check "$LICENSING_URL_VALUE" "$USER_LOGIN_VALUE" "$USER_PASSWORD_VALUE" "$SERIAL_VALUE"
 
-run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"
+diag_api_check "$SERIAL_VALUE" "$SITE_LAN_PORT"
+
+# if false; then
+#   run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"
+# fi
