@@ -28,7 +28,7 @@ on:
                     - port_broker
                     - message_broker
                     - database
-                    - media_storage
+                    #- media_storage
                     - configurator
                 default: "all"
 
@@ -194,14 +194,14 @@ jobs:
                     -t artecoglobalcompany/usee_database:${{ env.TAG }} \
                     --push hypernode-server
 
-            - name: BuildMediaStorage
-              if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'media_storage' }}
-              run: |
-                  docker buildx build \
-                    --platform=${{ env.PLATFORMS }} \
-                    -f hypernode-server/docker/storage.Dockerfile \
-                    -t artecoglobalcompany/usee_media_storage:${{ env.TAG }} \
-                    --push hypernode-server
+            # - name: BuildMediaStorage
+            #   if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'media_storage' }}
+            #   run: |
+            #       docker buildx build \
+            #         --platform=${{ env.PLATFORMS }} \
+            #         -f hypernode-server/docker/storage.Dockerfile \
+            #         -t artecoglobalcompany/usee_media_storage:${{ env.TAG }} \
+            #         --push hypernode-server
 
             # ------------------------
             # FRONTEND CONFIGURATOR

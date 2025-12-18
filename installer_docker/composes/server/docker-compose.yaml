@@ -96,29 +96,29 @@ services:
         max-size: "10m"
         max-file: "5"
 
-  storage:
-    image: artecoglobalcompany/usee_media_storage:${DOCKER_TAG:-latest}
-    networks:
-      - hypernode-net
-    environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/storage-db
-      - STORAGE_PATH=/storage_files
-      - STORAGE_DISK_SPACE=${STORAGE_DISK_SPACE:-10000000}
-    container_name: storage
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - ${STORAGE_PATH}:/storage_files
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
+  # storage:
+  #   image: artecoglobalcompany/usee_media_storage:${DOCKER_TAG:-latest}
+  #   networks:
+  #     - hypernode-net
+  #   environment:
+  #     - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
+  #     - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/storage-db
+  #     - STORAGE_PATH=/storage_files
+  #     - STORAGE_DISK_SPACE=${STORAGE_DISK_SPACE:-10000000}
+  #   container_name: storage
+  #   restart: unless-stopped
+  #   depends_on:
+  #     messagebroker:
+  #       condition: service_healthy
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   volumes:
+  #     - ${STORAGE_PATH}:/storage_files
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "5"
 
   recording:
     image: artecoglobalcompany/usee_media_recorder:${DOCKER_TAG:-latest}
