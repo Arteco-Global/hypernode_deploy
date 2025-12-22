@@ -26,6 +26,7 @@ SITE_STATUS=""
 SITE_IS_USS=""
 REACH_LAN_OK="false"
 REACH_WAN_OK="false"
+DB_PORT=""
 
 info() { echo "ℹ️  $*"; }
 warn() { echo "⚠️  $*" >&2; }
@@ -215,6 +216,32 @@ check_container_statuses() {
   done
 
   return $all_ok
+}
+
+find_database_port() {
+  local container="USS_SERVER" host_binding=""
+
+  if ! docker inspect "$container" >/dev/null 2>&1; then
+    warn "$container: container non trovato, porta DB non rilevata."
+    return 1
+  fi
+
+  host_binding=$(docker inspect --format '{{range $port, $bindings := .HostConfig.PortBindings}}{{if eq $port "27017/tcp"}}{{range $bindings}}{{printf "%s:%s\n" .HostIp .HostPort}}{{end}}{{end}}{{end}}' "$container" 2>/dev/null | awk 'NF{print; exit}' || true)
+  if [[ -z "$host_binding" ]]; then
+    host_binding=$(docker port "$container" 27017/tcp 2>/dev/null | awk 'NR==1{print $0}' || true)
+  fi
+  if [[ -z "$host_binding" ]]; then
+    host_binding=$(docker inspect --format '{{range $port, $bindings := .NetworkSettings.Ports}}{{if eq $port "27017/tcp"}}{{range $bindings}}{{printf "%s:%s\n" .HostIp .HostPort}}{{end}}{{end}}{{end}}' "$container" 2>/dev/null | awk 'NF{print; exit}' || true)
+  fi
+
+  if [[ -n "$host_binding" ]]; then
+    DB_PORT="${host_binding##*:}"
+    ok "$container: porta DB host ${DB_PORT} (binding ${host_binding})"
+    return 0
+  fi
+
+  warn "$container: impossibile determinare la porta DB (27017/tcp)."
+  return 1
 }
 
 find_hypernode_dir() {
@@ -700,7 +727,10 @@ done
 dedupe_array CONTAINERS
 check_container_statuses || true
 
-section "2) SCRIPT NECESSARI"
+section "2) DATABASE"
+find_database_port || true
+
+section "3) SCRIPT NECESSARI"
 if find_hypernode_dir; then
   ok "Cartella hypernode_deploy trovata: $HYPERNODE_DIR"
 else
@@ -731,15 +761,15 @@ else
   warn "Impossibile leggere SERIAL da $CONFIG_FILE."
 fi
 
-section "3) NETWORK"
-subsection "3.1) IP"
+section "4) NETWORK"
+subsection "4.1) IP"
 
 LOCAL_IP=$(current_local_ip || true)
 PUBLIC_IP=$(current_public_ip || true)
 [[ -n "$LOCAL_IP" ]] && info "IP locale corrente: $LOCAL_IP" || warn "IP locale non determinato."
 [[ -n "$PUBLIC_IP" ]] && info "IP pubblico corrente: $PUBLIC_IP" || warn "IP pubblico non determinato."
 
-subsection "3.2) DNS"
+subsection "4.2) DNS"
 if [[ -n "$SERIAL_LOWER" ]]; then
   LOCAL_HOST="${SERIAL_LOWER}.lan.omniaweb.cloud"
   PUBLIC_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
@@ -749,7 +779,7 @@ else
   warn "Seriale non disponibile: impossibile verificare il DNS."
 fi
 
-subsection "3.3) PORTS"
+subsection "4.3) PORTS"
 licensing_sites_check "$LICENSING_URL_VALUE" "$USER_LOGIN_VALUE" "$USER_PASSWORD_VALUE" "$SERIAL_VALUE"
 if [[ -n "$SITE_PORT" || -n "$SITE_LAN_PORT" ]]; then
   ok "serial ${SERIAL_VALUE:-n/d}: site_port=${SITE_PORT:-n/d}, site_lan_port=${SITE_LAN_PORT:-n/d}, status=${SITE_STATUS:-n/d}, is_uss=${SITE_IS_USS:-n/d}"
@@ -762,22 +792,22 @@ if [[ -n "$SERIAL_LOWER" ]]; then
   WAN_HOST="${SERIAL_LOWER}.my.omniaweb.cloud"
 fi
 
-subsection "3.4) REACHABILITY"
-subsection "3.4.1) LAN"
+subsection "4.4) REACHABILITY"
+subsection "4.4.1) LAN"
 if [[ -n "$SERIAL_VALUE" && -n "$SITE_LAN_PORT" && "$SITE_LAN_PORT" != "n/d" ]]; then
   diag_api_check "$SERIAL_VALUE" "$LAN_HOST" "$SITE_LAN_PORT" "LAN"
 else
   warn "Porta LAN o seriale non disponibili: salto diagnostica LAN."
 fi
 
-subsection "3.4.2) WAN"
+subsection "4.4.2) WAN"
 if [[ -n "$SERIAL_VALUE" && -n "$SITE_PORT" && "$SITE_PORT" != "n/d" ]]; then
   diag_api_check "$SERIAL_VALUE" "$WAN_HOST" "$SITE_PORT" "WAN"
 else
   warn "Porta WAN o seriale non disponibili: salto diagnostica WAN."
 fi
 
-subsection "3.5) CERTIFICATE"
+subsection "4.5) CERTIFICATE"
 if [[ -n "$LAN_HOST" && -n "$SITE_LAN_PORT" && "$SITE_LAN_PORT" != "n/d" ]]; then
   if [[ "$REACH_LAN_OK" == "true" ]]; then
     check_https_certificate "$LAN_HOST" "$SITE_LAN_PORT" || true
@@ -796,5 +826,5 @@ if [[ -n "$WAN_HOST" && -n "$SITE_PORT" && "$SITE_PORT" != "n/d" ]]; then
   fi
 fi
 
-subsection "3.6) UPDATES"
+subsection "4.6) UPDATES"
 run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"
