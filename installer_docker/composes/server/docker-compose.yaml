@@ -80,6 +80,7 @@ services:
       - CERTIFICATE_PROVIDER_URL=${CERTIFICATE_PROVIDER_URL}
       - DNS_PROVIDER_URL=${DNS_PROVIDER_URL}
       - LICENSE_PROVIDER_URL=${LICENSE_PROVIDER_URL}
+      - UPDATE_PROVIDER_URL=${UPDATE_PROVIDER_URL}
     container_name: coretrust
     restart: unless-stopped
     depends_on:

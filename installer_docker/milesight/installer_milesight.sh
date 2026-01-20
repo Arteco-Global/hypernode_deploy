@@ -158,6 +158,11 @@ while [[ "$#" -gt 0 ]]; do
       export LICENSE_PROVIDER_URL
       shift 2
       ;;
+    -upd-url|--update-provider-url)
+      UPDATE_PROVIDER_URL="$2"
+      export UPDATE_PROVIDER_URL
+      shift 2
+      ;;
     -rec-path|--recording-path)
       RECORDING_PATH="$2"
       export RECORDING_PATH
