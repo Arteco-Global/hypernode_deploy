@@ -5,7 +5,7 @@ services:
   database:
     image: artecoglobalcompany/usee_database:${DOCKER_TAG:-latest}
     ports:
-      - "127.0.0.1:${DB_PORT:-27017}:27017"
+      - "${DB_PORT:-27017}:27017"
     volumes:
       - mongodb_data:/data/db          # <- path giusto
       - mongodb_config:/data/configdb  # <- opzionale ma pulito
