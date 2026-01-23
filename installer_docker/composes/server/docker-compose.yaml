@@ -65,6 +65,24 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  metadata:
+      image: artecoglobalcompany/usee_metadata_manager:${DOCKER_TAG:-latest}
+      environment:
+        - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
+        - GATEWAY_URI=ws://127.0.0.1:8181
+        - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/metadata-db
+      container_name: metadata
+      restart: unless-stopped
+      network_mode: "host"
+      depends_on:
+        messagebroker:
+          condition: service_healthy
+      logging:
+        driver: "json-file"
+        options:
+          max-size: "10m"
+          max-file: "5"
+
   coretrust:
     image: artecoglobalcompany/usee_coretrust:${DOCKER_TAG:-latest}
     networks:
