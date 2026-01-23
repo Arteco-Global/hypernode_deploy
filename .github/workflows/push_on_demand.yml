@@ -14,7 +14,7 @@ on:
       TAG_REF:
         description: 'Tag Docker (es. latest, v1.2.3)'
         required: true
-        default: 'latest'
+        default: 'ATTENTION: usare "latest" solo per prod!'
       SERVICES:
         description: 'Seleziona il servizio da buildare (o "all" per tutti)'
         required: true
