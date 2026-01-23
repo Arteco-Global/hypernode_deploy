@@ -4,7 +4,9 @@
 
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
-ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes
+DEPLOY_BRANCH="main"
+ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
+ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
@@ -119,6 +121,10 @@ while [[ "$#" -gt 0 ]]; do
       export LICENSE_PROVIDER_URL
       shift 2
       ;;
+    -db|--deploy-branch)
+      DEPLOY_BRANCH="$2"
+      shift 2
+      ;;
     -rec-path|--recording-path)
       RECORDING_PATH="$2"
       export RECORDING_PATH
@@ -173,6 +179,7 @@ while [[ "$#" -gt 0 ]]; do
     echo "  -dns-url, --dns-provider-url           Set the DNS provider URL"
     echo "  -lic-url, --license-provider-url       Set the license provider URL"
     echo "  -upd-url, --update-provider-url        Set the update provider URL"
+    echo "  -db, --deploy-branch                   Set the deploy branch for compose files (default: main)"
     echo ""
     echo "Storage/Recording/Snapshot options:"
     echo "  -rec-path, --recording-path            Set the path to save recordings (default: /recording_files)"
@@ -183,7 +190,7 @@ while [[ "$#" -gt 0 ]]; do
     echo "  -snapshot-max-disk, --snapshot-max-disk Set max disk space for snapshots in Kbytes (default: 10000000)"
     echo ""
     echo "Example:"
-    echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com --recording-path /recording_files --recording-max-disk 10000000 --storage-path /storage_files --storage-max-disk 10000000 --snapshot-path /snapshot_files --snapshot-max-disk 10000000"
+    echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com --deploy-branch main --recording-path /recording_files --recording-max-disk 10000000 --storage-path /storage_files --storage-max-disk 10000000 --snapshot-path /snapshot_files --snapshot-max-disk 10000000"
     exit 0
       ;;
     *)
@@ -192,6 +199,8 @@ while [[ "$#" -gt 0 ]]; do
       ;;
   esac
 done
+
+ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
 
 
 
