@@ -333,6 +333,7 @@ if [ "$mode" == "install" ]; then
     echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager{NC}"
     # echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC} 15. ${GREEN}Metadata Manager${NC}"
 
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
@@ -343,6 +344,7 @@ if [ "$mode" == "install" ]; then
     echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
     # echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC} 16. ${BLUE}Metadata Manager${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -368,6 +370,7 @@ else
     # echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Recording${NC}"
+    echo -e "  ${CYAN}  │${NC} 15. ${GREEN}Metadata Manager${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
@@ -379,6 +382,7 @@ else
     # echo -e "  ${CYAN}  │${NC} 12. ${BLUE}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC} 13. ${BLUE}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  │${NC} 14. ${BLUE}Recording${NC}"
+    echo -e "  ${CYAN}  │${NC} 16. ${BLUE}Metadata Manager${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -478,7 +482,7 @@ get_config() {
         export RMQ
 
         ;;
-    2 | 3 | 4 | 5 | 6 | 7)
+    2 | 3 | 4 | 5 | 6 | 7 | 15)
        
 
         if [ "$FORCE_INSTALL" == "false" ]; then
@@ -507,7 +511,7 @@ get_config() {
         fi
         ;;
 
-      8 | 9 | 10 | 11 | 12)
+      8 | 9 | 10 | 11 | 12 | 16)
 
         # Update single services (Runner Mode)
         read -p "Type the service name to update: " PROCESS_NAME
@@ -686,6 +690,10 @@ elif [ "$INSTALL_OPTION" -eq 12 ]; then
     additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
 elif [ "$INSTALL_OPTION" -eq 13 ]; then
     additionalServiceInstall "snapshot" "update" && end_with_message "Snapshot service update" 0 || end_with_message "Snapshot service update" 1
+elif [ "$INSTALL_OPTION" -eq 15 ]; then
+    additionalServiceInstall "metadata" && end_with_message "Metadata service installation" 0 || end_with_message "Metadata service installation" 1
+elif [ "$INSTALL_OPTION" -eq 16 ]; then
+    additionalServiceInstall "metadata" "update" && end_with_message "Metadata service update" 0 || end_with_message "Metadata service update" 1
 elif [ "$INSTALL_OPTION" -eq 99 ]; then
     dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
 elif [ "$INSTALL_OPTION" -eq 666 ]; then
