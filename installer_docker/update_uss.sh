@@ -6,15 +6,14 @@ CONFIG_FILE="$SCRIPT_DIR/.hypernode-update-check.conf"
 STATE_FILE="$SCRIPT_DIR/.hypernode-update-check.state"
 RUN_CHECK_SCRIPT="$SCRIPT_DIR/run-hypernode-update-check.sh"
 WATCHTOWER_IMAGE="containrrr/watchtower:1.7.1"
-ABSOLUTE_PATH="${ABSOLUTE_PATH:-https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes}"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
+ABSOLUTE_PATH="${ABSOLUTE_PATH:-}"
 COMPOSE_FILES=(
   "$SCRIPT_DIR/composes/server/docker-compose.yaml"
   "$SCRIPT_DIR/composes/database/docker-compose.yaml"
 )
-COMPOSE_URLS=(
-  "$ABSOLUTE_PATH/server/docker-compose.yaml"
-  "$ABSOLUTE_PATH/database/docker-compose.yaml"
-)
+COMPOSE_URLS=()
 DEBUG_LOG="${DEBUG_LOG:-0}"
 
 DOCKER_USERNAME="${DOCKER_USERNAME:-}"
@@ -33,6 +32,40 @@ if [[ -f "$CONFIG_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$CONFIG_FILE"
 fi
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -db|--deploy-branch)
+      DEPLOY_BRANCH="$2"
+      shift 2
+      ;;
+    -ap|--absolute-path)
+      ABSOLUTE_PATH="$2"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: update_uss.sh [options]"
+      echo ""
+      echo "Options:"
+      echo "  -db, --deploy-branch   Set the deploy branch for remote compose files (default: main)"
+      echo "  -ap, --absolute-path   Override the full compose base URL"
+      exit 0
+      ;;
+    *)
+      echo "Opzione non riconosciuta: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$ABSOLUTE_PATH" ]]; then
+  ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
+fi
+
+COMPOSE_URLS=(
+  "$ABSOLUTE_PATH/server/docker-compose.yaml"
+  "$ABSOLUTE_PATH/database/docker-compose.yaml"
+)
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "❌ Docker non è disponibile sul sistema." >&2
