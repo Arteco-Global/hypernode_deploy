@@ -21,6 +21,7 @@ Script: `installer_docker/uss_healthcheck.sh`
    ```
    - Richiede `wget` (o puoi sostituire con `curl -fsSL URL -o /tmp/uss_healthcheck.sh`).
    - Usa `sudo` per avere accesso al socket Docker.
+   - Se vuoi usare un branch diverso (es. `staging`), aggiungi prima di inviare: `--deploy-branch staging` (esempio: `sudo /tmp/uss_healthcheck.sh --deploy-branch staging`).
 
 ## Cosa aspettarsi in output
 - Output strutturato in sezioni numerate (Docker, Script necessari, Network con IP/DNS/Ports/Reachability/Certificate, Updates).

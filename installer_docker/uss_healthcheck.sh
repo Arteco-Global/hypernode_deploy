@@ -2,15 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ABSOLUTE_PATH="${ABSOLUTE_PATH:-https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes}"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
+ABSOLUTE_PATH="${ABSOLUTE_PATH:-}"
 COMPOSE_FILES=(
   "$SCRIPT_DIR/composes/server/docker-compose.yaml"
   "$SCRIPT_DIR/composes/database/docker-compose.yaml"
 )
-COMPOSE_URLS=(
-  "$ABSOLUTE_PATH/server/docker-compose.yaml"
-  "$ABSOLUTE_PATH/database/docker-compose.yaml"
-)
+COMPOSE_URLS=()
 
 TMP_COMPOSES=()
 COMPOSE_SOURCES=()
@@ -37,6 +36,35 @@ section() {
   echo ""
   echo "=== $* ==="
 }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -db|--deploy-branch)
+      DEPLOY_BRANCH="$2"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: uss_healthcheck.sh [options]"
+      echo ""
+      echo "Options:"
+      echo "  -db, --deploy-branch   Set the deploy branch for remote compose files (default: main)"
+      exit 0
+      ;;
+    *)
+      warn "Opzione non riconosciuta: $1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$ABSOLUTE_PATH" ]]; then
+  ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
+fi
+
+COMPOSE_URLS=(
+  "$ABSOLUTE_PATH/server/docker-compose.yaml"
+  "$ABSOLUTE_PATH/database/docker-compose.yaml"
+)
 
 subsection() {
   echo ""
