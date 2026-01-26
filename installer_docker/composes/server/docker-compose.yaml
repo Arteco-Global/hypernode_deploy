@@ -98,6 +98,7 @@ services:
       - CERTIFICATE_PROVIDER_URL=${CERTIFICATE_PROVIDER_URL}
       - DNS_PROVIDER_URL=${DNS_PROVIDER_URL}
       - LICENSE_PROVIDER_URL=${LICENSE_PROVIDER_URL}
+      - CORETRUST_CONFIG_PATH=/data/coretrust/config.json
     container_name: coretrust
     restart: unless-stopped
     depends_on:
@@ -105,6 +106,7 @@ services:
         condition: service_healthy
     volumes:
       - hypernode_security_shared_files:/ssl
+      - coretrust_config:/data/coretrust
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
@@ -286,6 +288,7 @@ services:
 volumes:
   rabbitmq_data:
   hypernode_security_shared_files:
+  coretrust_config:
 
 networks:
   hypernode-net:
