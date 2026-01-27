@@ -35,6 +35,7 @@ services:
       - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
       - SERVER_NAME=${SERVER_NAME:-Hypernode Server}
       - BACKUPS_PATH=/data/gateway/backups
+      - LICENSE_PROVIDER_URL=${LICENSE_PROVIDER_URL}
     container_name: gateway
     restart: unless-stopped
     depends_on:
