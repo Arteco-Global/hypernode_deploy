@@ -34,11 +34,14 @@ services:
       - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/gateway-db
       - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
       - SERVER_NAME=${SERVER_NAME:-Hypernode Server}
+      - BACKUPS_PATH=/data/gateway/backups
     container_name: gateway
     restart: unless-stopped
     depends_on:
       messagebroker:
         condition: service_healthy
+    volumes:
+      - hypernode_configuration_shared_files:/data/gateway
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
@@ -106,7 +109,7 @@ services:
         condition: service_healthy
     volumes:
       - hypernode_security_shared_files:/ssl
-      - coretrust_config:/data/coretrust
+      - hypernode_configuration_shared_files:/data/coretrust
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
@@ -288,7 +291,7 @@ services:
 volumes:
   rabbitmq_data:
   hypernode_security_shared_files:
-  coretrust_config:
+  hypernode_configuration_shared_files:
 
 networks:
   hypernode-net:
