@@ -42,7 +42,7 @@ services:
       messagebroker:
         condition: service_healthy
     volumes:
-      - hypernode_configuration_shared_files:/data/gateway
+      - gateway_config:/data/gateway
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
@@ -110,7 +110,7 @@ services:
         condition: service_healthy
     volumes:
       - hypernode_security_shared_files:/ssl
-      - hypernode_configuration_shared_files:/data/coretrust
+      - coretrust_config:/data/coretrust
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
@@ -292,7 +292,8 @@ services:
 volumes:
   rabbitmq_data:
   hypernode_security_shared_files:
-  hypernode_configuration_shared_files:
+  gateway_config:
+  coretrust_config:
 
 networks:
   hypernode-net:
