@@ -31,12 +31,67 @@ DB_PORT=27017
 PROCESS_NAME="--"
 remote_host="--"   
 
+ENV_LOG_FILE="${PWD}/.hypernode-install-env.log"
+ENV_VARS=(
+    SSL_PORT
+    DOCKER_TAG
+    SERIAL_NUMBER
+    SERVER_TIMEZONE
+    SERVER_NAME
+    ARTECO_GLOBAL_EMAIL
+    ARTECO_GLOBAL_PASSWORD
+    SERVER_IP_ADDRESS
+    CERTIFICATE_PROVIDER_URL
+    DNS_PROVIDER_URL
+    LICENSE_PROVIDER_URL
+    RECORDING_PATH
+    RECORDING_DISK_SPACE
+    STORAGE_PATH
+    STORAGE_DISK_SPACE
+    SNAPSHOT_PATH
+    SNAPSHOT_DISK_SPACE
+    DB_PORT
+    DB_NAME
+    PROCESS_NAME
+    DATABASE_URI
+    RMQ
+    GRI
+    INSTALL_OPTION
+)
+
+log_install_env() {
+    local now
+    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    {
+        echo "---- $now ----"
+        for var_name in "${ENV_VARS[@]}"; do
+            if [[ -z "${!var_name+x}" ]]; then
+                printf '%s=\n' "$var_name"
+            else
+                printf '%s=%q\n' "$var_name" "${!var_name}"
+            fi
+        done
+        echo ""
+    } >> "$ENV_LOG_FILE"
+
+    chmod 600 "$ENV_LOG_FILE" 2>/dev/null || true
+}
+
+log_env_before_compose() {
+    local command=$1
+    if [[ "$command" == *"docker compose"* || "$command" == *"docker-compose"* ]]; then
+        log_install_env
+    fi
+}
+
 
 
 
 execute_command() {
     local COMMAND=$1
     local MESSAGE=$2
+
+    log_env_before_compose "$COMMAND"
 
     eval "$COMMAND" 
     local COMMAND_STATUS=$?
