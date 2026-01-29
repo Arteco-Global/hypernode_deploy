@@ -9,6 +9,7 @@ COMPOSE_CMD="docker compose"
 SERVICE_NAME=""
 TMP_DB_COMPOSE=""
 TMP_SERVICE_COMPOSE=""
+COMPOSE_PROJECT_NAME=""
 
 usage() {
     cat <<'EOF'
@@ -88,6 +89,44 @@ ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
 DB_COMPOSE_URL="$ABSOLUTE_PATH/database/docker-compose.yaml"
 SERVICE_COMPOSE_URL="$ABSOLUTE_PATH/$SERVICE_NAME/docker-compose.yaml"
 
+detect_compose_project() {
+    local candidates=()
+
+    if [[ -n "${COMPOSE_PROJECT_NAME:-}" ]]; then
+        return
+    fi
+
+    if [[ "$SERVICE_NAME" == "server" ]]; then
+        candidates=(
+            recording
+            messagebroker
+            gateway
+            camera
+            metadata
+            coretrust
+            event
+            auth
+            webserver
+            configurator
+            portbroker
+            snapshot
+        )
+    else
+        candidates=("$SERVICE_NAME")
+    fi
+
+    for c in "${candidates[@]}"; do
+        if docker inspect "$c" >/dev/null 2>&1; then
+            local project
+            project=$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$c" 2>/dev/null || true)
+            if [[ -n "$project" && "$project" != "<no value>" ]]; then
+                COMPOSE_PROJECT_NAME="$project"
+                return
+            fi
+        fi
+    done
+}
+
 cleanup_tmp() {
     rm -f "$TMP_DB_COMPOSE" "$TMP_SERVICE_COMPOSE"
 }
@@ -99,14 +138,21 @@ TMP_SERVICE_COMPOSE=$(mktemp)
 curl -sSL "$DB_COMPOSE_URL" -o "$TMP_DB_COMPOSE"
 curl -sSL "$SERVICE_COMPOSE_URL" -o "$TMP_SERVICE_COMPOSE"
 
+detect_compose_project
+
+SERVICE_COMPOSE_ARGS=()
+if [[ -n "$COMPOSE_PROJECT_NAME" ]]; then
+    SERVICE_COMPOSE_ARGS=(--project-name "$COMPOSE_PROJECT_NAME")
+fi
+
 echo "▶️  Pull database images"
 $COMPOSE_CMD -f "$TMP_DB_COMPOSE" pull
 echo "▶️  Recreate database"
 $COMPOSE_CMD -f "$TMP_DB_COMPOSE" up -d --force-recreate --remove-orphans
 
 echo "▶️  Pull $SERVICE_NAME images"
-$COMPOSE_CMD -f "$TMP_SERVICE_COMPOSE" pull
+$COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" pull
 echo "▶️  Recreate $SERVICE_NAME"
-$COMPOSE_CMD -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate --remove-orphans
+$COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate --remove-orphans
 
 echo "✅ Update completed for $SERVICE_NAME."
