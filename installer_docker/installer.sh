@@ -60,10 +60,9 @@ ENV_VARS=(
 )
 
 log_install_env() {
-    local now
-    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local tmp_file
+    tmp_file=$(mktemp)
     {
-        echo "---- $now ----"
         for var_name in "${ENV_VARS[@]}"; do
             if [[ -z "${!var_name+x}" ]]; then
                 printf '%s=\n' "$var_name"
@@ -71,9 +70,9 @@ log_install_env() {
                 printf '%s=%q\n' "$var_name" "${!var_name}"
             fi
         done
-        echo ""
-    } >> "$ENV_LOG_FILE"
+    } > "$tmp_file"
 
+    mv "$tmp_file" "$ENV_LOG_FILE"
     chmod 600 "$ENV_LOG_FILE" 2>/dev/null || true
 }
 
