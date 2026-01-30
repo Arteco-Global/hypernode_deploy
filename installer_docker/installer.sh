@@ -30,7 +30,6 @@ DB_PORT=27017
 
 PROCESS_NAME="--"
 remote_host="--"   
-COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-hypernode}"
 
 ENV_LOG_FILE="${PWD}/.hypernode-install-env.log"
 ENV_VARS=(
@@ -54,7 +53,6 @@ ENV_VARS=(
     DB_PORT
     DB_NAME
     PROCESS_NAME
-    COMPOSE_PROJECT_NAME
     DATABASE_URI
     RMQ
     GRI
@@ -265,7 +263,6 @@ ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
 
 export SSL_PORT
 export DOCKER_TAG
-export COMPOSE_PROJECT_NAME
 
 
 get_my_local_ip() {
