@@ -314,16 +314,7 @@ stat_summary() {
 check_required_files() {
   local base="$1"
   local -a required=(
-    "check-container-updates.sh"
-    "container_update_report.json"
-    "container_versions.json"
-    "dump-container-versions.sh"
-    ".hypernode-update-check.conf"
-    "hypernode-update-check.log"
-    ".hypernode-update-check.state"
     "installer.sh"
-    "run-hypernode-update-check.sh"
-    "update_uss.sh"
   )
 
   local missing=0 path
@@ -420,21 +411,6 @@ compare_dns_ip() {
     ok "$label: $host risolve in $resolved (atteso: $expected_ip)"
   else
     warn "$label: $host risolve in $resolved (atteso: $expected_ip)"
-  fi
-}
-
-run_update_check() {
-  local script_path="$1"
-  if [[ ! -x "$script_path" ]]; then
-    warn "Script $script_path non trovato o non eseguibile."
-    return 1
-  fi
-
-  info "Eseguo $(basename "$script_path") --use-config --force-send"
-  if (cd "$(dirname "$script_path")" && "$script_path" --use-config --force-send); then
-    ok "run-hypernode-update-check.sh completato."
-  else
-    warn "run-hypernode-update-check.sh terminato con errore."
   fi
 }
 
@@ -853,6 +829,3 @@ if [[ -n "$WAN_HOST" && -n "$SITE_PORT" && "$SITE_PORT" != "n/d" ]]; then
     info "Certificato WAN non verificato: endpoint non raggiungibile."
   fi
 fi
-
-subsection "4.6) UPDATES"
-run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"
