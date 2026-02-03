@@ -6,7 +6,7 @@ ENV_FILE="${PWD}/.hypernode-install-env.log"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
 COMPOSE_CMD="docker compose"
-SERVICE_NAME=""
+SERVICE_NAME="server"
 TMP_DB_COMPOSE=""
 TMP_SERVICE_COMPOSE=""
 COMPOSE_PROJECT_NAME=""
@@ -58,24 +58,6 @@ set -a
 source "$ENV_FILE"
 set +a
 
-if [[ -z "$SERVICE_NAME" ]]; then
-    case "${INSTALL_OPTION:-}" in
-        1|8) SERVICE_NAME="server" ;;
-        2|9) SERVICE_NAME="camera" ;;
-        3|10) SERVICE_NAME="auth" ;;
-        4|11) SERVICE_NAME="event" ;;
-        5|12) SERVICE_NAME="storage" ;;
-        6|13) SERVICE_NAME="snapshot" ;;
-        7) SERVICE_NAME="recording" ;;
-        15|16) SERVICE_NAME="metadata" ;;
-        *)
-            echo "❌ Unable to infer service from INSTALL_OPTION."
-            echo "   Provide --service <name>."
-            exit 1
-            ;;
-    esac
-fi
-
 if command -v docker &> /dev/null && docker compose version &> /dev/null; then
     COMPOSE_CMD="docker compose"
 elif command -v docker-compose &> /dev/null; then
@@ -87,7 +69,7 @@ fi
 
 ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
 DB_COMPOSE_URL="$ABSOLUTE_PATH/database/docker-compose.yaml"
-SERVICE_COMPOSE_URL="$ABSOLUTE_PATH/$SERVICE_NAME/docker-compose.yaml"
+SERVICE_COMPOSE_URL="$ABSOLUTE_PATH/server/docker-compose.yaml"
 
 detect_compose_project() {
     local candidates=()
