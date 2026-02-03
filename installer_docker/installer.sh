@@ -32,6 +32,8 @@ PROCESS_NAME="--"
 remote_host="--"   
 
 ENV_LOG_FILE="${PWD}/.hypernode-install-env.log"
+ENV_LOG_DIR_SYSTEM="/etc/.hypernode"
+ENV_LOG_FILE_SYSTEM="${ENV_LOG_DIR_SYSTEM}/.hypernode-install-env.log"
 ENV_VARS=(
     SSL_PORT
     DOCKER_TAG
@@ -74,6 +76,17 @@ log_install_env() {
 
     mv "$tmp_file" "$ENV_LOG_FILE"
     chmod 600 "$ENV_LOG_FILE" 2>/dev/null || true
+
+    if mkdir -p "$ENV_LOG_DIR_SYSTEM" 2>/dev/null; then
+        cp "$ENV_LOG_FILE" "$ENV_LOG_FILE_SYSTEM" 2>/dev/null || true
+        chmod 600 "$ENV_LOG_FILE_SYSTEM" 2>/dev/null || true
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo mkdir -p "$ENV_LOG_DIR_SYSTEM" 2>/dev/null || true
+        if [[ -d "$ENV_LOG_DIR_SYSTEM" ]]; then
+            sudo cp "$ENV_LOG_FILE" "$ENV_LOG_FILE_SYSTEM" 2>/dev/null || true
+            sudo chmod 600 "$ENV_LOG_FILE_SYSTEM" 2>/dev/null || true
+        fi
+    fi
 }
 
 log_env_before_compose() {
