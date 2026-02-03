@@ -11,6 +11,36 @@ ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_de
 RESTORE_DIR="$(cd "$INSTALL_DIR/.." && pwd -P)/hypernode_deploy"
 NATIVE_UPDATE_PATH="${RESTORE_DIR}/native_update.sh"
 
+is_docker_logged_in() {
+    local config="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+
+    if [[ ! -f "$config" ]]; then
+        return 1
+    fi
+
+    if command -v jq >/dev/null 2>&1; then
+        if jq -e '.auths and ( .auths | length > 0 )' "$config" >/dev/null 2>&1; then
+            return 0
+        fi
+        if jq -e '.credsStore or (.credHelpers | length > 0)' "$config" >/dev/null 2>&1; then
+            return 0
+        fi
+    else
+        if grep -q '"auth"[[:space:]]*:' "$config"; then
+            return 0
+        fi
+        if grep -q '"credsStore"[[:space:]]*:' "$config" || grep -q '"credHelpers"[[:space:]]*:' "$config"; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+is_interactive() {
+    [[ -t 0 && -t 1 ]]
+}
+
 usage() {
     cat <<'EOF'
 Usage: uss_restore.sh [options]
@@ -53,6 +83,10 @@ fi
 ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd -P)/$(basename "$ENV_FILE")"
 
 if [[ "$DEPLOY_BRANCH_PROVIDED" != "true" ]]; then
+    if ! is_interactive; then
+        echo "❌ --deploy-branch option not provided and no interactive input available."
+        exit 1
+    fi
     while true; do
         read -r -p "⚠️  --deploy-branch option not provided: should I use the default (main)? [y/n] " reply
         case "$reply" in
@@ -75,8 +109,20 @@ set -a
 source "$ENV_FILE"
 set +a
 
-if [[ -n "${DOCKER_USERNAME:-}" && -n "${DOCKER_PASSWORD:-}" ]]; then
-    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+if ! is_docker_logged_in; then
+    if [[ -n "${DOCKER_USERNAME:-}" && -n "${DOCKER_PASSWORD:-}" ]]; then
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    else
+        if ! is_interactive; then
+            echo "❌ Docker not logged in and no credentials provided; cannot prompt for login in non-interactive mode."
+            exit 1
+        fi
+        read -r -p "Docker username [artecoglobalcompany]: " DOCKER_USERNAME_INPUT
+        DOCKER_USERNAME_INPUT="${DOCKER_USERNAME_INPUT:-artecoglobalcompany}"
+        read -r -s -p "Docker access token: " DOCKER_PASSWORD_INPUT
+        echo
+        echo "$DOCKER_PASSWORD_INPUT" | docker login -u "$DOCKER_USERNAME_INPUT" --password-stdin
+    fi
 fi
 
 mkdir -p "$RESTORE_DIR"
