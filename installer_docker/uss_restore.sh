@@ -52,6 +52,24 @@ fi
 
 ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd -P)/$(basename "$ENV_FILE")"
 
+if [[ "$DEPLOY_BRANCH_PROVIDED" != "true" ]]; then
+    while true; do
+        read -r -p "⚠️  --deploy-branch option not provided: should I use the default (main)? [y/n] " reply
+        case "$reply" in
+            y|Y)
+                break
+                ;;
+            n|N)
+                echo "❌ Aborted. Please provide --deploy-branch."
+                exit 1
+                ;;
+            *)
+                echo "Please answer y or n."
+                ;;
+        esac
+    done
+fi
+
 set -a
 # shellcheck source=/dev/null
 source "$ENV_FILE"
