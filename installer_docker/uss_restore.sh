@@ -148,3 +148,6 @@ fi
 popd >/dev/null
 
 rm -f "$NATIVE_UPDATE_PATH"
+
+echo "Configurator URL (if finalized): https://${SERIAL_NUMBER}.lan.omniaweb.cloud:${SSL_PORT}"
+echo "Configurator URL (before finalizing): https://${SERVER_IP_ADDRESS}:${SSL_PORT}"
