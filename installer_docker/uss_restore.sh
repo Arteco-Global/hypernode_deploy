@@ -80,12 +80,14 @@ if [[ -n "${DOCKER_USERNAME:-}" && -n "${DOCKER_PASSWORD:-}" ]]; then
 fi
 
 mkdir -p "$RESTORE_DIR"
+chmod 777 "$RESTORE_DIR"
 
 if [[ "$ENV_FILE" != "$DEFAULT_ENV_FILE" ]]; then
     cp "$ENV_FILE" "$DEFAULT_ENV_FILE"
 fi
 
 cp "$DEFAULT_ENV_FILE" "${RESTORE_DIR}/.hypernode-install-env.log"
+chmod 644 "${RESTORE_DIR}/.hypernode-install-env.log"
 
 NATIVE_UPDATE_URL="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/installer_docker/native_update.sh"
 curl -sSL "$NATIVE_UPDATE_URL" -o "$NATIVE_UPDATE_PATH"
@@ -98,3 +100,5 @@ else
     ./native_update.sh
 fi
 popd >/dev/null
+
+rm -f "$NATIVE_UPDATE_PATH"
