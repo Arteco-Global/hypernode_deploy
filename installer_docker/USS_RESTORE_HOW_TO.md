@@ -53,16 +53,16 @@ Quando il file manca, lo script chiede questi valori:
 - `ARTECO_GLOBAL_EMAIL` (obbligatoria)
 - `ARTECO_GLOBAL_PASSWORD` (obbligatoria, input nascosto)
 - `SERVER_IP_ADDRESS` (obbligatoria)
-- `CERTIFICATE_PROVIDER_URL` (default `https://urkuhpucyi.execute-api.eu-central-1.amazonaws.com/Cert/renew_hypernode`)
-- `DNS_PROVIDER_URL` (default `https://oxkqg67wjd.execute-api.eu-central-1.amazonaws.com/dyndns/update_hypernode`)
-- `LICENSE_PROVIDER_URL` (default `https://giz0827jc3.execute-api.eu-central-1.amazonaws.com/en/wp-json/sso-provider/login`)
+- `CERTIFICATE_PROVIDER_URL` (default `https://****.execute-api.eu-central-1.amazonaws.com/Cert/renew_hypernode`)
+- `DNS_PROVIDER_URL` (default `https://****.execute-api.eu-central-1.amazonaws.com/dyndns/update_hypernode`)
+- `LICENSE_PROVIDER_URL` (default `https://****.execute-api.eu-central-1.amazonaws.com/en/wp-json/sso-provider/login`)
 - `RECORDING_PATH` (default `/recording`)
 - `RECORDING_DISK_SPACE` (obbligatoria)
 - `SNAPSHOT_PATH` (default `/snapshot`)
 - `SNAPSHOT_DISK_SPACE` (obbligatoria)
 - `DB_PORT` (default `27017`)
 - `DB_NAME` (default `USS_SERVER`)
-- `RMQ` (default `amqp://hypernode:hypernode@messagebroker:5672`)
+- `RMQ` (default `amqp://****:****@messagebroker:5672`)
 
 I valori vengono salvati con escaping sicuro per evitare problemi con caratteri speciali (es. `!`).
 
