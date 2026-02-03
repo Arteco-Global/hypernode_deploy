@@ -2,14 +2,39 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 INSTALL_DIR="$(pwd -P)"
 DEFAULT_ENV_FILE="${INSTALL_DIR}/.hypernode-install-env.log"
 ENV_FILE="$DEFAULT_ENV_FILE"
+ENV_FILE_PROVIDED="false"
+ENV_FILE_COPIED="false"
 DEPLOY_BRANCH="main"
 DEPLOY_BRANCH_PROVIDED="false"
 ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
 RESTORE_DIR="$(cd "$INSTALL_DIR/.." && pwd -P)/hypernode_deploy"
 NATIVE_UPDATE_PATH="${RESTORE_DIR}/native_update.sh"
+HYPERNODE_DIR=""
+
+ENV_VARS=(
+    SSL_PORT
+    DOCKER_TAG
+    SERIAL_NUMBER
+    SERVER_TIMEZONE
+    SERVER_NAME
+    ARTECO_GLOBAL_EMAIL
+    ARTECO_GLOBAL_PASSWORD
+    SERVER_IP_ADDRESS
+    CERTIFICATE_PROVIDER_URL
+    DNS_PROVIDER_URL
+    LICENSE_PROVIDER_URL
+    RECORDING_PATH
+    RECORDING_DISK_SPACE
+    SNAPSHOT_PATH
+    SNAPSHOT_DISK_SPACE
+    DB_PORT
+    DB_NAME
+    RMQ
+)
 
 is_docker_logged_in() {
     local config="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
@@ -41,6 +66,169 @@ is_interactive() {
     [[ -t 0 && -t 1 ]]
 }
 
+find_hypernode_dir() {
+    local parent search_paths=(
+        "$SCRIPT_DIR/.."
+        "/Users"
+        "/home"
+        "/root"
+        "/opt"
+        "/usr/local"
+        "/var"
+        "/"
+    )
+
+    parent="$(cd "$SCRIPT_DIR/.." && pwd -P)"
+    if [[ "$(basename "$parent")" == "hypernode_deploy" ]]; then
+        HYPERNODE_DIR="$parent"
+        return 0
+    fi
+
+    local base path
+    for base in "${search_paths[@]}"; do
+        [[ -d "$base" ]] || continue
+        while IFS= read -r path; do
+            HYPERNODE_DIR="$path"
+            return 0
+        done < <(find "$base" -type d -name hypernode_deploy 2>/dev/null || true)
+    done
+
+    return 1
+}
+
+prompt_var() {
+    local var_name="$1"
+    local prompt="$2"
+    local default_value="${3:-}"
+    local secret="${4:-false}"
+    local input
+
+    while true; do
+        if [[ "$secret" == "true" ]]; then
+            if [[ -n "$default_value" ]]; then
+                read -r -s -p "${prompt} [${default_value}]: " input
+            else
+                read -r -s -p "${prompt}: " input
+            fi
+            echo
+        else
+            if [[ -n "$default_value" ]]; then
+                read -r -p "${prompt} [${default_value}]: " input
+            else
+                read -r -p "${prompt}: " input
+            fi
+        fi
+
+        if [[ -z "$input" && -n "$default_value" ]]; then
+            input="$default_value"
+        fi
+
+        if [[ -n "$input" ]]; then
+            break
+        fi
+
+        echo "Value required."
+    done
+
+    printf -v "$var_name" '%s' "$input"
+}
+
+write_env_file() {
+    local tmp_file
+    tmp_file=$(mktemp)
+    {
+        for var_name in "${ENV_VARS[@]}"; do
+            if [[ -z "${!var_name+x}" ]]; then
+                printf '%s=\n' "$var_name"
+            else
+                printf '%s=%q\n' "$var_name" "${!var_name}"
+            fi
+        done
+    } > "$tmp_file"
+
+    mv "$tmp_file" "$DEFAULT_ENV_FILE"
+    chmod 600 "$DEFAULT_ENV_FILE" 2>/dev/null || true
+}
+
+prompt_env_vars() {
+    if ! is_interactive; then
+        echo "❌ Env file not found and no interactive input available."
+        exit 1
+    fi
+
+    prompt_var "SSL_PORT" "SSL_PORT" "10446"
+    prompt_var "DOCKER_TAG" "DOCKER_TAG" "staging"
+    prompt_var "SERIAL_NUMBER" "SERIAL_NUMBER"
+    prompt_var "SERVER_TIMEZONE" "SERVER_TIMEZONE" "Europe/Rome"
+    prompt_var "SERVER_NAME" "SERVER_NAME"
+    prompt_var "ARTECO_GLOBAL_EMAIL" "ARTECO_GLOBAL_EMAIL"
+    prompt_var "ARTECO_GLOBAL_PASSWORD" "ARTECO_GLOBAL_PASSWORD" "" "true"
+    prompt_var "SERVER_IP_ADDRESS" "SERVER_IP_ADDRESS"
+    prompt_var "CERTIFICATE_PROVIDER_URL" "CERTIFICATE_PROVIDER_URL" "https://urkuhpucyi.execute-api.eu-central-1.amazonaws.com/Cert/renew_hypernode"
+    prompt_var "DNS_PROVIDER_URL" "DNS_PROVIDER_URL" "https://oxkqg67wjd.execute-api.eu-central-1.amazonaws.com/dyndns/update_hypernode"
+    prompt_var "LICENSE_PROVIDER_URL" "LICENSE_PROVIDER_URL" "https://giz0827jc3.execute-api.eu-central-1.amazonaws.com/en/wp-json/sso-provider/login"
+    prompt_var "RECORDING_PATH" "RECORDING_PATH" "/recording"
+    prompt_var "RECORDING_DISK_SPACE" "RECORDING_DISK_SPACE"
+    prompt_var "SNAPSHOT_PATH" "SNAPSHOT_PATH" "/snapshot"
+    prompt_var "SNAPSHOT_DISK_SPACE" "SNAPSHOT_DISK_SPACE"
+    prompt_var "DB_PORT" "DB_PORT" "27017"
+    prompt_var "DB_NAME" "DB_NAME" "USS_SERVER"
+    prompt_var "RMQ" "RMQ" "amqp://hypernode:hypernode@messagebroker:5672"
+
+    write_env_file
+}
+
+resolve_env_file() {
+    local candidate=""
+
+    if [[ "$ENV_FILE_PROVIDED" == "true" ]]; then
+        if [[ ! -f "$ENV_FILE" ]]; then
+            echo "❌ Env file not found: $ENV_FILE"
+            exit 1
+        fi
+        return
+    fi
+
+    if [[ -f "$DEFAULT_ENV_FILE" ]]; then
+        echo "ℹ️  Using env file from: $DEFAULT_ENV_FILE"
+        ENV_FILE="$DEFAULT_ENV_FILE"
+        return
+    fi
+
+    candidate="${INSTALL_DIR}/../hypernode_deploy/.hypernode-install-env.log"
+    if [[ -f "$candidate" ]]; then
+        echo "ℹ️  Using env file from: $candidate"
+        cp "$candidate" "$DEFAULT_ENV_FILE"
+        ENV_FILE_COPIED="true"
+        ENV_FILE="$DEFAULT_ENV_FILE"
+        return
+    fi
+
+    candidate="/etc/.hypernode/.hypernode-install-env.log"
+    if [[ -f "$candidate" ]]; then
+        echo "ℹ️  Using env file from: $candidate"
+        cp "$candidate" "$DEFAULT_ENV_FILE"
+        ENV_FILE_COPIED="true"
+        ENV_FILE="$DEFAULT_ENV_FILE"
+        return
+    fi
+
+    if find_hypernode_dir; then
+        candidate="${HYPERNODE_DIR}/.hypernode-install-env.log"
+        if [[ -f "$candidate" ]]; then
+            echo "ℹ️  Using env file from: $candidate"
+            cp "$candidate" "$DEFAULT_ENV_FILE"
+            ENV_FILE_COPIED="true"
+            ENV_FILE="$DEFAULT_ENV_FILE"
+            return
+        fi
+    fi
+
+    echo "ℹ️  Env file not found. Collecting values interactively."
+    prompt_env_vars
+    ENV_FILE="$DEFAULT_ENV_FILE"
+}
+
 usage() {
     cat <<'EOF'
 Usage: uss_restore.sh [options]
@@ -56,6 +244,7 @@ while [[ "$#" -gt 0 ]]; do
     case "$1" in
         --env-file)
             ENV_FILE="$2"
+            ENV_FILE_PROVIDED="true"
             shift 2
             ;;
         --deploy-branch)
@@ -75,12 +264,11 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
-if [[ ! -f "$ENV_FILE" ]]; then
-    echo "❌ Env file not found: $ENV_FILE"
-    exit 1
-fi
-
+resolve_env_file
 ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd -P)/$(basename "$ENV_FILE")"
+if [[ "$ENV_FILE_COPIED" == "true" ]]; then
+    echo "ℹ️  Env file copied to: $ENV_FILE"
+fi
 
 if [[ "$DEPLOY_BRANCH_PROVIDED" != "true" ]]; then
     if ! is_interactive; then
