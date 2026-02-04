@@ -4,7 +4,9 @@
 
 # Global vars
 SCRIPT_DIR=$(dirname "$0") #local path
-ABSOLUTE_PATH=https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes
+DEPLOY_BRANCH="main"
+ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
+ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
 
 HYPERNODE_ALREADY_INSTALLED="false"
 DOCKER_ALREADY_INSTALLED="false";
@@ -29,12 +31,79 @@ DB_PORT=27017
 PROCESS_NAME="--"
 remote_host="--"   
 
+ENV_LOG_FILE="${PWD}/.hypernode-install-env.log"
+ENV_LOG_DIR_SYSTEM="/etc/.hypernode"
+ENV_LOG_FILE_SYSTEM="${ENV_LOG_DIR_SYSTEM}/.hypernode-install-env.log"
+ENV_VARS=(
+    SSL_PORT
+    DOCKER_TAG
+    SERIAL_NUMBER
+    SERVER_TIMEZONE
+    SERVER_NAME
+    ARTECO_GLOBAL_EMAIL
+    ARTECO_GLOBAL_PASSWORD
+    SERVER_IP_ADDRESS
+    CERTIFICATE_PROVIDER_URL
+    DNS_PROVIDER_URL
+    LICENSE_PROVIDER_URL
+    RECORDING_PATH
+    RECORDING_DISK_SPACE
+    STORAGE_PATH
+    STORAGE_DISK_SPACE
+    SNAPSHOT_PATH
+    SNAPSHOT_DISK_SPACE
+    DB_PORT
+    DB_NAME
+    PROCESS_NAME
+    DATABASE_URI
+    RMQ
+    GRI
+    INSTALL_OPTION
+)
+
+log_install_env() {
+    local tmp_file
+    tmp_file=$(mktemp)
+    {
+        for var_name in "${ENV_VARS[@]}"; do
+            if [[ -z "${!var_name+x}" ]]; then
+                printf '%s=\n' "$var_name"
+            else
+                printf '%s=%q\n' "$var_name" "${!var_name}"
+            fi
+        done
+    } > "$tmp_file"
+
+    mv "$tmp_file" "$ENV_LOG_FILE"
+    chmod 600 "$ENV_LOG_FILE" 2>/dev/null || true
+
+    if mkdir -p "$ENV_LOG_DIR_SYSTEM" 2>/dev/null; then
+        cp "$ENV_LOG_FILE" "$ENV_LOG_FILE_SYSTEM" 2>/dev/null || true
+        chmod 600 "$ENV_LOG_FILE_SYSTEM" 2>/dev/null || true
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo mkdir -p "$ENV_LOG_DIR_SYSTEM" 2>/dev/null || true
+        if [[ -d "$ENV_LOG_DIR_SYSTEM" ]]; then
+            sudo cp "$ENV_LOG_FILE" "$ENV_LOG_FILE_SYSTEM" 2>/dev/null || true
+            sudo chmod 600 "$ENV_LOG_FILE_SYSTEM" 2>/dev/null || true
+        fi
+    fi
+}
+
+log_env_before_compose() {
+    local command=$1
+    if [[ "$command" == *"docker compose"* || "$command" == *"docker-compose"* ]]; then
+        log_install_env
+    fi
+}
+
 
 
 
 execute_command() {
     local COMMAND=$1
     local MESSAGE=$2
+
+    log_env_before_compose "$COMMAND"
 
     eval "$COMMAND" 
     local COMMAND_STATUS=$?
@@ -119,9 +188,8 @@ while [[ "$#" -gt 0 ]]; do
       export LICENSE_PROVIDER_URL
       shift 2
       ;;
-    -upd-url|--update-provider-url)
-      UPDATE_PROVIDER_URL="$2"
-      export UPDATE_PROVIDER_URL
+    -db|--deploy-branch)
+      DEPLOY_BRANCH="$2"
       shift 2
       ;;
     -rec-path|--recording-path)
@@ -178,6 +246,7 @@ while [[ "$#" -gt 0 ]]; do
     echo "  -dns-url, --dns-provider-url           Set the DNS provider URL"
     echo "  -lic-url, --license-provider-url       Set the license provider URL"
     echo "  -upd-url, --update-provider-url        Set the update provider URL"
+    echo "  -db, --deploy-branch                   Set the deploy branch for compose files (default: main)"
     echo ""
     echo "Storage/Recording/Snapshot options:"
     echo "  -rec-path, --recording-path            Set the path to save recordings (default: /recording_files)"
@@ -188,7 +257,7 @@ while [[ "$#" -gt 0 ]]; do
     echo "  -snapshot-max-disk, --snapshot-max-disk Set max disk space for snapshots in Kbytes (default: 10000000)"
     echo ""
     echo "Example:"
-    echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com --recording-path /recording_files --recording-max-disk 10000000 --storage-path /storage_files --storage-max-disk 10000000 --snapshot-path /snapshot_files --snapshot-max-disk 10000000"
+    echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com --deploy-branch main --recording-path /recording_files --recording-max-disk 10000000 --storage-path /storage_files --storage-max-disk 10000000 --snapshot-path /snapshot_files --snapshot-max-disk 10000000"
     exit 0
       ;;
     *)
@@ -197,6 +266,8 @@ while [[ "$#" -gt 0 ]]; do
       ;;
   esac
 done
+
+ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
 
 
 
@@ -338,6 +409,7 @@ if [ "$mode" == "install" ]; then
     echo -e "  ${CYAN}  │${NC}  4. ${GREEN}Event Manager{NC}"
     # echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC} 15. ${GREEN}Metadata Manager${NC}"
 
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
@@ -348,6 +420,7 @@ if [ "$mode" == "install" ]; then
     echo -e "  ${CYAN}  │${NC}  9. ${BLUE}Event Manager${NC}"
     # echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Thumbnail Engine${NC}"
+    echo -e "  ${CYAN}  │${NC} 16. ${BLUE}Metadata Manager${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -373,6 +446,7 @@ else
     # echo -e "  ${CYAN}  │${NC}  5. ${GREEN}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC}  6. ${GREEN}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  │${NC}  7. ${GREEN}Recording${NC}"
+    echo -e "  ${CYAN}  │${NC} 15. ${GREEN}Metadata Manager${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${BLUE}UPDATE EXISTING SERVICE:${NC}"
@@ -384,6 +458,7 @@ else
     # echo -e "  ${CYAN}  │${NC} 12. ${BLUE}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC} 13. ${BLUE}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  │${NC} 14. ${BLUE}Recording${NC}"
+    echo -e "  ${CYAN}  │${NC} 16. ${BLUE}Metadata Manager${NC}"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -483,7 +558,7 @@ get_config() {
         export RMQ
 
         ;;
-    2 | 3 | 4 | 5 | 6 | 7)
+    2 | 3 | 4 | 5 | 6 | 7 | 15)
        
 
         if [ "$FORCE_INSTALL" == "false" ]; then
@@ -512,7 +587,7 @@ get_config() {
         fi
         ;;
 
-      8 | 9 | 10 | 11 | 12)
+      8 | 9 | 10 | 11 | 12 | 16)
 
         # Update single services (Runner Mode)
         read -p "Type the service name to update: " PROCESS_NAME
@@ -691,6 +766,10 @@ elif [ "$INSTALL_OPTION" -eq 12 ]; then
     additionalServiceInstall "storage" "update" && end_with_message "Storage service update" 0 || end_with_message "Storage service update" 1
 elif [ "$INSTALL_OPTION" -eq 13 ]; then
     additionalServiceInstall "snapshot" "update" && end_with_message "Snapshot service update" 0 || end_with_message "Snapshot service update" 1
+elif [ "$INSTALL_OPTION" -eq 15 ]; then
+    additionalServiceInstall "metadata" && end_with_message "Metadata service installation" 0 || end_with_message "Metadata service installation" 1
+elif [ "$INSTALL_OPTION" -eq 16 ]; then
+    additionalServiceInstall "metadata" "update" && end_with_message "Metadata service update" 0 || end_with_message "Metadata service update" 1
 elif [ "$INSTALL_OPTION" -eq 99 ]; then
     dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
 elif [ "$INSTALL_OPTION" -eq 666 ]; then

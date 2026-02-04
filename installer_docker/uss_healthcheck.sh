@@ -2,15 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ABSOLUTE_PATH="${ABSOLUTE_PATH:-https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/main/installer_docker/composes}"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
+ABSOLUTE_PATH="${ABSOLUTE_PATH:-}"
 COMPOSE_FILES=(
   "$SCRIPT_DIR/composes/server/docker-compose.yaml"
   "$SCRIPT_DIR/composes/database/docker-compose.yaml"
 )
-COMPOSE_URLS=(
-  "$ABSOLUTE_PATH/server/docker-compose.yaml"
-  "$ABSOLUTE_PATH/database/docker-compose.yaml"
-)
+COMPOSE_URLS=()
 
 TMP_COMPOSES=()
 COMPOSE_SOURCES=()
@@ -37,6 +36,35 @@ section() {
   echo ""
   echo "=== $* ==="
 }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -db|--deploy-branch)
+      DEPLOY_BRANCH="$2"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: uss_healthcheck.sh [options]"
+      echo ""
+      echo "Options:"
+      echo "  -db, --deploy-branch   Set the deploy branch for remote compose files (default: main)"
+      exit 0
+      ;;
+    *)
+      warn "Opzione non riconosciuta: $1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$ABSOLUTE_PATH" ]]; then
+  ABSOLUTE_PATH="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/composes"
+fi
+
+COMPOSE_URLS=(
+  "$ABSOLUTE_PATH/server/docker-compose.yaml"
+  "$ABSOLUTE_PATH/database/docker-compose.yaml"
+)
 
 subsection() {
   echo ""
@@ -286,16 +314,7 @@ stat_summary() {
 check_required_files() {
   local base="$1"
   local -a required=(
-    "check-container-updates.sh"
-    "container_update_report.json"
-    "container_versions.json"
-    "dump-container-versions.sh"
-    ".hypernode-update-check.conf"
-    "hypernode-update-check.log"
-    ".hypernode-update-check.state"
     "installer.sh"
-    "run-hypernode-update-check.sh"
-    "update_uss.sh"
   )
 
   local missing=0 path
@@ -392,21 +411,6 @@ compare_dns_ip() {
     ok "$label: $host risolve in $resolved (atteso: $expected_ip)"
   else
     warn "$label: $host risolve in $resolved (atteso: $expected_ip)"
-  fi
-}
-
-run_update_check() {
-  local script_path="$1"
-  if [[ ! -x "$script_path" ]]; then
-    warn "Script $script_path non trovato o non eseguibile."
-    return 1
-  fi
-
-  info "Eseguo $(basename "$script_path") --use-config --force-send"
-  if (cd "$(dirname "$script_path")" && "$script_path" --use-config --force-send); then
-    ok "run-hypernode-update-check.sh completato."
-  else
-    warn "run-hypernode-update-check.sh terminato con errore."
   fi
 }
 
@@ -825,6 +829,3 @@ if [[ -n "$WAN_HOST" && -n "$SITE_PORT" && "$SITE_PORT" != "n/d" ]]; then
     info "Certificato WAN non verificato: endpoint non raggiungibile."
   fi
 fi
-
-subsection "4.6) UPDATES"
-run_update_check "$HYPERNODE_DIR/run-hypernode-update-check.sh"

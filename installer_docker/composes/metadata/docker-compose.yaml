@@ -1,0 +1,19 @@
+name: metadata_${PROCESS_NAME}
+
+services:
+
+  metadata:
+    image: artecoglobalcompany/usee_metadata_manager:${DOCKER_TAG:-latest}
+    environment:
+      - RABBITMQ_URI=${RMQ}
+      - GATEWAY_URI=${GRI}
+      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/metadata_${PROCESS_NAME}
+      - SRV_INST_NAME=metadata_${PROCESS_NAME}
+    container_name: metadata_${PROCESS_NAME}
+    restart: unless-stopped    
+    network_mode: "host"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"

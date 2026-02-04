@@ -20,6 +20,7 @@ on:
                     - live_streamer
                     - id_verifier
                     - event_manager
+                    - metadata
                     - suite_manager
                     - coretrust       # 👈 nuovo servizio aggiunto
                     - media_recorder
@@ -119,6 +120,15 @@ jobs:
                     --platform=${{ env.PLATFORMS }} \
                     -f hypernode-server/docker/event.Dockerfile \
                     -t artecoglobalcompany/usee_event_manager:${{ env.TAG }} \
+                    --push hypernode-server
+
+            - name: BuildMetadataManager
+              if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'metadata' }}
+              run: |
+                  docker buildx build \
+                    --platform=${{ env.PLATFORMS }} \
+                    -f hypernode-server/docker/metadata.Dockerfile \
+                    -t artecoglobalcompany/usee_metadata_manager:${{ env.TAG }} \
                     --push hypernode-server
 
             - name: BuildSuiteManager

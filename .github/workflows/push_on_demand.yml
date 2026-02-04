@@ -14,7 +14,7 @@ on:
       TAG_REF:
         description: 'Tag Docker (es. latest, v1.2.3)'
         required: true
-        default: 'latest'
+        default: 'ATTENTION: usare "latest" solo per prod!'
       SERVICES:
         description: 'Seleziona il servizio da buildare (o "all" per tutti)'
         required: true
@@ -24,6 +24,7 @@ on:
           - live_streamer
           - id_verifier
           - event_manager
+          - metadata
           - suite_manager
           - media_recorder
           - snapshot_recorder
@@ -45,7 +46,7 @@ on:
           - linux/amd64,linux/arm64
           - linux/arm/v7
           - linux/arm/v6
-        default: 'linux/amd64'
+        default: 'linux/amd64,linux/arm64'
 
 jobs:
   build_and_push:
@@ -161,6 +162,17 @@ jobs:
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/event.Dockerfile \
             -t artecoglobalcompany/usee_event_manager:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildMetadataManager
+        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'metadata' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/metadata.Dockerfile \
+            -t artecoglobalcompany/usee_metadata_manager:${{ env.TAG }} \
             --push hypernode-server
 
       - name: BuildSuiteManager
