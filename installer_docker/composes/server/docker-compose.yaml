@@ -155,6 +155,9 @@ services:
       - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
     container_name: recording
     restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
     volumes:
       - ${RECORDING_PATH}:/recording_files
     extra_hosts:
