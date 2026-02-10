@@ -117,8 +117,8 @@ trap cleanup_tmp EXIT
 TMP_DB_COMPOSE=$(mktemp)
 TMP_SERVICE_COMPOSE=$(mktemp)
 
-curl -sSL "$DB_COMPOSE_URL" -o "$TMP_DB_COMPOSE"
-curl -sSL "$SERVICE_COMPOSE_URL" -o "$TMP_SERVICE_COMPOSE"
+curl -fsSL "$DB_COMPOSE_URL" -o "$TMP_DB_COMPOSE"
+curl -fsSL "$SERVICE_COMPOSE_URL" -o "$TMP_SERVICE_COMPOSE"
 
 detect_compose_project
 
@@ -127,13 +127,34 @@ if [[ -n "$COMPOSE_PROJECT_NAME" ]]; then
     SERVICE_COMPOSE_ARGS=(--project-name "$COMPOSE_PROJECT_NAME")
 fi
 
-echo "▶️  Pull database images"
-$COMPOSE_CMD -f "$TMP_DB_COMPOSE" pull
+pull_images_from_compose() {
+    local label="$1"
+    shift
+    local images=()
+
+    if ! mapfile -t images < <($COMPOSE_CMD "$@" config --images | awk 'NF'); then
+        echo "❌ Failed to resolve images for $label."
+        return 1
+    fi
+
+    if [[ "${#images[@]}" -eq 0 ]]; then
+        echo "❌ No images resolved for $label."
+        return 1
+    fi
+
+    echo "▶️  Pull $label images"
+    for image in "${images[@]}"; do
+        echo "   ⬇️  $image"
+        docker pull "$image"
+    done
+}
+
+pull_images_from_compose "database" -f "$TMP_DB_COMPOSE"
+pull_images_from_compose "$SERVICE_NAME" "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE"
+
 echo "▶️  Recreate database"
 $COMPOSE_CMD -f "$TMP_DB_COMPOSE" up -d --force-recreate --remove-orphans
 
-echo "▶️  Pull $SERVICE_NAME images"
-$COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" pull
 echo "▶️  Recreate $SERVICE_NAME"
 $COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate --remove-orphans
 
