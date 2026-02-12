@@ -62,6 +62,32 @@ ENV_VARS=(
 )
 
 log_install_env() {
+    local base_name
+    local target_name
+    local additional_name
+
+    base_name=".hypernode-install-env.log"
+    target_name="$base_name"
+
+    if [[ -n "${INSTALL_OPTION:-}" && "${INSTALL_OPTION}" != "1" ]]; then
+        if [[ -n "${PROCESS_NAME:-}" && "${PROCESS_NAME}" != "--" ]]; then
+            additional_name="$PROCESS_NAME"
+        elif [[ -n "${DB_NAME:-}" && "${DB_NAME}" != "USS_SERVER" ]]; then
+            additional_name="$DB_NAME"
+        else
+            additional_name=""
+        fi
+
+        if [[ -n "$additional_name" ]]; then
+            target_name=".hypernode-install-${additional_name}-env.log"
+        else
+            target_name=".hypernode-install-additional-env.log"
+        fi
+    fi
+
+    ENV_LOG_FILE="${PWD}/${target_name}"
+    ENV_LOG_FILE_SYSTEM="${ENV_LOG_DIR_SYSTEM}/${target_name}"
+
     local tmp_file
     tmp_file=$(mktemp)
     {

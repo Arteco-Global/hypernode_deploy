@@ -14,6 +14,8 @@ ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_de
 RESTORE_DIR="$(cd "$INSTALL_DIR/.." && pwd -P)/hypernode_deploy"
 NATIVE_UPDATE_PATH="${RESTORE_DIR}/native_update.sh"
 HYPERNODE_DIR=""
+GUI_INSTALL_DIR="/opt/uSee-Service-Suite-Launcher/ussinstaller"
+GUI_ENV_FILE="${GUI_INSTALL_DIR}/.hypernode-install-env.log"
 
 ENV_VARS=(
     SSL_PORT
@@ -322,6 +324,15 @@ fi
 
 cp "$DEFAULT_ENV_FILE" "${RESTORE_DIR}/.hypernode-install-env.log"
 chmod 644 "${RESTORE_DIR}/.hypernode-install-env.log"
+
+if [[ -d "$GUI_INSTALL_DIR" ]]; then
+    if cp "$DEFAULT_ENV_FILE" "$GUI_ENV_FILE" 2>/dev/null; then
+        chmod 644 "$GUI_ENV_FILE" 2>/dev/null || true
+        echo "ℹ️  Env file updated in GUI installer dir: $GUI_ENV_FILE"
+    else
+        echo "⚠️  Unable to update env file in GUI installer dir: $GUI_ENV_FILE"
+    fi
+fi
 
 NATIVE_UPDATE_URL="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/installer_docker/native_update.sh"
 curl -sSL "$NATIVE_UPDATE_URL" -o "$NATIVE_UPDATE_PATH"
