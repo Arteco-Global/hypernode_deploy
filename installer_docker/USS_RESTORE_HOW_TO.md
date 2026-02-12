@@ -44,6 +44,15 @@ Se lo trova in uno dei punti 2/3/4, lo copia in `./.hypernode-install-env.log` e
 
 Se **non lo trova**, chiede i valori in modo interattivo e crea `./.hypernode-install-env.log`.
 
+## Aggiornamento file in `/etc/.hypernode`
+
+Sia `native_update.sh` che `uss_restore.sh` sincronizzano il file di env di sistema:
+
+- al **primo giro** viene salvata una copia originale in
+  `/etc/.hypernode/.hypernode-install-env.log.original`
+- ad **ogni esecuzione** viene aggiornato
+  `/etc/.hypernode/.hypernode-install-env.log`
+
 ## Variabili richieste (con default)
 Quando il file manca, lo script chiede questi valori:
 - `SSL_PORT` (default `10446`)

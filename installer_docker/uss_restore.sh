@@ -16,6 +16,9 @@ NATIVE_UPDATE_PATH="${RESTORE_DIR}/native_update.sh"
 HYPERNODE_DIR=""
 GUI_INSTALL_DIR="/opt/uSee-Service-Suite-Launcher/ussinstaller"
 GUI_ENV_FILE="${GUI_INSTALL_DIR}/.hypernode-install-env.log"
+SYSTEM_ENV_DIR="/etc/.hypernode"
+SYSTEM_ENV_FILE="${SYSTEM_ENV_DIR}/.hypernode-install-env.log"
+SYSTEM_ENV_ORIGINAL="${SYSTEM_ENV_DIR}/.hypernode-install-env.log.original"
 
 ENV_VARS=(
     SSL_PORT
@@ -150,6 +153,50 @@ write_env_file() {
 
     mv "$tmp_file" "$DEFAULT_ENV_FILE"
     chmod 600 "$DEFAULT_ENV_FILE" 2>/dev/null || true
+}
+
+sync_env_to_system() {
+    local src="$1"
+
+    if [[ -z "$src" || ! -f "$src" ]]; then
+        echo "⚠️  Env file sorgente non trovato: $src"
+        return 1
+    fi
+
+    if mkdir -p "$SYSTEM_ENV_DIR" 2>/dev/null; then
+        :
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo mkdir -p "$SYSTEM_ENV_DIR" 2>/dev/null || true
+    fi
+
+    if [[ ! -d "$SYSTEM_ENV_DIR" ]]; then
+        echo "⚠️  Impossibile creare $SYSTEM_ENV_DIR"
+        return 1
+    fi
+
+    if [[ ! -f "$SYSTEM_ENV_ORIGINAL" ]]; then
+        echo "📝 Salvo env originale in: $SYSTEM_ENV_ORIGINAL"
+        if cp "$src" "$SYSTEM_ENV_ORIGINAL" 2>/dev/null; then
+            chmod 600 "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
+        elif command -v sudo >/dev/null 2>&1; then
+            sudo cp "$src" "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
+            sudo chmod 600 "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
+        else
+            echo "⚠️  Impossibile scrivere $SYSTEM_ENV_ORIGINAL (permessi)."
+        fi
+    else
+        echo "ℹ️  Env originale già presente: $SYSTEM_ENV_ORIGINAL"
+    fi
+
+    echo "📝 Aggiorno env di sistema: $SYSTEM_ENV_FILE"
+    if cp "$src" "$SYSTEM_ENV_FILE" 2>/dev/null; then
+        chmod 600 "$SYSTEM_ENV_FILE" 2>/dev/null || true
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo cp "$src" "$SYSTEM_ENV_FILE" 2>/dev/null || true
+        sudo chmod 600 "$SYSTEM_ENV_FILE" 2>/dev/null || true
+    else
+        echo "⚠️  Impossibile scrivere $SYSTEM_ENV_FILE (permessi)."
+    fi
 }
 
 prompt_env_vars() {
@@ -324,6 +371,8 @@ fi
 
 cp "$DEFAULT_ENV_FILE" "${RESTORE_DIR}/.hypernode-install-env.log"
 chmod 644 "${RESTORE_DIR}/.hypernode-install-env.log"
+
+sync_env_to_system "$DEFAULT_ENV_FILE" || true
 
 if [[ -d "$GUI_INSTALL_DIR" ]]; then
     if cp "$DEFAULT_ENV_FILE" "$GUI_ENV_FILE" 2>/dev/null; then
