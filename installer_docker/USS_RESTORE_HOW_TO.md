@@ -7,6 +7,7 @@ Questa guida spiega come usare `uss_restore.sh` per ripristinare/aggiornare una 
 - Se non trova il file, raccoglie i valori in modo interattivo e crea il file.
 - Effettua il login Docker se necessario.
 - Crea `../hypernode_deploy` (cartella sorella rispetto alla directory corrente), la rende scrivibile da tutti.
+- Copia `.hypernode-install-env.log` in `../hypernode_deploy` e, se presente l'installazione grafica, anche in `/opt/uSee-Service-Suite-Launcher/ussinstaller`.
 - Scarica `native_update.sh`, lo esegue, poi lo elimina.
 - Stampa due URL finali del configurator.
 
