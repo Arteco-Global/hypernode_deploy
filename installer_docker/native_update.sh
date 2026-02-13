@@ -10,6 +10,9 @@ SERVICE_NAME="server"
 TMP_DB_COMPOSE=""
 TMP_SERVICE_COMPOSE=""
 COMPOSE_PROJECT_NAME=""
+SYSTEM_ENV_DIR="/etc/.hypernode"
+SYSTEM_ENV_FILE="${SYSTEM_ENV_DIR}/.hypernode-install-env.log"
+SYSTEM_ENV_ORIGINAL="${SYSTEM_ENV_DIR}/.hypernode-install-env.log.original"
 
 usage() {
     cat <<'EOF'
@@ -21,6 +24,54 @@ Options:
   --service <name>        Service to update (server|camera|auth|event|storage|snapshot|recording|metadata)
   -h, --help              Show this help
 EOF
+}
+
+sync_env_to_system() {
+    local src="$1"
+
+    if [[ -z "$src" || ! -f "$src" ]]; then
+        echo "⚠️  Env file sorgente non trovato: $src"
+        return 1
+    fi
+
+    if mkdir -p "$SYSTEM_ENV_DIR" 2>/dev/null; then
+        :
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo mkdir -p "$SYSTEM_ENV_DIR" 2>/dev/null || true
+    fi
+
+    if [[ ! -d "$SYSTEM_ENV_DIR" ]]; then
+        echo "⚠️  Impossibile creare $SYSTEM_ENV_DIR"
+        return 1
+    fi
+
+    if [[ ! -f "$SYSTEM_ENV_ORIGINAL" ]]; then
+        local original_src="$src"
+        if [[ -f "$SYSTEM_ENV_FILE" ]]; then
+            original_src="$SYSTEM_ENV_FILE"
+        fi
+        echo "📝 Salvo env originale in: $SYSTEM_ENV_ORIGINAL (source: $original_src)"
+        if cp "$original_src" "$SYSTEM_ENV_ORIGINAL" 2>/dev/null; then
+            chmod 600 "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
+        elif command -v sudo >/dev/null 2>&1; then
+            sudo cp "$original_src" "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
+            sudo chmod 600 "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
+        else
+            echo "⚠️  Impossibile scrivere $SYSTEM_ENV_ORIGINAL (permessi)."
+        fi
+    else
+        echo "ℹ️  Env originale già presente: $SYSTEM_ENV_ORIGINAL"
+    fi
+
+    echo "📝 Aggiorno env di sistema: $SYSTEM_ENV_FILE"
+    if cp "$src" "$SYSTEM_ENV_FILE" 2>/dev/null; then
+        chmod 600 "$SYSTEM_ENV_FILE" 2>/dev/null || true
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo cp "$src" "$SYSTEM_ENV_FILE" 2>/dev/null || true
+        sudo chmod 600 "$SYSTEM_ENV_FILE" 2>/dev/null || true
+    else
+        echo "⚠️  Impossibile scrivere $SYSTEM_ENV_FILE (permessi)."
+    fi
 }
 
 while [[ "$#" -gt 0 ]]; do
@@ -51,8 +102,52 @@ done
 
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "❌ Env file not found: $ENV_FILE"
-    exit 1
+    echo "🔄 Provo a ricrearlo con recreate_env_file.sh..."
+
+    RECREATE_SCRIPT="${PWD}/recreate_env_file.sh"
+    RECREATE_URL="$ABSOLUTE_PATH_BASE/$DEPLOY_BRANCH/installer_docker/recreate_env_file.sh"
+    RESTORED_FILE="${PWD}/_restored_hypernode-install-env.log"
+
+    if [[ ! -f "$RECREATE_SCRIPT" ]]; then
+        echo "⬇️  Download recreate_env_file.sh da: $RECREATE_URL"
+        if command -v wget >/dev/null 2>&1; then
+            wget -q -O "$RECREATE_SCRIPT" "$RECREATE_URL" || {
+                echo "❌ Download fallito: $RECREATE_URL"
+                exit 1
+            }
+        elif command -v curl >/dev/null 2>&1; then
+            curl -fsSL "$RECREATE_URL" -o "$RECREATE_SCRIPT" || {
+                echo "❌ Download fallito: $RECREATE_URL"
+                exit 1
+            }
+        else
+            echo "❌ Né wget né curl disponibili per scaricare recreate_env_file.sh"
+            exit 1
+        fi
+    else
+        echo "ℹ️  Script già presente: $RECREATE_SCRIPT"
+    fi
+
+    echo "🔧 Rendo eseguibile: $RECREATE_SCRIPT"
+    chmod +x "$RECREATE_SCRIPT" 2>/dev/null || true
+
+    echo "▶️  Eseguo recreate_env_file.sh (sovrascriverà l'output se esiste)"
+    if ! DEPLOY_BRANCH="$DEPLOY_BRANCH" "$RECREATE_SCRIPT"; then
+        echo "❌ Ricostruzione env fallita."
+        exit 1
+    fi
+
+    if [[ ! -f "$RESTORED_FILE" ]]; then
+        echo "❌ File ricostruito non trovato: $RESTORED_FILE"
+        exit 1
+    fi
+
+    echo "📝 Sovrascrivo env file: $ENV_FILE"
+    mv "$RESTORED_FILE" "$ENV_FILE"
+    echo "✅ Env file ricreato: $ENV_FILE"
 fi
+
+sync_env_to_system "$ENV_FILE" || true
 
 set -a
 source "$ENV_FILE"
