@@ -175,11 +175,15 @@ sync_env_to_system() {
     fi
 
     if [[ ! -f "$SYSTEM_ENV_ORIGINAL" ]]; then
-        echo "📝 Salvo env originale in: $SYSTEM_ENV_ORIGINAL"
-        if cp "$src" "$SYSTEM_ENV_ORIGINAL" 2>/dev/null; then
+        local original_src="$src"
+        if [[ -f "$SYSTEM_ENV_FILE" ]]; then
+            original_src="$SYSTEM_ENV_FILE"
+        fi
+        echo "📝 Salvo env originale in: $SYSTEM_ENV_ORIGINAL (source: $original_src)"
+        if cp "$original_src" "$SYSTEM_ENV_ORIGINAL" 2>/dev/null; then
             chmod 600 "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
         elif command -v sudo >/dev/null 2>&1; then
-            sudo cp "$src" "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
+            sudo cp "$original_src" "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
             sudo chmod 600 "$SYSTEM_ENV_ORIGINAL" 2>/dev/null || true
         else
             echo "⚠️  Impossibile scrivere $SYSTEM_ENV_ORIGINAL (permessi)."

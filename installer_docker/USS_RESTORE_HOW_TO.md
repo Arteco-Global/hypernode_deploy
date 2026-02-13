@@ -49,7 +49,9 @@ Se **non lo trova**, chiede i valori in modo interattivo e crea `./.hypernode-in
 Sia `native_update.sh` che `uss_restore.sh` sincronizzano il file di env di sistema:
 
 - al **primo giro** viene salvata una copia originale in
-  `/etc/.hypernode/.hypernode-install-env.log.original`
+  `/etc/.hypernode/.hypernode-install-env.log.original` (se esiste già
+  `/etc/.hypernode/.hypernode-install-env.log`, la copia originale viene
+  salvata a partire da quello)
 - ad **ogni esecuzione** viene aggiornato
   `/etc/.hypernode/.hypernode-install-env.log`
 
