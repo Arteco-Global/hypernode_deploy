@@ -7,6 +7,15 @@ on:
         description: 'Checkout branch Backend (server)'
         required: true
         default: 'release_candidate'
+      BUILD_TAGS:
+        description: 'Quali tag vuoi buildare?'
+        required: true
+        type: choice
+        options:
+          - latest+avx_support
+          - latest
+          - avx_support
+        default: 'latest+avx_support'
       PLATFORMS:
         description: 'Architettura target Docker (piattaforma di build)'
         required: true
@@ -64,6 +73,7 @@ jobs:
         run: docker info
 
       - name: BuildDatabaseLatest
+        if: ${{ inputs.BUILD_TAGS == 'latest+avx_support' || inputs.BUILD_TAGS == 'latest' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -73,6 +83,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildDatabaseAvxSupport
+        if: ${{ inputs.BUILD_TAGS == 'latest+avx_support' || inputs.BUILD_TAGS == 'avx_support' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
