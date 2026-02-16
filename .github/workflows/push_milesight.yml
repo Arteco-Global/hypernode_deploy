@@ -28,7 +28,7 @@ on:
                     - web_server
                     - port_broker
                     - message_broker
-                    - database
+                    # - database
                     #- media_storage
                     - configurator
                 default: "all"
@@ -194,15 +194,15 @@ jobs:
                     -t artecoglobalcompany/usee_message_broker:${{ env.TAG }} \
                     --push hypernode-server
 
-            - name: BuildDatabase
-              if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'database' }}
-              run: |
-                  docker buildx build \
-                    --platform=${{ env.PLATFORMS }} \
-                    -f hypernode-server/docker/database/database.Dockerfile \
-                    --build-arg MONGO_VERSION=4.4.18 \
-                    -t artecoglobalcompany/usee_database:${{ env.TAG }} \
-                    --push hypernode-server
+            # - name: BuildDatabase
+            #   if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'database' }}
+            #   run: |
+            #       docker buildx build \
+            #         --platform=${{ env.PLATFORMS }} \
+            #         -f hypernode-server/docker/database/database.Dockerfile \
+            #         --build-arg MONGO_VERSION=4.4.18 \
+            #         -t artecoglobalcompany/usee_database:${{ env.TAG }} \
+            #         --push hypernode-server
 
             # - name: BuildMediaStorage
             #   if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'media_storage' }}
