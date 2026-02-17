@@ -72,7 +72,7 @@ log_install_env() {
     if [[ -n "${INSTALL_OPTION:-}" && "${INSTALL_OPTION}" != "1" ]]; then
         if [[ -n "${PROCESS_NAME:-}" && "${PROCESS_NAME}" != "--" ]]; then
             additional_name="$PROCESS_NAME"
-        elif [[ -n "${DB_NAME:-}" && "${DB_NAME}" != "USS_SERVER" ]]; then
+        elif [[ -n "${DB_NAME:-}" && "${DB_NAME}" != "uss_database" ]]; then
             additional_name="$DB_NAME"
         else
             additional_name=""
@@ -580,7 +580,7 @@ get_config() {
         # Install the complete suite (Gateway Mode)
 
         RMQ="amqp://hypernode:hypernode@messagebroker:5672"
-        export DB_NAME='USS_SERVER'
+        export DB_NAME='uss_database'
         export RMQ
 
         ;;

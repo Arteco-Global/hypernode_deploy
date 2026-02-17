@@ -1,4 +1,4 @@
-name: local_database_for_${DB_NAME:-USS_SERVER}
+name: local_database_for_${DB_NAME:-uss_database}
 
 services:
   database:
@@ -8,7 +8,7 @@ services:
     volumes:
       - mongodb_data:/data/db # <- path giusto
       - mongodb_config:/data/configdb # <- opzionale ma pulito
-    container_name: ${DB_NAME:-USS_SERVER} #in caso di installazione completa DB_NAME viene hardcodato in USS_SERVER dall'installer
+    container_name: ${DB_NAME:-uss_database} #in caso di installazione completa DB_NAME viene hardcodato in uss_database dall'installer
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -18,7 +18,7 @@ services:
 
 volumes:
   mongodb_data:
-    name: database_for_${DB_NAME:-USS_SERVER}
+    name: database_for_${DB_NAME:-uss_database}
 
   mongodb_config:
-    name: config_for_${DB_NAME:-USS_SERVER}
+    name: config_for_${DB_NAME:-uss_database}

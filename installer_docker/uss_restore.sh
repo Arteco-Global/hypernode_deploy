@@ -225,7 +225,7 @@ prompt_env_vars() {
     prompt_var "SNAPSHOT_PATH" "SNAPSHOT_PATH" "/snapshot"
     prompt_var "SNAPSHOT_DISK_SPACE" "SNAPSHOT_DISK_SPACE"
     prompt_var "DB_PORT" "DB_PORT" "27017"
-    prompt_var "DB_NAME" "DB_NAME" "USS_SERVER"
+    prompt_var "DB_NAME" "DB_NAME" "uss_database"
     prompt_var "RMQ" "RMQ" "amqp://hypernode:hypernode@messagebroker:5672"
 
     write_env_file
