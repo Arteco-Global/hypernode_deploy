@@ -2,7 +2,7 @@ name: local_database_for_${DB_NAME:-uss_database}
 
 services:
   database:
-    image: artecoglobalcompany/usee_database:avx_support
+    image: artecoglobalcompany/usee_database:${DOCKER_TAG:-latest}
     ports:
       - "${DB_PORT:-27017}:27017"
     volumes:
