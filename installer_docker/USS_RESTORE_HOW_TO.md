@@ -73,7 +73,7 @@ Quando il file manca, lo script chiede questi valori:
 - `SNAPSHOT_PATH` (default `/snapshot`)
 - `SNAPSHOT_DISK_SPACE` (obbligatoria)
 - `DB_PORT` (default `27017`)
-- `DB_NAME` (default `USS_SERVER`)
+- `DB_NAME` (default `uss_database`)
 - `RMQ` (default `amqp://****:****@messagebroker:5672`)
 
 I valori vengono salvati con escaping sicuro per evitare problemi con caratteri speciali (es. `!`).

@@ -295,10 +295,10 @@ if [[ -n "$STORAGE_CONTAINER" ]]; then
 fi
 
 if [[ -z "${VALUES[DB_NAME]:-}" ]]; then
-  if container_running "USS_SERVER"; then
-    VALUES[DB_NAME]="USS_SERVER"
+  if container_running "uss_database"; then
+    VALUES[DB_NAME]="uss_database"
   else
-    VALUES[DB_NAME]="USS_SERVER"
+    VALUES[DB_NAME]="uss_database"
   fi
 fi
 

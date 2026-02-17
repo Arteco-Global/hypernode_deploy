@@ -108,7 +108,7 @@ HYPERNODE_CONTAINERS=()
 BROKER_CONTAINER="messagebroker"
 PORTBROKER_CONTAINER="portbroker"
 WEBSERVER_CONTAINER="webserver"
-DATABASE_CONTAINER="USS_SERVER"
+DATABASE_CONTAINER="uss_database"
 INDEPENDENT_CONTAINERS=()
 COMPOSE_SOURCES=()
 UPDATED_INDEPENDENT="false"
@@ -518,7 +518,7 @@ if [[ ${#HYPERNODE_CONTAINERS[@]} -eq 0 ]]; then
   )
   BROKER_CONTAINER="messagebroker"
   PORTBROKER_CONTAINER="portbroker"
-  DATABASE_CONTAINER="USS_SERVER"
+  DATABASE_CONTAINER="uss_database"
   INDEPENDENT_CONTAINERS=("$DATABASE_CONTAINER")
   echo "⚠️  Impossibile leggere i servizi dal compose: uso l'elenco statico." >&2
 else

@@ -247,7 +247,7 @@ check_container_statuses() {
 }
 
 find_database_port() {
-  local container="USS_SERVER" host_binding=""
+  local container="uss_database" host_binding=""
 
   if ! docker inspect "$container" >/dev/null 2>&1; then
     warn "$container: container non trovato, porta DB non rilevata."

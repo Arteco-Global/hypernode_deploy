@@ -445,7 +445,7 @@ get_config() {
         # Install the complete suite (Gateway Mode)
 
         RMQ="amqp://hypernode:hypernode@messagebroker:5672"
-        export DB_NAME='USS_SERVER'
+        export DB_NAME='uss_database'
         export RMQ
 
         ;;
