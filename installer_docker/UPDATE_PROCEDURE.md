@@ -39,7 +39,11 @@ Per la **suite**, `native_update.sh`:
 
 Per i **servizi accessori**, `native_service_update.sh`:
 
-- richiede sempre `--env-file` per evitare update sul servizio sbagliato.
+- controlla i container in esecuzione (`docker ps`).
+- filtra i container il cui nome inizia con `database-for-`.
+- per gli altri, prende il nome dopo il primo `_` e cerca
+  `.hypernode-install-<nome>-env.log` in `.` o `/etc/.hypernode/`.
+- se manca un file per un container attivo, l’update si ferma con errore.
 
 ## Update intera suite
 
@@ -66,11 +70,10 @@ In questa modalità l’installer fa un update completo della suite.
 
 ## Update servizi accessori
 
-Usare sempre **`native_service_update.sh`** (con `--env-file` obbligatorio).
+Usare sempre **`native_service_update.sh`**.
 
 ```bash
-sudo installer_docker/native_service_update.sh \
-  --env-file .hypernode-install-additional-aux31-env.log
+sudo installer_docker/native_service_update.sh
 ```
 
 Caratteristiche principali:
@@ -78,6 +81,13 @@ Caratteristiche principali:
 - ricostruisce **database + servizio** dal compose specifico
 - usa le variabili già valorizzate nell’env file
 - non usa il compose della suite (`server`) per evitare conflitti
+
+Se vuoi aggiornare **solo un servizio** specifico:
+
+```bash
+sudo installer_docker/native_service_update.sh \
+  --env-file .hypernode-install-additional-aux31-env.log
+```
 
 Se `INSTALL_OPTION` non è presente o non è coerente:
 
@@ -138,7 +148,13 @@ Suite:
 sudo installer_docker/native_update.sh --env-file .hypernode-install-env.log
 ```
 
-Servizio accessorio:
+Servizi accessori (tutti quelli in esecuzione):
+
+```bash
+sudo installer_docker/native_service_update.sh
+```
+
+Servizio accessorio singolo:
 
 ```bash
 sudo installer_docker/native_service_update.sh \
