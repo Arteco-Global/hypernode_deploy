@@ -5,6 +5,7 @@ Questa guida spiega come usare `uss_restore.sh` per ripristinare/aggiornare una 
 ## Cosa fa lo script
 - Cerca un file `.hypernode-install-env.log` e lo usa per configurare il restore.
 - Se non trova il file, raccoglie i valori in modo interattivo e crea il file.
+- Assicura la presenza di `machine.json` e aggiunge `MACHINE` al file env.
 - Effettua il login Docker se necessario.
 - Crea `../hypernode_deploy` (cartella sorella rispetto alla directory corrente), la rende scrivibile da tutti.
 - Copia `.hypernode-install-env.log` in `../hypernode_deploy` e, se presente l'installazione grafica, anche in `/opt/uSee-Service-Suite-Launcher/ussinstaller`.
@@ -55,10 +56,17 @@ Sia `native_update.sh` che `uss_restore.sh` sincronizzano il file di env di sist
 - ad **ogni esecuzione** viene aggiornato
   `/etc/.hypernode/.hypernode-install-env.log`
 
+Inoltre viene gestito un identificativo macchina:
+
+- file: `/etc/.hypernode/machine.json` (fallback: `./machine.json`)
+- contenuto: `{"MACHINE":"<uuid>"}`
+- la variabile `MACHINE=` viene scritta nel file `.hypernode-install-env.log`
+
 ## Variabili richieste (con default)
 Quando il file manca, lo script chiede questi valori:
 - `SSL_PORT` (default `10446`)
 - `DOCKER_TAG` (default `staging`)
+- `MACHINE` (auto-generata, non richiesta)
 - `SERIAL_NUMBER` (obbligatoria)
 - `SERVER_TIMEZONE` (default `Europe/Rome`)
 - `SERVER_NAME` (obbligatoria)

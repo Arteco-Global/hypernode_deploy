@@ -34,9 +34,115 @@ remote_host="--"
 ENV_LOG_FILE="${PWD}/.hypernode-install-env.log"
 ENV_LOG_DIR_SYSTEM="/etc/.hypernode"
 ENV_LOG_FILE_SYSTEM="${ENV_LOG_DIR_SYSTEM}/.hypernode-install-env.log"
+MACHINE=""
+MACHINE_JSON_NAME="machine.json"
+MACHINE_FILE_LOCAL="${PWD}/${MACHINE_JSON_NAME}"
+MACHINE_FILE_SYSTEM="${ENV_LOG_DIR_SYSTEM}/${MACHINE_JSON_NAME}"
+MACHINE_FILE=""
+
+generate_machine_id() {
+    if command -v uuidgen >/dev/null 2>&1; then
+        uuidgen
+        return
+    fi
+
+    if [[ -r /proc/sys/kernel/random/uuid ]]; then
+        cat /proc/sys/kernel/random/uuid
+        return
+    fi
+
+    printf '%s-%s-%s\n' "$(date +%s)" "$RANDOM" "$RANDOM"
+}
+
+read_machine_id_from_file() {
+    local file="$1"
+    local value=""
+
+    if [[ -f "$file" ]]; then
+        if [[ -r "$file" ]]; then
+            value=$(sed -n 's/.*"MACHINE"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$file" | head -n 1)
+            if [[ -z "$value" ]]; then
+                value=$(sed -n 's/^MACHINE=\(.*\)$/\1/p' "$file" | head -n 1)
+            fi
+        elif command -v sudo >/dev/null 2>&1; then
+            value=$(sudo cat "$file" 2>/dev/null | sed -n 's/.*"MACHINE"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+            if [[ -z "$value" ]]; then
+                value=$(sudo cat "$file" 2>/dev/null | sed -n 's/^MACHINE=\(.*\)$/\1/p' | head -n 1)
+            fi
+        fi
+    fi
+
+    printf '%s' "$value"
+}
+
+write_machine_json() {
+    local file="$1"
+    local id="$2"
+    local dir
+    local tmp
+
+    dir=$(dirname "$file")
+    if mkdir -p "$dir" 2>/dev/null; then
+        :
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo mkdir -p "$dir" 2>/dev/null || true
+    fi
+
+    tmp=$(mktemp)
+    printf '{\"MACHINE\":\"%s\"}\n' "$id" > "$tmp"
+
+    if cp "$tmp" "$file" 2>/dev/null; then
+        chmod 600 "$file" 2>/dev/null || true
+        rm -f "$tmp"
+        return 0
+    fi
+
+    if command -v sudo >/dev/null 2>&1; then
+        if sudo cp "$tmp" "$file" 2>/dev/null; then
+            sudo chmod 600 "$file" 2>/dev/null || true
+            rm -f "$tmp"
+            return 0
+        fi
+    fi
+
+    rm -f "$tmp"
+    return 1
+}
+
+if [[ -f "$MACHINE_FILE_LOCAL" ]]; then
+    MACHINE_FILE="$MACHINE_FILE_LOCAL"
+elif [[ -f "$MACHINE_FILE_SYSTEM" ]]; then
+    MACHINE_FILE="$MACHINE_FILE_SYSTEM"
+fi
+
+if [[ -n "$MACHINE_FILE" ]]; then
+    MACHINE="$(read_machine_id_from_file "$MACHINE_FILE")"
+    if [[ -z "$MACHINE" && ! -r "$MACHINE_FILE" ]]; then
+        if ! command -v sudo >/dev/null 2>&1; then
+            echo "❌ machine.json is not readable. Run installer with sudo."
+            exit 1
+        fi
+    fi
+fi
+
+if [[ -z "$MACHINE" ]]; then
+    MACHINE="$(generate_machine_id)"
+    if write_machine_json "$MACHINE_FILE_SYSTEM" "$MACHINE"; then
+        MACHINE_FILE="$MACHINE_FILE_SYSTEM"
+    else
+        write_machine_json "$MACHINE_FILE_LOCAL" "$MACHINE" || true
+        MACHINE_FILE="$MACHINE_FILE_LOCAL"
+    fi
+fi
+
+export MACHINE
+if [[ ! -f "$MACHINE_FILE_LOCAL" ]]; then
+    write_machine_json "$MACHINE_FILE_LOCAL" "$MACHINE" || true
+fi
 ENV_VARS=(
     SSL_PORT
     DOCKER_TAG
+    MACHINE
     SERIAL_NUMBER
     SERVER_TIMEZONE
     SERVER_NAME

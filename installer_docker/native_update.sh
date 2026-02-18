@@ -13,6 +13,119 @@ COMPOSE_PROJECT_NAME=""
 SYSTEM_ENV_DIR="/etc/.hypernode"
 SYSTEM_ENV_FILE="${SYSTEM_ENV_DIR}/.hypernode-install-env.log"
 SYSTEM_ENV_ORIGINAL="${SYSTEM_ENV_DIR}/.hypernode-install-env.log.original"
+MACHINE=""
+MACHINE_JSON_NAME="machine.json"
+MACHINE_FILE_LOCAL="${PWD}/${MACHINE_JSON_NAME}"
+MACHINE_FILE_SYSTEM="${SYSTEM_ENV_DIR}/${MACHINE_JSON_NAME}"
+MACHINE_FILE=""
+
+generate_machine_id() {
+    if command -v uuidgen >/dev/null 2>&1; then
+        uuidgen
+        return
+    fi
+
+    if [[ -r /proc/sys/kernel/random/uuid ]]; then
+        cat /proc/sys/kernel/random/uuid
+        return
+    fi
+
+    printf '%s-%s-%s\n' "$(date +%s)" "$RANDOM" "$RANDOM"
+}
+
+read_machine_id_from_file() {
+    local file="$1"
+    local value=""
+
+    if [[ -f "$file" ]]; then
+        if [[ -r "$file" ]]; then
+            value=$(sed -n 's/.*"MACHINE"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$file" | head -n 1)
+            if [[ -z "$value" ]]; then
+                value=$(sed -n 's/^MACHINE=\(.*\)$/\1/p' "$file" | head -n 1)
+            fi
+        elif command -v sudo >/dev/null 2>&1; then
+            value=$(sudo cat "$file" 2>/dev/null | sed -n 's/.*"MACHINE"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+            if [[ -z "$value" ]]; then
+                value=$(sudo cat "$file" 2>/dev/null | sed -n 's/^MACHINE=\(.*\)$/\1/p' | head -n 1)
+            fi
+        fi
+    fi
+
+    printf '%s' "$value"
+}
+
+write_machine_json() {
+    local file="$1"
+    local id="$2"
+    local dir
+    local tmp
+
+    dir=$(dirname "$file")
+    if mkdir -p "$dir" 2>/dev/null; then
+        :
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo mkdir -p "$dir" 2>/dev/null || true
+    fi
+
+    tmp=$(mktemp)
+    printf '{\"MACHINE\":\"%s\"}\n' "$id" > "$tmp"
+
+    if cp "$tmp" "$file" 2>/dev/null; then
+        chmod 600 "$file" 2>/dev/null || true
+        rm -f "$tmp"
+        return 0
+    fi
+
+    if command -v sudo >/dev/null 2>&1; then
+        if sudo cp "$tmp" "$file" 2>/dev/null; then
+            sudo chmod 600 "$file" 2>/dev/null || true
+            rm -f "$tmp"
+            return 0
+        fi
+    fi
+
+    rm -f "$tmp"
+    return 1
+}
+
+ensure_machine_env_in_file() {
+    local file="$1"
+    local tmp
+
+    if [[ -z "$file" || ! -f "$file" ]]; then
+        return 1
+    fi
+
+    tmp=$(mktemp)
+    if awk -v machine="$MACHINE" '
+        BEGIN {found=0}
+        /^MACHINE=/ {found=1; next}
+        {print}
+        END {printf "MACHINE=%s\n", machine}
+    ' "$file" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$file"
+        chmod 600 "$file" 2>/dev/null || true
+        return 0
+    fi
+
+    if command -v sudo >/dev/null 2>&1; then
+        if sudo awk -v machine="$MACHINE" '
+            BEGIN {found=0}
+            /^MACHINE=/ {found=1; next}
+            {print}
+            END {printf "MACHINE=%s\n", machine}
+        ' "$file" > "$tmp" 2>/dev/null; then
+            if sudo cp "$tmp" "$file" 2>/dev/null; then
+                sudo chmod 600 "$file" 2>/dev/null || true
+                rm -f "$tmp"
+                return 0
+            fi
+        fi
+    fi
+
+    rm -f "$tmp"
+    return 1
+}
 
 usage() {
     cat <<'EOF'
@@ -100,6 +213,37 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
+if [[ -f "$MACHINE_FILE_LOCAL" ]]; then
+    MACHINE_FILE="$MACHINE_FILE_LOCAL"
+elif [[ -f "$MACHINE_FILE_SYSTEM" ]]; then
+    MACHINE_FILE="$MACHINE_FILE_SYSTEM"
+fi
+
+if [[ -n "$MACHINE_FILE" ]]; then
+    MACHINE="$(read_machine_id_from_file "$MACHINE_FILE")"
+    if [[ -z "$MACHINE" && ! -r "$MACHINE_FILE" ]]; then
+        if ! command -v sudo >/dev/null 2>&1; then
+            echo "❌ machine.json is not readable. Run with sudo."
+            exit 1
+        fi
+    fi
+fi
+
+if [[ -z "$MACHINE" ]]; then
+    MACHINE="$(generate_machine_id)"
+    if write_machine_json "$MACHINE_FILE_SYSTEM" "$MACHINE"; then
+        MACHINE_FILE="$MACHINE_FILE_SYSTEM"
+    else
+        write_machine_json "$MACHINE_FILE_LOCAL" "$MACHINE" || true
+        MACHINE_FILE="$MACHINE_FILE_LOCAL"
+    fi
+fi
+
+export MACHINE
+if [[ ! -f "$MACHINE_FILE_LOCAL" ]]; then
+    write_machine_json "$MACHINE_FILE_LOCAL" "$MACHINE" || true
+fi
+
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "❌ Env file not found: $ENV_FILE"
     echo "🔄 Provo a ricrearlo con recreate_env_file.sh..."
@@ -147,6 +291,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     echo "✅ Env file ricreato: $ENV_FILE"
 fi
 
+ensure_machine_env_in_file "$ENV_FILE" || true
 sync_env_to_system "$ENV_FILE" || true
 
 set -a

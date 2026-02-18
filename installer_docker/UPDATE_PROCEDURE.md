@@ -20,6 +20,10 @@ Durante install/update vengono salvate le variabili in un file `.log`:
 - **Servizi accessori**: `.hypernode-install-<PROCESS_NAME>-env.log`
   - esempio: `.hypernode-install-additional-aux31-env.log`
 
+In tutti i file `.log` viene aggiunta anche la variabile:
+
+- `MACHINE` (identificativo univoco della macchina)
+
 Il file viene salvato:
 
 - in `.` (directory corrente)
@@ -28,6 +32,15 @@ Il file viene salvato:
 Quando possibile, viene salvata anche una copia originale:
 
 - `/etc/.hypernode/<nome_file>.original`
+
+## Identificativo macchina (MACHINE)
+
+Tutti gli script di install/update assicurano la presenza di un identificativo
+stabile della macchina:
+
+- file: `/etc/.hypernode/machine.json` (fallback: `./machine.json`)
+- contenuto: `{"MACHINE":"<uuid>"}` (UUID generato automaticamente)
+- la variabile `MACHINE=` viene scritta nei file `.log` e passata ai container
 
 ## Recupero env quando il file non esiste
 
@@ -44,6 +57,7 @@ Per i **servizi accessori**, `native_service_update.sh`:
 - per gli altri, prende il nome dopo il primo `_` e cerca
   `.hypernode-install-<nome>-env.log` in `.` o `/etc/.hypernode/`.
 - se manca un file per un container attivo, l’update si ferma con errore.
+- se `machine.json` non esiste, viene creato e il valore `MACHINE` è aggiunto ai `.log`.
 
 ## Update intera suite
 
@@ -114,6 +128,7 @@ Queste variabili **devono** essere valorizzate nell’env:
 Generali:
 
 - `DOCKER_TAG`
+- `MACHINE`
 - `PROCESS_NAME`
 - `DB_NAME`
 - `DB_PORT`
