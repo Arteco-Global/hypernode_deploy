@@ -9,6 +9,7 @@ services:
       - GATEWAY_URI=${GRI}
       - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/metadata_${PROCESS_NAME}
       - SRV_INST_NAME=metadata_${PROCESS_NAME}
+      - MACHINE=${MACHINE}
     container_name: metadata_${PROCESS_NAME}
     restart: unless-stopped    
     network_mode: "host"

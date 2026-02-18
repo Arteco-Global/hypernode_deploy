@@ -9,6 +9,7 @@ services:
       - SRV_INST_NAME=storage_${PROCESS_NAME}
       - STORAGE_PATH=/storage_files
       - STORAGE_DISK_SPACE=${STORAGE_DISK_SPACE:-10000000}
+      - MACHINE=${MACHINE}
     container_name: storage_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"

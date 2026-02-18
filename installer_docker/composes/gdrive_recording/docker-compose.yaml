@@ -27,6 +27,7 @@ services:
       - SRV_INST_NAME=gdrive_recording_${PROCESS_NAME}
       - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
       - RECORDING_PATH=/recording_files
+      - MACHINE=${MACHINE}
     network_mode: "host"
     restart: unless-stopped
     logging:

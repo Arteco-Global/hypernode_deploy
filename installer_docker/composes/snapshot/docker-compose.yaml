@@ -10,6 +10,7 @@ services:
       - GATEWAY_URI=${GRI}
       - SRV_INST_NAME=snapshot_${PROCESS_NAME}
       - SNAPSHOT_DISK_SPACE=${SNAPSHOT_DISK_SPACE:-10000000}
+      - MACHINE=${MACHINE}
     container_name: snapshot_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"

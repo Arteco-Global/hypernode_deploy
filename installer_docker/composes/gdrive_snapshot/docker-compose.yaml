@@ -27,6 +27,7 @@ services:
       - SRV_INST_NAME=gdrive_snapshot_${PROCESS_NAME}
       - SNAPSHOT_DISK_SPACE=${SNAPSHOT_DISK_SPACE:-10000000}
       - SNAPSHOT_PATH=/snapshot_files
+      - MACHINE=${MACHINE}
     network_mode: "host"
     restart: unless-stopped
     logging:

@@ -8,6 +8,7 @@ services:
       - RABBITMQ_URI=${RMQ}
       - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/event_${PROCESS_NAME}
       - SRV_INST_NAME=event_${PROCESS_NAME}
+      - MACHINE=${MACHINE}
     container_name: event_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"

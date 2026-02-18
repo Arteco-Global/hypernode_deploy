@@ -10,6 +10,7 @@ services:
       - RECORDING_PATH=/recording_files
       - GATEWAY_URI=${GRI}
       - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
+      - MACHINE=${MACHINE}
     container_name: recording_${PROCESS_NAME}
     restart: unless-stopped
     network_mode: "host"
