@@ -281,6 +281,7 @@ get_running_container_names() {
 collect_env_files_from_running_containers() {
     local names
     local name
+    local prefix
     local instance
     local env_file
     local missing=()
@@ -294,10 +295,11 @@ collect_env_files_from_running_containers() {
 
     while IFS= read -r name; do
         [[ -z "$name" ]] && continue
-        [[ "$name" == database-for-* ]] && continue
-        if [[ "$name" != *_* ]]; then
+        if [[ "$name" != *_additional-* ]]; then
             continue
         fi
+        prefix="${name%%_*}"
+        [[ "$prefix" == "database-for" ]] && continue
         instance="${name#*_}"
         if [[ -z "$instance" ]]; then
             continue
