@@ -16,6 +16,10 @@ on:
           - latest
           - avx_support
         default: 'latest+avx_support'
+      CUSTOM_TAG:
+        description: "Tag custom opzionale (se valorizzato sostituisce il tag 'latest')"
+        required: false
+        default: ''
       PLATFORMS:
         description: 'Architettura target Docker (piattaforma di build)'
         required: true
@@ -72,14 +76,21 @@ jobs:
       - name: DockerHub check
         run: docker info
 
-      - name: BuildDatabaseLatest
-        if: ${{ inputs.BUILD_TAGS == 'latest+avx_support' || inputs.BUILD_TAGS == 'latest' }}
+      - name: BuildDatabaseLatestOrCustom
+        if: ${{ inputs.BUILD_TAGS == 'latest+avx_support' || inputs.BUILD_TAGS == 'latest' || inputs.CUSTOM_TAG != '' }}
         run: |
+          TAG_ARGS=""
+          if [ -n "${{ inputs.CUSTOM_TAG }}" ]; then
+            TAG_ARGS="$TAG_ARGS -t artecoglobalcompany/usee_database:${{ inputs.CUSTOM_TAG }}"
+          elif [ "${{ inputs.BUILD_TAGS }}" = "latest+avx_support" ] || [ "${{ inputs.BUILD_TAGS }}" = "latest" ]; then
+            TAG_ARGS="$TAG_ARGS -t artecoglobalcompany/usee_database:latest"
+          fi
+
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
             --build-arg MONGO_VERSION=latest \
             -f hypernode-server/docker/database/database.Dockerfile \
-            -t artecoglobalcompany/usee_database:latest \
+            $TAG_ARGS \
             --push hypernode-server
 
       - name: BuildDatabaseAvxSupport
