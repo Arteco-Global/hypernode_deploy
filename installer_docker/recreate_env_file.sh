@@ -32,6 +32,8 @@ ENV_VARS=(
   DB_NAME
   PROCESS_NAME
   DATABASE_URI
+  RABBITMQ_DEFAULT_USER
+  RABBITMQ_DEFAULT_PASS
   RMQ
   GRI
   INSTALL_OPTION
@@ -271,6 +273,13 @@ if [[ -n "$GATEWAY_CONTAINER" ]]; then
   if [[ -z "${VALUES[DB_PORT]:-}" ]]; then
     db_uri="$(get_env "$GATEWAY_CONTAINER" "DATABASE_URI")"
     VALUES[DB_PORT]="$(parse_db_port_from_uri "$db_uri")"
+  fi
+fi
+
+if [[ -z "${VALUES[RABBITMQ_DEFAULT_USER]:-}" && -n "${VALUES[RMQ]:-}" ]]; then
+  if [[ "${VALUES[RMQ]}" =~ ^[^:]+://([^:]+):([^@]+)@ ]]; then
+    VALUES[RABBITMQ_DEFAULT_USER]="${BASH_REMATCH[1]}"
+    VALUES[RABBITMQ_DEFAULT_PASS]="${BASH_REMATCH[2]}"
   fi
 fi
 

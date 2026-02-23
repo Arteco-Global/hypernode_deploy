@@ -27,6 +27,8 @@ SSL_PORT=443
 DOCKER_TAG="latest"
 FORCE_INSTALL="false"
 DB_PORT=27017
+RABBITMQ_DEFAULT_USER="${RABBITMQ_DEFAULT_USER:-hypernode}"
+RABBITMQ_DEFAULT_PASS="${RABBITMQ_DEFAULT_PASS:-hypernode}"
 
 PROCESS_NAME="--"
 remote_host="--"   
@@ -162,6 +164,8 @@ ENV_VARS=(
     DB_NAME
     PROCESS_NAME
     DATABASE_URI
+    RABBITMQ_DEFAULT_USER
+    RABBITMQ_DEFAULT_PASS
     RMQ
     GRI
     INSTALL_OPTION
@@ -658,6 +662,10 @@ reuseExistingDbPort() {
 
 get_config() {
 
+    RABBITMQ_DEFAULT_USER="${RABBITMQ_DEFAULT_USER:-hypernode}"
+    RABBITMQ_DEFAULT_PASS="${RABBITMQ_DEFAULT_PASS:-hypernode}"
+    export RABBITMQ_DEFAULT_USER
+    export RABBITMQ_DEFAULT_PASS
 
     if [ "$HYPERNODE_ALREADY_INSTALLED" != "true" ]; then
     
@@ -685,7 +693,7 @@ get_config() {
     
         # Install the complete suite (Gateway Mode)
 
-        RMQ="amqp://hypernode:hypernode@messagebroker:5672"
+        RMQ="amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@messagebroker:5672"
         export DB_NAME='uss_database'
         export RMQ
 
@@ -705,7 +713,7 @@ get_config() {
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqps://hypernode:hypernode@$remote_host"
+        export RMQ="amqps://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@$remote_host"
         export GRI="wss://$remote_host"
         printf "\nGateway set as $remote_host"
         printf "\nPROCESS_NAME set as $PROCESS_NAME"
@@ -728,7 +736,7 @@ get_config() {
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
         export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
-        export RMQ="amqps://hypernode:hypernode@$remote_host"
+        export RMQ="amqps://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@$remote_host"
         export GRI="wss://$remote_host"
 
         printf "\nGateway set as $remote_host"

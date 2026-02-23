@@ -44,6 +44,8 @@ ENV_VARS=(
     SNAPSHOT_DISK_SPACE
     DB_PORT
     DB_NAME
+    RABBITMQ_DEFAULT_USER
+    RABBITMQ_DEFAULT_PASS
     RMQ
 )
 
@@ -340,7 +342,9 @@ prompt_env_vars() {
     prompt_var "SNAPSHOT_DISK_SPACE" "SNAPSHOT_DISK_SPACE"
     prompt_var "DB_PORT" "DB_PORT" "27017"
     prompt_var "DB_NAME" "DB_NAME" "uss_database"
-    prompt_var "RMQ" "RMQ" "amqp://hypernode:hypernode@messagebroker:5672"
+    prompt_var "RABBITMQ_DEFAULT_USER" "RABBITMQ_DEFAULT_USER" "hypernode"
+    prompt_var "RABBITMQ_DEFAULT_PASS" "RABBITMQ_DEFAULT_PASS" "hypernode" "true"
+    prompt_var "RMQ" "RMQ" "amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@messagebroker:5672"
 
     write_env_file
 }
