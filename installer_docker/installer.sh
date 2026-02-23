@@ -257,111 +257,132 @@ execute_command() {
 }
 
 while [[ "$#" -gt 0 ]]; do
-  case "$1" in
+    case "$1" in
+    
     -fi|--force-install)
-      FORCE_INSTALL="true"
-      shift
-      ;;
+        FORCE_INSTALL="true"
+        shift
+        ;;
     -p|--port)
-      SSL_PORT="$2"
-      shift 2
-      ;;
+        SSL_PORT="$2"
+        shift 2
+        ;;
     -t|--tag)
-      DOCKER_TAG="$2"
-      shift 2
-      ;;
+        DOCKER_TAG="$2"
+        shift 2
+        ;;
     -m|--mode)
-      INSTALL_OPTION="$2"
-      shift 2
-      ;;
+        INSTALL_OPTION="$2"
+        shift 2
+        ;;
     -host|--host)
-      remote_host="$2"
-      shift 2
-      ;;
+        remote_host="$2"
+        shift 2
+        ;;
     -pn|--process-name)
-      PROCESS_NAME="$2"
-      shift 2
-      ;;
+        PROCESS_NAME="$2"
+        shift 2
+        ;;
     -sn|--serial-number)
-      SERIAL_NUMBER="$2"
-      export SERIAL_NUMBER
-      shift 2
-      ;;
+        SERIAL_NUMBER="$2"
+        export SERIAL_NUMBER
+        shift 2
+        ;;
     -tz|--timezone)
-      SERVER_TIMEZONE="$2"
-      export SERVER_TIMEZONE
-      shift 2
-      ;;
+        SERVER_TIMEZONE="$2"
+        export SERVER_TIMEZONE
+        shift 2
+        ;;
     -in|--internal-name)
-      SERVER_NAME="$2"
-      export SERVER_NAME
-      shift 2
-      ;;
+        SERVER_NAME="$2"
+        export SERVER_NAME
+        shift 2
+        ;;
     -email|--email)
-      ARTECO_GLOBAL_EMAIL="$2"
-      export ARTECO_GLOBAL_EMAIL
-      shift 2
-      ;;
+        ARTECO_GLOBAL_EMAIL="$2"
+        export ARTECO_GLOBAL_EMAIL
+        shift 2
+        ;;
     -pass|--password)
-      ARTECO_GLOBAL_PASSWORD="$2"
-      export ARTECO_GLOBAL_PASSWORD
-      shift 2
-      ;;
+        ARTECO_GLOBAL_PASSWORD="$2"
+        export ARTECO_GLOBAL_PASSWORD
+        shift 2
+        ;;
     -sip|--server-ip)
-      SERVER_IP_ADDRESS="$2"
-      export SERVER_IP_ADDRESS
-      shift 2
-      ;;
-
+        SERVER_IP_ADDRESS="$2"
+        export SERVER_IP_ADDRESS
+        shift 2
+        ;;    
     -cert-url|--certificate-provider-url)
-      CERTIFICATE_PROVIDER_URL="$2"
-      export CERTIFICATE_PROVIDER_URL
-      shift 2
-      ;;
+        CERTIFICATE_PROVIDER_URL="$2"
+        export CERTIFICATE_PROVIDER_URL
+        shift 2
+        ;;
     -dns-url|--dns-provider-url)
-      DNS_PROVIDER_URL="$2"
-      export DNS_PROVIDER_URL
-      shift 2
-      ;;
+        DNS_PROVIDER_URL="$2"
+        export DNS_PROVIDER_URL
+        shift 2
+        ;;
     -lic-url|--license-provider-url)
-      LICENSE_PROVIDER_URL="$2"
-      export LICENSE_PROVIDER_URL
-      shift 2
-      ;;
+        LICENSE_PROVIDER_URL="$2"
+        export LICENSE_PROVIDER_URL
+        shift 2
+        ;;
     -db|--deploy-branch)
-      DEPLOY_BRANCH="$2"
-      shift 2
-      ;;
+        DEPLOY_BRANCH="$2"
+        shift 2
+        ;;
     -rec-path|--recording-path)
-      RECORDING_PATH="$2"
-      export RECORDING_PATH
-      shift 2
-      ;;
+        RECORDING_PATH="$2"
+        export RECORDING_PATH
+        shift 2
+        ;;
     -rec-max-disk|--recording-max-disk)
-      RECORDING_DISK_SPACE="$2"
-      export RECORDING_DISK_SPACE
-      shift 2
-      ;;
+        RECORDING_DISK_SPACE="$2"
+        export RECORDING_DISK_SPACE
+        shift 2
+        ;;
     -storage-path|--storage-path)
-      STORAGE_PATH="$2"
-      export STORAGE_PATH
-      shift 2
-      ;;
+        STORAGE_PATH="$2"
+        export STORAGE_PATH
+        shift 2
+        ;;
     -storage-max-disk|--storage-max-disk)
-      STORAGE_DISK_SPACE="$2"
-      export STORAGE_DISK_SPACE
-      shift 2
-      ;;
+        STORAGE_DISK_SPACE="$2"
+        export STORAGE_DISK_SPACE
+        shift 2
+        ;;
     -snapshot-path|--snapshot-path)
-      SNAPSHOT_PATH="$2"
-      export SNAPSHOT_PATH
-      shift 2
-      ;;
+        SNAPSHOT_PATH="$2"
+        export SNAPSHOT_PATH
+        shift 2
+        ;;
     -snapshot-max-disk|--snapshot-max-disk)
-      SNAPSHOT_DISK_SPACE="$2"
-      export SNAPSHOT_DISK_SPACE
-      shift 2
-      ;;
+        SNAPSHOT_DISK_SPACE="$2"
+        export SNAPSHOT_DISK_SPACE
+        shift 2
+        ;;
+    -dbuser|--db-username)
+        DB_USERNAME="$2"
+        export DB_USERNAME
+        shift 2
+        ;;
+    -dbpass|--db-password)
+        DB_PASSWORD="$2"
+        export DB_PASSWORD
+        shift 2
+        ;;
+    -rmquser|--rabbitmq-username)
+        RABBITMQ_DEFAULT_USER="$2"
+        export RABBITMQ_DEFAULT_USER
+        shift 2
+        ;;
+    -rmqpass|--rabbitmq-password)
+        RABBITMQ_DEFAULT_PASS="$2"
+        export RABBITMQ_DEFAULT_PASS
+        shift 2
+        ;;
+
     -h|--help)
     echo "Usage: installer.sh [options]"
     echo ""
