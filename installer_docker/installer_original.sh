@@ -25,6 +25,8 @@ SSL_PORT=443
 DOCKER_TAG="latest"
 FORCE_INSTALL="false"
 DB_PORT=27017
+DB_USERNAME="${DB_USERNAME:-hypernode}"
+DB_PASSWORD="${DB_PASSWORD:-hypernode}"
 RABBITMQ_DEFAULT_USER="${RABBITMQ_DEFAULT_USER:-hypernode}"
 RABBITMQ_DEFAULT_PASS="${RABBITMQ_DEFAULT_PASS:-hypernode}"
 
@@ -419,6 +421,11 @@ getFirstDbPortFree() {
 
 get_config() {
 
+    DB_USERNAME="${DB_USERNAME:-hypernode}"
+    DB_PASSWORD="${DB_PASSWORD:-hypernode}"
+    export DB_USERNAME
+    export DB_PASSWORD
+
     RABBITMQ_DEFAULT_USER="${RABBITMQ_DEFAULT_USER:-hypernode}"
     RABBITMQ_DEFAULT_PASS="${RABBITMQ_DEFAULT_PASS:-hypernode}"
     export RABBITMQ_DEFAULT_USER
@@ -469,7 +476,7 @@ get_config() {
      
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
-        export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
+        export DATABASE_URI=mongodb://${DB_USERNAME}:${DB_PASSWORD}@${DB_NAME}:27017/${PROCESS_NAME}?authSource=admin
         export RMQ="amqps://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@$remote_host"
         export GRI="wss://$remote_host"
         printf "\nGateway set as $remote_host"
@@ -492,7 +499,7 @@ get_config() {
      
         export PROCESS_NAME=additional-${PROCESS_NAME}
         export DB_NAME=database-for-${PROCESS_NAME}
-        export DATABASE_URI=mongodb://${DB_NAME}:27017/${PROCESS_NAME}
+        export DATABASE_URI=mongodb://${DB_USERNAME}:${DB_PASSWORD}@${DB_NAME}:27017/${PROCESS_NAME}?authSource=admin
         export RMQ="amqps://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@$remote_host"
         export GRI="wss://$remote_host"
 

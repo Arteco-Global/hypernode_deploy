@@ -359,6 +359,8 @@ update_with_env_file() {
 
         DB_PORT="${DB_PORT:-27017}"
         DOCKER_TAG="${DOCKER_TAG:-latest}"
+        DB_USERNAME="${DB_USERNAME:-hypernode}"
+        DB_PASSWORD="${DB_PASSWORD:-hypernode}"
 
         if [[ -z "${PROCESS_NAME:-}" && -n "${DB_NAME:-}" ]]; then
             PROCESS_NAME="${DB_NAME#database-for-}"
@@ -369,10 +371,10 @@ update_with_env_file() {
         fi
 
         if [[ -z "${DATABASE_URI:-}" && -n "${DB_NAME:-}" && -n "${PROCESS_NAME:-}" ]]; then
-            DATABASE_URI="mongodb://${DB_NAME}:27017/${PROCESS_NAME}"
+            DATABASE_URI="mongodb://${DB_USERNAME}:${DB_PASSWORD}@${DB_NAME}:27017/${PROCESS_NAME}?authSource=admin"
         fi
 
-        export DB_PORT DOCKER_TAG PROCESS_NAME DB_NAME DATABASE_URI
+        export DB_PORT DOCKER_TAG PROCESS_NAME DB_NAME DB_USERNAME DB_PASSWORD DATABASE_URI
 
         local service_name=""
         if [[ -n "$service_override" ]]; then

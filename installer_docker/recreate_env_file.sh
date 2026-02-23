@@ -28,6 +28,8 @@ ENV_VARS=(
   STORAGE_DISK_SPACE
   SNAPSHOT_PATH
   SNAPSHOT_DISK_SPACE
+  DB_USERNAME
+  DB_PASSWORD
   DB_PORT
   DB_NAME
   PROCESS_NAME
@@ -204,12 +206,25 @@ get_port_mapping() {
 parse_db_port_from_uri() {
   local uri="$1"
   local port=""
-  if [[ "$uri" =~ mongodb://[^:/]+:([0-9]+) ]]; then
-    port="${BASH_REMATCH[1]}"
-  elif [[ "$uri" =~ mongodb://[^/]+/ ]]; then
+  if [[ "$uri" =~ mongodb://([^@/]+@)?[^:/]+:([0-9]+) ]]; then
+    port="${BASH_REMATCH[2]}"
+  elif [[ "$uri" =~ mongodb://([^@/]+@)?[^/]+/ ]]; then
     port="27017"
   fi
   printf "%s" "$port"
+}
+
+parse_db_credentials_from_uri() {
+  local uri="$1"
+  local user=""
+  local pass=""
+
+  if [[ "$uri" =~ mongodb://([^:/@]+):([^@]+)@ ]]; then
+    user="${BASH_REMATCH[1]}"
+    pass="${BASH_REMATCH[2]}"
+  fi
+
+  printf "%s\t%s" "$user" "$pass"
 }
 
 get_container_for_service() {
@@ -264,15 +279,22 @@ if [[ -n "$CORETRUST_CONTAINER" ]]; then
 fi
 
 if [[ -n "$GATEWAY_CONTAINER" ]]; then
+  local_db_uri="$(get_env "$GATEWAY_CONTAINER" "DATABASE_URI")"
   VALUES[SERVER_TIMEZONE]="$(get_env "$GATEWAY_CONTAINER" "SERVER_TIMEZONE")"
   VALUES[SERVER_NAME]="$(get_env "$GATEWAY_CONTAINER" "SERVER_NAME")"
   if [[ -z "${VALUES[LICENSE_PROVIDER_URL]:-}" ]]; then
     VALUES[LICENSE_PROVIDER_URL]="$(get_env "$GATEWAY_CONTAINER" "LICENSE_PROVIDER_URL")"
   fi
   VALUES[RMQ]="$(get_env "$GATEWAY_CONTAINER" "RABBITMQ_URI")"
+  if [[ -z "${VALUES[DB_USERNAME]:-}" || -z "${VALUES[DB_PASSWORD]:-}" ]]; then
+    db_user=""
+    db_password=""
+    IFS=$'\t' read -r db_user db_password <<< "$(parse_db_credentials_from_uri "$local_db_uri")"
+    VALUES[DB_USERNAME]="$db_user"
+    VALUES[DB_PASSWORD]="$db_password"
+  fi
   if [[ -z "${VALUES[DB_PORT]:-}" ]]; then
-    db_uri="$(get_env "$GATEWAY_CONTAINER" "DATABASE_URI")"
-    VALUES[DB_PORT]="$(parse_db_port_from_uri "$db_uri")"
+    VALUES[DB_PORT]="$(parse_db_port_from_uri "$local_db_uri")"
   fi
 fi
 

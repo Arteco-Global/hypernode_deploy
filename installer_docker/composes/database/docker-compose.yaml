@@ -3,6 +3,9 @@ name: local_database_for_${DB_NAME:-uss_database}
 services:
   database:
     image: artecoglobalcompany/usee_database:${DOCKER_TAG:-latest}
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DB_USERNAME:-hypernode}
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD:-hypernode}
     ports:
       - "${DB_PORT:-27017}:27017"
     volumes:

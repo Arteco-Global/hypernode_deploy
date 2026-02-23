@@ -22,7 +22,7 @@ services:
       - MOUNT_PATH=/recording_files
       - RCLONE_CACHE_DIR=/dev/shm/rclone-cache
       - RABBITMQ_URI=${RMQ}
-      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/gdrive_recording_${PROCESS_NAME}
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT}/gdrive_recording_${PROCESS_NAME}?authSource=admin
       - GATEWAY_URI=${GRI}
       - SRV_INST_NAME=gdrive_recording_${PROCESS_NAME}
       - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
