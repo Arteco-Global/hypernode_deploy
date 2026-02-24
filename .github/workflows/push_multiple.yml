@@ -26,13 +26,15 @@ on:
           - metadata
           - suite (suite_manager)
           - coretrust
-          - media (media_recorder)
+          - media/rec (media_recorder)
           - snap/snapshot (snapshot_recorder)
           - web (web_server)
           - port (port_broker)
           - message (message_broker)
           - configurator
-          Esempio: camera,snap,configurator
+          Esempi:
+          - camera,snap,configurator
+          - camera,snap,rec,id,metadata,coretrust
         required: true
         default: 'all'
       PLATFORMS:
@@ -82,6 +84,7 @@ jobs:
             [suite_manager]="suite_manager"
             [coretrust]="coretrust"
             [media]="media_recorder"
+            [rec]="media_recorder"
             [media_recorder]="media_recorder"
             [snap]="snapshot_recorder"
             [snapshot]="snapshot_recorder"
@@ -134,7 +137,7 @@ jobs:
             mapped="${ALIASES[$token]:-}"
             if [[ -z "${mapped}" ]]; then
               echo "Unsupported service token: '${token}'"
-              echo "Allowed tokens: all,camera/live_streamer,id/id_verifier,event/event_manager,metadata,suite/suite_manager,coretrust,media/media_recorder,snap/snapshot/snapshot_recorder,web/web_server,port/port_broker,message/message_broker,configurator"
+              echo "Allowed tokens: all,camera/live_streamer,id/id_verifier,event/event_manager,metadata,suite/suite_manager,coretrust,media/rec/media_recorder,snap/snapshot/snapshot_recorder,web/web_server,port/port_broker,message/message_broker,configurator"
               exit 1
             fi
 
