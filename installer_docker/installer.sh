@@ -806,7 +806,9 @@ resolve_nuke_env_files() {
 
     local fixed_candidates=(
         "${PWD}/.hypernode-install-env.log"
+        "${PWD}/hypernode-install-env.log"
         "${ENV_LOG_DIR_SYSTEM}/.hypernode-install-env.log"
+        "${ENV_LOG_DIR_SYSTEM}/hypernode-install-env.log"
     )
 
     for candidate in "${fixed_candidates[@]}"; do
@@ -819,7 +821,9 @@ resolve_nuke_env_files() {
     shopt -s nullglob
     local extra_candidates=(
         "${PWD}"/.hypernode-install-*-env.log
+        "${PWD}"/hypernode-install-*-env.log
         "${ENV_LOG_DIR_SYSTEM}"/.hypernode-install-*-env.log
+        "${ENV_LOG_DIR_SYSTEM}"/hypernode-install-*-env.log
     )
     shopt -u nullglob
 
@@ -831,6 +835,80 @@ resolve_nuke_env_files() {
     done
 
     printf '%s\n' "${paths[@]}"
+}
+
+remove_file_with_fallback() {
+    local target="$1"
+
+    if [[ ! -e "$target" ]]; then
+        return 0
+    fi
+
+    if rm -f -- "$target" 2>/dev/null; then
+        echo "🗑️  Removed env log: $target"
+        return 0
+    fi
+
+    if command -v sudo >/dev/null 2>&1; then
+        if sudo rm -f -- "$target" 2>/dev/null; then
+            echo "🗑️  Removed env log (sudo): $target"
+            return 0
+        fi
+    fi
+
+    echo "⚠️  Unable to remove env log: $target"
+    return 1
+}
+
+resolve_nuke_env_log_cleanup_targets() {
+    local candidate
+    local paths=()
+    declare -A seen=()
+
+    shopt -s nullglob
+    local candidates=(
+        "${PWD}/.hypernode-install-env.log"
+        "${PWD}/hypernode-install-env.log"
+        "${ENV_LOG_DIR_SYSTEM}/.hypernode-install-env.log"
+        "${ENV_LOG_DIR_SYSTEM}/hypernode-install-env.log"
+        "${PWD}/.hypernode-install-env.log.original"
+        "${PWD}/hypernode-install-env.log.original"
+        "${ENV_LOG_DIR_SYSTEM}/.hypernode-install-env.log.original"
+        "${ENV_LOG_DIR_SYSTEM}/hypernode-install-env.log.original"
+        "${PWD}"/.hypernode-install-*-env.log
+        "${PWD}"/hypernode-install-*-env.log
+        "${ENV_LOG_DIR_SYSTEM}"/.hypernode-install-*-env.log
+        "${ENV_LOG_DIR_SYSTEM}"/hypernode-install-*-env.log
+        "${PWD}"/.hypernode-install-*-env.log.original
+        "${PWD}"/hypernode-install-*-env.log.original
+        "${ENV_LOG_DIR_SYSTEM}"/.hypernode-install-*-env.log.original
+        "${ENV_LOG_DIR_SYSTEM}"/hypernode-install-*-env.log.original
+    )
+    shopt -u nullglob
+
+    for candidate in "${candidates[@]}"; do
+        if [[ -f "$candidate" && -z "${seen[$candidate]:-}" ]]; then
+            seen["$candidate"]=1
+            paths+=("$candidate")
+        fi
+    done
+
+    printf '%s\n' "${paths[@]}"
+}
+
+cleanup_env_log_files_from_nuke() {
+    local target
+    local found_any="false"
+
+    while IFS= read -r target; do
+        [[ -z "$target" ]] && continue
+        found_any="true"
+        remove_file_with_fallback "$target" || true
+    done < <(resolve_nuke_env_log_cleanup_targets)
+
+    if [[ "$found_any" != "true" ]]; then
+        echo "ℹ️  No env log copies found to remove."
+    fi
 }
 
 extract_data_paths_from_env_file() {
@@ -947,6 +1025,7 @@ dockerNuke() {
             "Pruning Docker system" || return 1
 
         cleanup_service_data_paths_from_env_logs || true
+        cleanup_env_log_files_from_nuke || true
 
         end_with_message "Docker cleanup completed successfully" 0
     else
