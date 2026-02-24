@@ -1,0 +1,377 @@
+name: Push USee Images (multiple)
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH_BACKEND_REF:
+        description: 'Checkout branch Backend (server)'
+        required: true
+        default: 'release_candidate'
+      BRANCH_CONFIGURATOR_REF:
+        description: 'Checkout branch Configurator (frontend)'
+        required: true
+        default: 'release_candidate'
+      TAG_REF:
+        description: 'Tag Docker (es. latest, v1.2.3)'
+        required: true
+        default: 'ATTENTION: usare "latest" solo per prod!'
+      SERVICES:
+        description: 'Servizi da buildare (CSV). Esempio: camera,snap,configurator. Usa "all" per tutti.'
+        required: true
+        default: 'all'
+      PLATFORMS:
+        description: 'Architettura target Docker (piattaforma di build)'
+        required: true
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/amd64,linux/arm64
+          - linux/arm/v7
+          - linux/arm/v6
+        default: 'linux/amd64,linux/arm64'
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.TAG_REF }}
+      PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+      IMAGE_VERSION: ""  # valorizzato dallo step "Compute image version"
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Resolve selected services
+        id: resolve_services
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RAW="${{ github.event.inputs.SERVICES }}"
+          NORMALIZED="$(echo "${RAW}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+
+          declare -A ALIASES=(
+            [camera]="live_streamer"
+            [live_streamer]="live_streamer"
+            [id]="id_verifier"
+            [id_verifier]="id_verifier"
+            [event]="event_manager"
+            [event_manager]="event_manager"
+            [metadata]="metadata"
+            [suite]="suite_manager"
+            [suite_manager]="suite_manager"
+            [coretrust]="coretrust"
+            [media]="media_recorder"
+            [media_recorder]="media_recorder"
+            [snap]="snapshot_recorder"
+            [snapshot]="snapshot_recorder"
+            [snapshot_recorder]="snapshot_recorder"
+            [web]="web_server"
+            [web_server]="web_server"
+            [port]="port_broker"
+            [port_broker]="port_broker"
+            [message]="message_broker"
+            [message_broker]="message_broker"
+            [configurator]="configurator"
+          )
+
+          SERVICES=(
+            live_streamer
+            id_verifier
+            event_manager
+            metadata
+            suite_manager
+            coretrust
+            media_recorder
+            snapshot_recorder
+            web_server
+            port_broker
+            message_broker
+            configurator
+          )
+
+          declare -A SELECTED=()
+          for service in "${SERVICES[@]}"; do
+            SELECTED["$service"]="false"
+          done
+
+          if [[ -z "${NORMALIZED}" ]]; then
+            echo "SERVICES input is empty."
+            exit 1
+          fi
+
+          IFS=',' read -r -a TOKENS <<< "${NORMALIZED}"
+          for token in "${TOKENS[@]}"; do
+            [[ -z "${token}" ]] && continue
+
+            if [[ "${token}" == "all" ]]; then
+              for service in "${SERVICES[@]}"; do
+                SELECTED["$service"]="true"
+              done
+              break
+            fi
+
+            mapped="${ALIASES[$token]:-}"
+            if [[ -z "${mapped}" ]]; then
+              echo "Unsupported service token: '${token}'"
+              echo "Allowed tokens: all,camera/live_streamer,id/id_verifier,event/event_manager,metadata,suite/suite_manager,coretrust,media/media_recorder,snap/snapshot/snapshot_recorder,web/web_server,port/port_broker,message/message_broker,configurator"
+              exit 1
+            fi
+
+            SELECTED["$mapped"]="true"
+          done
+
+          NEED_BACKEND="false"
+          NEED_FRONTEND="${SELECTED[configurator]}"
+          for service in "${SERVICES[@]}"; do
+            value="${SELECTED[$service]}"
+            echo "${service}=${value}" >> "$GITHUB_OUTPUT"
+            if [[ "${service}" != "configurator" && "${value}" == "true" ]]; then
+              NEED_BACKEND="true"
+            fi
+          done
+
+          echo "need_backend=${NEED_BACKEND}" >> "$GITHUB_OUTPUT"
+          echo "need_frontend=${NEED_FRONTEND}" >> "$GITHUB_OUTPUT"
+
+          SELECTED_LIST=""
+          for service in "${SERVICES[@]}"; do
+            if [[ "${SELECTED[$service]}" == "true" ]]; then
+              if [[ -z "${SELECTED_LIST}" ]]; then
+                SELECTED_LIST="${service}"
+              else
+                SELECTED_LIST="${SELECTED_LIST},${service}"
+              fi
+            fi
+          done
+          echo "Selected services: ${SELECTED_LIST}"
+
+      # ------------------------
+      # BACKEND REPO
+      # ------------------------
+      - name: Checkout backend
+        if: ${{ steps.resolve_services.outputs.need_backend == 'true' }}
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode-server
+          ref: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
+          path: hypernode-server
+          token: ${{ secrets.GIT_PAT }}
+
+      # ------------------------
+      # FRONTEND REPO (CONFIGURATOR)
+      # ------------------------
+      - name: Checkout frontend
+        if: ${{ steps.resolve_services.outputs.need_frontend == 'true' }}
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode_server_gui
+          ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
+          path: hypernode_server_gui
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Compute image version
+        run: |
+          VERSION=""
+          if [ "${TAG}" != "latest" ]; then
+            VERSION="${TAG}"
+          elif [ -d hypernode-server ]; then
+            VERSION="$(git -C hypernode-server rev-parse --short HEAD)"
+          elif [ -d hypernode_server_gui ]; then
+            VERSION="$(git -C hypernode_server_gui rev-parse --short HEAD)"
+          else
+            VERSION="$(date +%Y%m%d%H%M%S)"
+          fi
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Image version: ${VERSION}"
+
+      # ------------------------
+      # COMMON SETUP
+      # ------------------------
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: DockerHub check
+        run: docker info
+
+      # ------------------------
+      # BACKEND BUILDS
+      # ------------------------
+      - name: BuildLiveStreamer
+        if: ${{ steps.resolve_services.outputs.live_streamer == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/camera.Dockerfile \
+            -t artecoglobalcompany/usee_live_streamer:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildIDVerifier
+        if: ${{ steps.resolve_services.outputs.id_verifier == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/auth.Dockerfile \
+            -t artecoglobalcompany/usee_id_verifier:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildEventManager
+        if: ${{ steps.resolve_services.outputs.event_manager == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/event.Dockerfile \
+            -t artecoglobalcompany/usee_event_manager:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildMetadataManager
+        if: ${{ steps.resolve_services.outputs.metadata == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/metadata.Dockerfile \
+            -t artecoglobalcompany/usee_metadata_manager:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildSuiteManager
+        if: ${{ steps.resolve_services.outputs.suite_manager == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/gateway.Dockerfile \
+            -t artecoglobalcompany/usee_suite_manager:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildCoreTrust 
+        if: ${{ steps.resolve_services.outputs.coretrust == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/coretrust.Dockerfile \
+            -t artecoglobalcompany/usee_coretrust:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildMediaRecorder
+        if: ${{ steps.resolve_services.outputs.media_recorder == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/recording.Dockerfile \
+            -t artecoglobalcompany/usee_media_recorder:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildSnapshotRecorder
+        if: ${{ steps.resolve_services.outputs.snapshot_recorder == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/snapshot.Dockerfile \
+            -t artecoglobalcompany/usee_snapshot_recorder:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildWebServer
+        if: ${{ steps.resolve_services.outputs.web_server == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/webserver/nginx.Dockerfile \
+            -t artecoglobalcompany/usee_web_server:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildPortBroker
+        if: ${{ steps.resolve_services.outputs.port_broker == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/portbroker/portBroker.Dockerfile \
+            -t artecoglobalcompany/usee_port_broker:${{ env.TAG }} \
+            --push hypernode-server
+
+      - name: BuildMessageBroker
+        if: ${{ steps.resolve_services.outputs.message_broker == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode-server/docker/messagebroker/messageBroker.Dockerfile \
+            -t artecoglobalcompany/usee_message_broker:${{ env.TAG }} \
+            --push hypernode-server
+
+      # - name: BuildDatabase
+      #   if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'database' }}
+      #   run: |
+      #     docker buildx build \
+      #       --platform=${{ env.PLATFORMS }} \
+      #       --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+      #       --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+      #       -f hypernode-server/docker/database/database.Dockerfile \
+      #       -t artecoglobalcompany/usee_database:${{ env.TAG }} \
+      #       --push hypernode-server
+
+      # - name: BuildMediaStorage
+      #   if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'media_storage' }}
+      #   run: |
+      #     docker buildx build \
+      #       --platform=${{ env.PLATFORMS }} \
+      #       --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+      #       --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+      #       -f hypernode-server/docker/storage.Dockerfile \
+      #       -t artecoglobalcompany/usee_media_storage:${{ env.TAG }} \
+      #       --push hypernode-server
+
+      # ------------------------
+      # FRONTEND CONFIGURATOR
+      # ------------------------
+      - name: BuildConfigurator
+        if: ${{ steps.resolve_services.outputs.configurator == 'true' }}
+        run: |
+          docker buildx build \
+            --platform=${{ env.PLATFORMS }} \
+            --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
+            --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
+            -f hypernode_server_gui/configurator.Dockerfile \
+            -t artecoglobalcompany/usee_configurator:${{ env.TAG }} \
+            --push hypernode_server_gui
