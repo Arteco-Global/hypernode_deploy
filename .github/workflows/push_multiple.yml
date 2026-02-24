@@ -16,7 +16,7 @@ on:
         required: true
         default: 'ATTENTION: usare "latest" solo per prod!'
       SERVICES:
-        description: 'Servizi da buildare (CSV). Esempio: camera,snap,configurator. Usa "all" per tutti.'
+        description: 'Servizi CSV: all; camera/live_streamer; id/id_verifier; event/event_manager; metadata; suite/suite_manager; coretrust; media/media_recorder; snap/snapshot/snapshot_recorder; web/web_server; port/port_broker; message/message_broker; configurator. Esempio: camera,snap,configurator'
         required: true
         default: 'all'
       PLATFORMS:
