@@ -51,6 +51,7 @@ on:
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       TAG: ${{ github.event.inputs.TAG_REF }}
       PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
