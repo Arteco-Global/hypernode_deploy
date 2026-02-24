@@ -1,4 +1,4 @@
-name: Push USee Images
+name: Push USee Images (multiple)
 
 on:
   workflow_dispatch:
@@ -16,25 +16,25 @@ on:
         required: true
         default: 'ATTENTION: usare "latest" solo per prod!'
       SERVICES:
-        description: 'Seleziona il servizio da buildare (o "all" per tutti)'
-        required: true
-        type: choice
-        options:
+        description: |
+          Servizi da buildare (CSV), separati da virgola. Usa "all" per tutti.
+          Elenco:
           - all
-          - live_streamer
-          - id_verifier
-          - event_manager
+          - camera
+          - id
+          - event
           - metadata
-          - suite_manager
-          - media_recorder
-          - snapshot_recorder
-          - web_server
-          - port_broker
-          - message_broker
-          # - database
-          # - media_storage
-          - configurator
+          - gateway
           - coretrust
+          - recording
+          - snapshot
+          - web (web_server)
+          - port (port_broker)
+          - message (message_broker)
+          - configurator (gui)
+          Esempio (tutto tranne port,message,web):
+          camera,id,event,metadata,gateway,coretrust,recording,snapshot,configurator
+        required: true
         default: 'all'
       PLATFORMS:
         description: 'Architettura target Docker (piattaforma di build)'
@@ -63,11 +63,120 @@ jobs:
         with:
           path: deploy
 
+      - name: Resolve selected services
+        id: resolve_services
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RAW="${{ github.event.inputs.SERVICES }}"
+          NORMALIZED="$(echo "${RAW}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+
+          declare -A ALIASES=(
+            [camera]="live_streamer"
+            [live_streamer]="live_streamer"
+            [id]="id_verifier"
+            [id_verifier]="id_verifier"
+            [event]="event_manager"
+            [event_manager]="event_manager"
+            [metadata]="metadata"
+            [gateway]="suite_manager"
+            [suite]="suite_manager"
+            [suite_manager]="suite_manager"
+            [coretrust]="coretrust"
+            [recording]="media_recorder"
+            [media]="media_recorder"
+            [rec]="media_recorder"
+            [media_recorder]="media_recorder"
+            [snap]="snapshot_recorder"
+            [snapshot]="snapshot_recorder"
+            [snapshot_recorder]="snapshot_recorder"
+            [web]="web_server"
+            [web_server]="web_server"
+            [port]="port_broker"
+            [port_broker]="port_broker"
+            [message]="message_broker"
+            [message_broker]="message_broker"
+            [configurator]="configurator"
+            [gui]="configurator"
+          )
+
+          SERVICES=(
+            live_streamer
+            id_verifier
+            event_manager
+            metadata
+            suite_manager
+            coretrust
+            media_recorder
+            snapshot_recorder
+            web_server
+            port_broker
+            message_broker
+            configurator
+          )
+
+          declare -A SELECTED=()
+          for service in "${SERVICES[@]}"; do
+            SELECTED["$service"]="false"
+          done
+
+          if [[ -z "${NORMALIZED}" ]]; then
+            echo "SERVICES input is empty."
+            exit 1
+          fi
+
+          IFS=',' read -r -a TOKENS <<< "${NORMALIZED}"
+          for token in "${TOKENS[@]}"; do
+            [[ -z "${token}" ]] && continue
+
+            if [[ "${token}" == "all" ]]; then
+              for service in "${SERVICES[@]}"; do
+                SELECTED["$service"]="true"
+              done
+              break
+            fi
+
+            mapped="${ALIASES[$token]:-}"
+            if [[ -z "${mapped}" ]]; then
+              echo "Unsupported service token: '${token}'"
+              echo "Allowed tokens: all,camera,id,event,metadata,gateway,coretrust,recording,snapshot,web,port,message,configurator,gui"
+              exit 1
+            fi
+
+            SELECTED["$mapped"]="true"
+          done
+
+          NEED_BACKEND="false"
+          NEED_FRONTEND="${SELECTED[configurator]}"
+          for service in "${SERVICES[@]}"; do
+            value="${SELECTED[$service]}"
+            echo "${service}=${value}" >> "$GITHUB_OUTPUT"
+            if [[ "${service}" != "configurator" && "${value}" == "true" ]]; then
+              NEED_BACKEND="true"
+            fi
+          done
+
+          echo "need_backend=${NEED_BACKEND}" >> "$GITHUB_OUTPUT"
+          echo "need_frontend=${NEED_FRONTEND}" >> "$GITHUB_OUTPUT"
+
+          SELECTED_LIST=""
+          for service in "${SERVICES[@]}"; do
+            if [[ "${SELECTED[$service]}" == "true" ]]; then
+              if [[ -z "${SELECTED_LIST}" ]]; then
+                SELECTED_LIST="${service}"
+              else
+                SELECTED_LIST="${SELECTED_LIST},${service}"
+              fi
+            fi
+          done
+          echo "Selected services: ${SELECTED_LIST}"
+
       # ------------------------
       # BACKEND REPO
       # ------------------------
       - name: Checkout backend
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES != 'configurator' }}
+        if: ${{ steps.resolve_services.outputs.need_backend == 'true' }}
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode-server
@@ -79,7 +188,7 @@ jobs:
       # FRONTEND REPO (CONFIGURATOR)
       # ------------------------
       - name: Checkout frontend
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'configurator' }}
+        if: ${{ steps.resolve_services.outputs.need_frontend == 'true' }}
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode_server_gui
@@ -133,7 +242,7 @@ jobs:
       # BACKEND BUILDS
       # ------------------------
       - name: BuildLiveStreamer
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'live_streamer' }}
+        if: ${{ steps.resolve_services.outputs.live_streamer == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -144,7 +253,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildIDVerifier
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'id_verifier' }}
+        if: ${{ steps.resolve_services.outputs.id_verifier == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -155,7 +264,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildEventManager
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'event_manager' }}
+        if: ${{ steps.resolve_services.outputs.event_manager == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -166,7 +275,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildMetadataManager
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'metadata' }}
+        if: ${{ steps.resolve_services.outputs.metadata == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -177,7 +286,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildSuiteManager
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'suite_manager' }}
+        if: ${{ steps.resolve_services.outputs.suite_manager == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -188,7 +297,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildCoreTrust 
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'coretrust' }}
+        if: ${{ steps.resolve_services.outputs.coretrust == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -199,7 +308,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildMediaRecorder
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'media_recorder' }}
+        if: ${{ steps.resolve_services.outputs.media_recorder == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -210,7 +319,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildSnapshotRecorder
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'snapshot_recorder' }}
+        if: ${{ steps.resolve_services.outputs.snapshot_recorder == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -221,7 +330,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildWebServer
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'web_server' }}
+        if: ${{ steps.resolve_services.outputs.web_server == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -232,7 +341,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildPortBroker
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'port_broker' }}
+        if: ${{ steps.resolve_services.outputs.port_broker == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -243,7 +352,7 @@ jobs:
             --push hypernode-server
 
       - name: BuildMessageBroker
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'message_broker' }}
+        if: ${{ steps.resolve_services.outputs.message_broker == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \
@@ -279,7 +388,7 @@ jobs:
       # FRONTEND CONFIGURATOR
       # ------------------------
       - name: BuildConfigurator
-        if: ${{ inputs.SERVICES == 'all' || inputs.SERVICES == 'configurator' }}
+        if: ${{ steps.resolve_services.outputs.configurator == 'true' }}
         run: |
           docker buildx build \
             --platform=${{ env.PLATFORMS }} \

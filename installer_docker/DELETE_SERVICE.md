@@ -47,6 +47,12 @@ Per eliminare un singolo servizio aggiuntivo:
 sudo installer_docker/delete_service.sh --service camera_additional-pippo
 ```
 
+Per esecuzione non interattiva (skip conferma):
+
+```bash
+sudo installer_docker/delete_service.sh --yes
+```
+
 Help:
 
 ```bash
@@ -56,6 +62,6 @@ installer_docker/delete_service.sh --help
 ## Note operative
 
 - Lo script agisce solo sui servizi aggiuntivi rilevati in **esecuzione** (`docker ps`).
-- Prima di procedere chiede conferma interattiva (`Sei sicuro...? [s/N]`).
+- Prima di procedere chiede conferma interattiva (`Sei sicuro...? [s/N]`), salvo uso di `--yes`.
 - Per sicurezza non rimuove path pericolosi come `/`, `.`, `..`.
 - Per la suite principale usare le procedure dedicate (`native_update.sh`, `installer.sh`).

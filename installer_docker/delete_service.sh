@@ -5,6 +5,7 @@ set -euo pipefail
 SYSTEM_ENV_DIR="/etc/.hypernode"
 DOCKER_CMD="docker"
 TARGET_SERVICE_CONTAINER=""
+SKIP_CONFIRMATION="false"
 
 usage() {
     cat <<'EOF'
@@ -17,6 +18,7 @@ Descrizione:
 Opzioni:
   --service <name>   Elimina solo il container servizio indicato
                      (es: camera_additional-pippo)
+  -y, --yes          Salta la conferma interattiva
   -h, --help         Mostra questo help
 EOF
 }
@@ -367,6 +369,10 @@ while [[ "$#" -gt 0 ]]; do
             fi
             shift 2
             ;;
+        -y|--yes)
+            SKIP_CONFIRMATION="true"
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -393,7 +399,11 @@ for entry in "${entries[@]}"; do
     IFS='|' read -r instance service_container db_container env_file <<< "$entry"
     echo " - ${service_container} (db: ${db_container})"
 done
-confirm_action_or_exit
+if [[ "$SKIP_CONFIRMATION" == "true" ]]; then
+    echo "ℹ️  Conferma saltata per flag --yes."
+else
+    confirm_action_or_exit
+fi
 
 for entry in "${entries[@]}"; do
     IFS='|' read -r instance service_container db_container env_file <<< "$entry"
