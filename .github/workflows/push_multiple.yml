@@ -20,21 +20,20 @@ on:
           Servizi da buildare (CSV), separati da virgola. Usa "all" per tutti.
           Elenco:
           - all
-          - camera (live_streamer)
-          - id (id_verifier)
-          - event (event_manager)
+          - camera
+          - id
+          - event
           - metadata
-          - suite (suite_manager)
+          - gateway
           - coretrust
-          - media/rec (media_recorder)
-          - snap/snapshot (snapshot_recorder)
+          - recording
+          - snapshot
           - web (web_server)
           - port (port_broker)
           - message (message_broker)
-          - configurator
-          Esempi:
-          - camera,snap,configurator
-          - camera,snap,rec,id,metadata,coretrust
+          - configurator (gui)
+          Esempio (tutto tranne port,message,web):
+          camera,id,event,metadata,gateway,coretrust,recording,snapshot,configurator
         required: true
         default: 'all'
       PLATFORMS:
@@ -80,9 +79,11 @@ jobs:
             [event]="event_manager"
             [event_manager]="event_manager"
             [metadata]="metadata"
+            [gateway]="suite_manager"
             [suite]="suite_manager"
             [suite_manager]="suite_manager"
             [coretrust]="coretrust"
+            [recording]="media_recorder"
             [media]="media_recorder"
             [rec]="media_recorder"
             [media_recorder]="media_recorder"
@@ -96,6 +97,7 @@ jobs:
             [message]="message_broker"
             [message_broker]="message_broker"
             [configurator]="configurator"
+            [gui]="configurator"
           )
 
           SERVICES=(
@@ -137,7 +139,7 @@ jobs:
             mapped="${ALIASES[$token]:-}"
             if [[ -z "${mapped}" ]]; then
               echo "Unsupported service token: '${token}'"
-              echo "Allowed tokens: all,camera/live_streamer,id/id_verifier,event/event_manager,metadata,suite/suite_manager,coretrust,media/rec/media_recorder,snap/snapshot/snapshot_recorder,web/web_server,port/port_broker,message/message_broker,configurator"
+              echo "Allowed tokens: all,camera,id,event,metadata,gateway,coretrust,recording,snapshot,web,port,message,configurator,gui"
               exit 1
             fi
 
