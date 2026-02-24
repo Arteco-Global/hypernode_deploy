@@ -763,6 +763,154 @@ get_config() {
 
 }
 
+is_safe_directory_path() {
+    local candidate="$1"
+
+    case "$candidate" in
+        ""|"/"|"/."|"/.."|"."|"..")
+            return 1
+            ;;
+    esac
+
+    return 0
+}
+
+remove_directory_forcefully() {
+    local target="$1"
+
+    if [[ ! -e "$target" ]]; then
+        echo "ℹ️  Path not found, skip: $target"
+        return 0
+    fi
+
+    if rm -rf -- "$target" 2>/dev/null; then
+        echo "🗑️  Removed path: $target"
+        return 0
+    fi
+
+    if command -v sudo >/dev/null 2>&1; then
+        if sudo rm -rf -- "$target" 2>/dev/null; then
+            echo "🗑️  Removed path (sudo): $target"
+            return 0
+        fi
+    fi
+
+    echo "⚠️  Unable to remove path: $target"
+    return 1
+}
+
+resolve_nuke_env_files() {
+    local candidate
+    local paths=()
+    declare -A seen=()
+
+    local fixed_candidates=(
+        "${PWD}/.hypernode-install-env.log"
+        "${ENV_LOG_DIR_SYSTEM}/.hypernode-install-env.log"
+    )
+
+    for candidate in "${fixed_candidates[@]}"; do
+        if [[ -f "$candidate" && -z "${seen[$candidate]:-}" ]]; then
+            seen["$candidate"]=1
+            paths+=("$candidate")
+        fi
+    done
+
+    shopt -s nullglob
+    local extra_candidates=(
+        "${PWD}"/.hypernode-install-*-env.log
+        "${ENV_LOG_DIR_SYSTEM}"/.hypernode-install-*-env.log
+    )
+    shopt -u nullglob
+
+    for candidate in "${extra_candidates[@]}"; do
+        if [[ -f "$candidate" && -z "${seen[$candidate]:-}" ]]; then
+            seen["$candidate"]=1
+            paths+=("$candidate")
+        fi
+    done
+
+    printf '%s\n' "${paths[@]}"
+}
+
+extract_data_paths_from_env_file() {
+    local env_file="$1"
+    local source_file="$env_file"
+    local tmp_file=""
+    local extracted=""
+
+    if [[ ! -r "$env_file" ]]; then
+        if command -v sudo >/dev/null 2>&1 && sudo test -r "$env_file" 2>/dev/null; then
+            tmp_file="$(mktemp)"
+            sudo cat "$env_file" > "$tmp_file"
+            source_file="$tmp_file"
+        else
+            echo "⚠️  Env file not readable, skip: $env_file" >&2
+            return 1
+        fi
+    fi
+
+    if extracted="$(
+        (
+            set -a
+            source "$source_file"
+            set +a
+
+            [[ -n "${SNAPSHOT_PATH:-}" ]] && printf '%s\n' "${SNAPSHOT_PATH}"
+            [[ -n "${RECORDING_PATH:-}" ]] && printf '%s\n' "${RECORDING_PATH}"
+        ) 2>/dev/null
+    )"; then
+        printf '%s\n' "$extracted"
+    else
+        if [[ -n "$tmp_file" ]]; then
+            rm -f "$tmp_file"
+        fi
+        echo "⚠️  Invalid env file format, skip: $env_file" >&2
+        return 1
+    fi
+
+    if [[ -n "$tmp_file" ]]; then
+        rm -f "$tmp_file"
+    fi
+}
+
+cleanup_service_data_paths_from_env_logs() {
+    local env_file
+    local path
+    local found_any="false"
+    declare -A unique_paths=()
+
+    while IFS= read -r env_file; do
+        [[ -z "$env_file" ]] && continue
+        found_any="true"
+        echo "ℹ️  Reading data paths from env: $env_file"
+
+        while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            unique_paths["$path"]=1
+        done < <(extract_data_paths_from_env_file "$env_file" || true)
+    done < <(resolve_nuke_env_files)
+
+    if [[ "$found_any" != "true" ]]; then
+        echo "ℹ️  No env logs found. Snapshot/recording cleanup skipped."
+        return 0
+    fi
+
+    if [[ "${#unique_paths[@]}" -eq 0 ]]; then
+        echo "ℹ️  No snapshot/recording paths found in env logs."
+        return 0
+    fi
+
+    echo "🧹 Cleaning snapshot/recording directories..."
+    for path in "${!unique_paths[@]}"; do
+        if ! is_safe_directory_path "$path"; then
+            echo "⚠️  Unsafe path skipped: $path"
+            continue
+        fi
+        remove_directory_forcefully "$path" || true
+    done
+}
+
 
 dockerNuke() {
     local skip_confirmation=${1:-false}
@@ -797,6 +945,8 @@ dockerNuke() {
         # Esegue il prune finale (opzionale)
         execute_command "docker system prune -a --volumes -f" \
             "Pruning Docker system" || return 1
+
+        cleanup_service_data_paths_from_env_logs || true
 
         end_with_message "Docker cleanup completed successfully" 0
     else
