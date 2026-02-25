@@ -31,7 +31,7 @@ on:
           - web_server
           - port_broker
           - message_broker
-          # - database
+          - database
           # - media_storage
           - configurator
           - coretrust
@@ -62,10 +62,10 @@ jobs:
 
           INPUT_SERVICE="${{ github.event.inputs.SERVICES }}"
           if [[ "${INPUT_SERVICE}" == "all" ]]; then
-            MATRIX='["live_streamer","id_verifier","event_manager","metadata","suite_manager","media_recorder","snapshot_recorder","web_server","port_broker","message_broker","configurator","coretrust"]'
+            MATRIX='["live_streamer","id_verifier","event_manager","metadata","suite_manager","media_recorder","snapshot_recorder","web_server","port_broker","message_broker","database","configurator","coretrust"]'
           else
             case "${INPUT_SERVICE}" in
-              live_streamer|id_verifier|event_manager|metadata|suite_manager|media_recorder|snapshot_recorder|web_server|port_broker|message_broker|configurator|coretrust)
+              live_streamer|id_verifier|event_manager|metadata|suite_manager|media_recorder|snapshot_recorder|web_server|port_broker|message_broker|database|configurator|coretrust)
                 MATRIX="[\"${INPUT_SERVICE}\"]"
                 ;;
               *)
@@ -162,18 +162,28 @@ jobs:
               echo "IMAGE_NAME=artecoglobalcompany/usee_message_broker" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            database)
+              echo "DOCKERFILE=hypernode-server/docker/database/database.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_database" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=true" >> "$GITHUB_ENV"
               ;;
             coretrust)
               echo "DOCKERFILE=hypernode-server/docker/coretrust.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_coretrust" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
               ;;
             configurator)
               echo "DOCKERFILE=hypernode_server_gui/configurator.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_configurator" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode_server_gui" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=true" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
               ;;
             *)
               echo "Unsupported matrix.service: ${{ matrix.service }}"
@@ -233,6 +243,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [ "${IS_DATABASE:-false}" = "true" ]; then
+            docker buildx build \
+              --platform="${PLATFORMS}" \
+              --build-arg MONGO_VERSION=latest \
+              --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+              --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+              -f "${DOCKERFILE}" \
+              -t "${IMAGE_NAME}:${TAG}" \
+              --push "${BUILD_CONTEXT}"
+
+            if [ "${TAG}" = "latest" ]; then
+              docker buildx build \
+                --platform="${PLATFORMS}" \
+                --build-arg MONGO_VERSION=4.4.18 \
+                --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+                --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+                -f "${DOCKERFILE}" \
+                -t "${IMAGE_NAME}:avx_support" \
+                --push "${BUILD_CONTEXT}"
+            fi
+
+            exit 0
+          fi
 
           docker buildx build \
             --platform="${PLATFORMS}" \
