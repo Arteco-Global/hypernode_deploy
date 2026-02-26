@@ -277,3 +277,25 @@ jobs:
             -f "${DOCKERFILE}" \
             -t "${IMAGE_NAME}:${TAG}" \
             --push "${BUILD_CONTEXT}"
+
+      - name: Build summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${IS_FRONTEND:-false}" = "true" ]; then
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}"
+          else
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_BACKEND_REF }}"
+          fi
+
+          echo "===== Build summary (${{ matrix.service }}) ====="
+          echo "Service: ${{ matrix.service }}"
+          echo "Docker tag: ${IMAGE_NAME}:${TAG}"
+          if [ "${IS_DATABASE:-false}" = "true" ] && [ "${TAG}" = "latest" ]; then
+            echo "Docker extra tag: ${IMAGE_NAME}:avx_support"
+          fi
+          echo "Source branch: ${SOURCE_BRANCH}"
+          echo "Architecture: ${PLATFORMS}"
+          echo "==============================================="
