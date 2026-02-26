@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEPLOY_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+DEPLOY_DIR="$SCRIPT_DIR"
 SYSTEM_ENV_DIR="/etc/.hypernode"
 
 NEW_TAG=""
@@ -24,6 +24,14 @@ Aggiorna DOCKER_TAG solo nei file env log Hypernode:
 Lo script chiede interattivamente il nuovo tag e stampa
 tutti i file/linee aggiornati.
 EOF
+}
+
+detect_deploy_dir() {
+    if [[ "$(basename "$SCRIPT_DIR")" == "installer_docker" ]]; then
+        DEPLOY_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+    else
+        DEPLOY_DIR="$SCRIPT_DIR"
+    fi
 }
 
 to_rel_path() {
@@ -181,6 +189,7 @@ if [[ "$#" -gt 0 ]]; then
 fi
 
 prompt_tag
+detect_deploy_dir
 
 echo ""
 echo "▶️  Aggiornamento DOCKER_TAG nei log in corso: $NEW_TAG"

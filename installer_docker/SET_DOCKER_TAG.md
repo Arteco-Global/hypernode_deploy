@@ -5,7 +5,7 @@ rapidamente il valore `DOCKER_TAG` nei file env log Hypernode (es. passaggio tes
 
 ## Cosa fa lo script
 
-`installer_docker/set_docker_tag.sh`:
+`set_docker_tag.sh`:
 
 1. Chiede in modo interattivo il nuovo tag Docker.
 2. Cerca i file env log Hypernode in:
@@ -29,27 +29,31 @@ Pattern gestiti:
 ## Uso
 
 ```bash
-installer_docker/set_docker_tag.sh
+./set_docker_tag.sh
 ```
 
 Help:
 
 ```bash
-installer_docker/set_docker_tag.sh --help
+./set_docker_tag.sh --help
 ```
 
 ## Download manuale sulla macchina
 
-Percorso consigliato sulla macchina host:
+Percorso sulla macchina host:
 
-`/home/arteco/hypernode_deploy/installer_docker/set_docker_tag.sh`
+`/home/arteco/hypernode_deploy/set_docker_tag.sh`
+
+Nota:
+
+nel repository lo script vive in `installer_docker/` solo per organizzazione dei file.
 
 ```bash
 BRANCH=main
 BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads/${BRANCH}/installer_docker"
 
-wget -q -O installer_docker/set_docker_tag.sh "${BASE}/set_docker_tag.sh"
-chmod +x installer_docker/set_docker_tag.sh
+wget -q -O set_docker_tag.sh "${BASE}/set_docker_tag.sh"
+chmod +x set_docker_tag.sh
 ```
 
 ## Note operative
