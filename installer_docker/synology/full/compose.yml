@@ -2,8 +2,21 @@ name: hypernode_stack
 
 services:
 
+  database:
+    image: artecoglobalcompany/usee_database:latest
+    container_name: database
+    networks:
+      - hypernode-net
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    restart: unless-stopped
+
   messagebroker:
     image: artecoglobalcompany/usee_message_broker:latest
+    container_name: messagebroker
     networks:
       - hypernode-net
     environment:
@@ -13,7 +26,6 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     ports:
       - "5672:5672"
-    container_name: messagebroker
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
@@ -21,168 +33,143 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
 
   gateway:
     image: artecoglobalcompany/usee_suite_manager:latest
+    container_name: gateway
     networks:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://uss_server_database:27017/gateway-db
+      - DATABASE_URI=mongodb://database:27017/gateway-db
       - SERVER_TIMEZONE=Europe/Rome
       - SERVER_NAME=synology
       - BACKUPS_PATH=/data/gateway/backups
       - LICENSE_PROVIDER_URL=https://www.arteco-global.com/en/wp-json/sso-provider/login
-    container_name: gateway
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
     volumes:
       - gateway_config:/data/gateway
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
+    restart: unless-stopped
+    depends_on:
+      - messagebroker
+      - database
 
   camera:
     image: artecoglobalcompany/usee_live_streamer:latest
-    environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
-      - GATEWAY_URI=ws://127.0.0.1:8181
-      - DATABASE_URI=mongodb://127.0.0.1:27017/camera-db
     container_name: camera
+    network_mode: host
     restart: unless-stopped
-    network_mode: "host"
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@10.30.6.89:5672
+      - GATEWAY_URI=ws://localhost:8181
+      - DATABASE_URI=mongodb://10.30.6.89:27017/camera-db
     depends_on:
-      messagebroker:
-        condition: service_healthy
+      - messagebroker
+      - database
 
   metadata:
     image: artecoglobalcompany/usee_metadata_manager:latest
-    environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
-      - GATEWAY_URI=ws://127.0.0.1:8181
-      - DATABASE_URI=mongodb://127.0.0.1:27017/metadata-db
     container_name: metadata
+    network_mode: host
     restart: unless-stopped
-    network_mode: "host"
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@10.30.6.89:5672
+      - GATEWAY_URI=ws://localhost:8181
+      - DATABASE_URI=mongodb://10.30.6.89:27017/metadata-db
     depends_on:
-      messagebroker:
-        condition: service_healthy
+      - messagebroker
+      - database
 
   coretrust:
     image: artecoglobalcompany/usee_coretrust:latest
+    container_name: coretrust
     networks:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://uss_server_database:27017/coretrust-db
+      - DATABASE_URI=mongodb://database:27017/coretrust-db
       - CERT_PATH=/ssl
       - SERIAL_NUMBER=V02260031
-      - ARTECO_GLOBAL_EMAIL=nTqServer@gmail.com
-      - ARTECO_GLOBAL_PASSWORD=****
-      - SERVER_IP_ADDRESS=192.168.10.39
-      - CERTIFICATE_PROVIDER_URL=https://xs9punpjw2.execute-api.eu-central-1.amazonaws.com/Cert/renew_hypernode
-      - DNS_PROVIDER_URL=https://zqhck0x3yi.execute-api.eu-central-1.amazonaws.com/dyndns/update_hypernode
-      - LICENSE_PROVIDER_URL=https://www.arteco-global.com/en/wp-json/sso-provider/login
-      - CORETRUST_CONFIG_PATH=/data/coretrust/config.json
-    container_name: coretrust
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
+      - SERVER_IP_ADDRESS=10.30.6.89
     volumes:
       - hypernode_security_shared_files:/ssl
       - coretrust_config:/data/coretrust
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - messagebroker
+      - database
 
   recording:
     image: artecoglobalcompany/usee_media_recorder:latest
+    container_name: recording
     networks:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://uss_server_database:27017/recording-db
+      - DATABASE_URI=mongodb://database:27017/recording-db
       - GATEWAY_URI=ws://webserver
       - RECORDING_PATH=/recording_files
       - RECORDING_DISK_SPACE=100000000
-    container_name: recording
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
     volumes:
       - /volume1/arteco/recordings:/recording_files
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - messagebroker
+      - database
 
   event:
     image: artecoglobalcompany/usee_event_manager:latest
+    container_name: event
     networks:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://uss_server_database:27017/event-db
-    container_name: event
+      - DATABASE_URI=mongodb://database:27017/event-db
     restart: unless-stopped
     depends_on:
-      messagebroker:
-        condition: service_healthy
+      - messagebroker
+      - database
 
   auth:
     image: artecoglobalcompany/usee_id_verifier:latest
+    container_name: auth
     networks:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://uss_server_database:27017/auth-db
-    container_name: auth
+      - DATABASE_URI=mongodb://database:27017/auth-db
     restart: unless-stopped
     depends_on:
-      messagebroker:
-        condition: service_healthy
+      - messagebroker
+      - database
 
   snapshot:
     image: artecoglobalcompany/usee_snapshot_recorder:latest
+    container_name: snapshot
     networks:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://uss_server_database:27017/snapshot-db
+      - DATABASE_URI=mongodb://database:27017/snapshot-db
       - GATEWAY_URI=ws://webserver
       - SNAPSHOT_PATH=/snapshot_files
       - SNAPSHOT_DISK_SPACE=100000000
-    container_name: snapshot
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
     volumes:
       - /volume1/arteco/snapshots:/snapshot_files
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - messagebroker
+      - database
 
   webserver:
     image: artecoglobalcompany/usee_web_server:latest
     container_name: webserver
     networks:
       - hypernode-net
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
     ports:
       - "8181:80"
+    restart: unless-stopped
+    depends_on:
+      - messagebroker
 
   configurator:
     image: artecoglobalcompany/usee_configurator:latest
@@ -191,39 +178,30 @@ services:
       - hypernode-net
     restart: unless-stopped
     depends_on:
-      messagebroker:
-        condition: service_healthy
+      - messagebroker
 
   portbroker:
     image: artecoglobalcompany/usee_port_broker:latest
     container_name: portbroker
-    ports:
-      - "480:443"
     networks:
       - hypernode-net
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-      webserver:
-        condition: service_healthy
+    ports:
+      - "480:443"
     volumes:
       - hypernode_security_shared_files:/ssl
+    restart: unless-stopped
+    depends_on:
+      - messagebroker
+      - webserver
 
 volumes:
   rabbitmq_data:
-    name: rabbitmq_data
-
   hypernode_security_shared_files:
-    name: hypernode_security_shared_files
-
   gateway_config:
-    name: gateway_config
-
   coretrust_config:
-    name: coretrust_config
+  mongodb_data:
+  mongodb_config:
 
 networks:
   hypernode-net:
-    name: hypernode-net
     driver: bridge

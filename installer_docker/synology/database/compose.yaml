@@ -8,7 +8,7 @@ services:
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
-    container_name: uss_server
+    container_name: uss_server_database
     restart: unless-stopped
     logging:
       driver: "json-file"
