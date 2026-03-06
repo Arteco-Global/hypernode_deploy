@@ -88,7 +88,7 @@ services:
       - DATABASE_URI=mongodb://192.168.10.89:27017/coretrust-db
       - CERT_PATH=/ssl
       - SERIAL_NUMBER=V02260031
-      - ARTECO_GLOBAL_EMAIL=****
+      - ARTECO_GLOBAL_EMAIL=nTqServer@gmail.com
       - ARTECO_GLOBAL_PASSWORD=****
       - SERVER_IP_ADDRESS=192.168.10.39
       - CERTIFICATE_PROVIDER_URL=https://xs9punpjw2.execute-api.eu-central-1.amazonaws.com/Cert/renew_hypernode
