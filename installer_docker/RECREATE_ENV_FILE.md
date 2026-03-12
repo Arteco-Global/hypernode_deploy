@@ -44,6 +44,7 @@ Parametri:
 - `SSL_PORT` viene letto dal mapping di `portbroker:443`.
 - `DOCKER_TAG` viene letto dall'immagine `messagebroker` (fallback `gateway`).
 - `DB_PORT` viene dedotto da `DATABASE_URI` del gateway/coretrust.
+- `SERVER_SECRET` (se presente) viene ricavata dall'env del container `gateway`.
 - La variabile `MACHINE` viene aggiunta successivamente da `native_update.sh`
   o `uss_restore.sh` (che creano/leggono `machine.json`).
 - Lo script non modifica i container: è in sola lettura.

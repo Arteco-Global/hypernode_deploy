@@ -36,6 +36,7 @@ services:
       - DATABASE_URI=mongodb://uss_server_database:27017/gateway-db
       - SERVER_TIMEZONE=Europe/Rome
       - SERVER_NAME=synology
+      - SERVER_SECRET=${SERVER_SECRET:-HYPERNODE_SERVER_SECRET}
       - BACKUPS_PATH=/data/gateway/backups
       - LICENSE_PROVIDER_URL=https://www.arteco-global.com/en/wp-json/sso-provider/login
     container_name: gateway

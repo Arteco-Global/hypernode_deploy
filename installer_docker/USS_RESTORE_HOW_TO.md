@@ -83,6 +83,7 @@ Quando il file manca, lo script chiede questi valori:
 - `DB_PORT` (default `27017`)
 - `DB_NAME` (default `uss_database`)
 - `RMQ` (default `amqp://****:****@messagebroker:5672`)
+- `SERVER_SECRET` (default `HYPERNODE_SERVER_SECRET`, usata da gateway per ALTCHA/reset)
 
 I valori vengono salvati con escaping sicuro per evitare problemi con caratteri speciali (es. `!`).
 
