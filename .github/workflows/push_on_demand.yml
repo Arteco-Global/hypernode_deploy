@@ -51,7 +51,7 @@ on:
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       TAG: ${{ github.event.inputs.TAG_REF }}
       PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
@@ -112,15 +112,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: DockerHub Login
         run: |
           echo "${{ secrets.DOCKER_TOKEN }}" \
@@ -140,6 +131,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/camera.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_live_streamer:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_live_streamer:buildcache,mode=max \
             -t artecoglobalcompany/usee_live_streamer:${{ env.TAG }} \
             --push hypernode-server
 
@@ -151,6 +144,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/auth.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_id_verifier:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_id_verifier:buildcache,mode=max \
             -t artecoglobalcompany/usee_id_verifier:${{ env.TAG }} \
             --push hypernode-server
 
@@ -162,6 +157,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/event.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_event_manager:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_event_manager:buildcache,mode=max \
             -t artecoglobalcompany/usee_event_manager:${{ env.TAG }} \
             --push hypernode-server
 
@@ -173,6 +170,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/metadata.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_metadata_manager:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_metadata_manager:buildcache,mode=max \
             -t artecoglobalcompany/usee_metadata_manager:${{ env.TAG }} \
             --push hypernode-server
 
@@ -184,6 +183,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/gateway.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_suite_manager:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_suite_manager:buildcache,mode=max \
             -t artecoglobalcompany/usee_suite_manager:${{ env.TAG }} \
             --push hypernode-server
 
@@ -195,6 +196,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/coretrust.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_coretrust:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_coretrust:buildcache,mode=max \
             -t artecoglobalcompany/usee_coretrust:${{ env.TAG }} \
             --push hypernode-server
 
@@ -206,6 +209,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/recording.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_media_recorder:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_media_recorder:buildcache,mode=max \
             -t artecoglobalcompany/usee_media_recorder:${{ env.TAG }} \
             --push hypernode-server
 
@@ -217,6 +222,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/snapshot.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_snapshot_recorder:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_snapshot_recorder:buildcache,mode=max \
             -t artecoglobalcompany/usee_snapshot_recorder:${{ env.TAG }} \
             --push hypernode-server
 
@@ -228,6 +235,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/webserver/nginx.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_web_server:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_web_server:buildcache,mode=max \
             -t artecoglobalcompany/usee_web_server:${{ env.TAG }} \
             --push hypernode-server
 
@@ -239,6 +248,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/portbroker/portBroker.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_port_broker:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_port_broker:buildcache,mode=max \
             -t artecoglobalcompany/usee_port_broker:${{ env.TAG }} \
             --push hypernode-server
 
@@ -250,6 +261,8 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode-server/docker/messagebroker/messageBroker.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_message_broker:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_message_broker:buildcache,mode=max \
             -t artecoglobalcompany/usee_message_broker:${{ env.TAG }} \
             --push hypernode-server
 
@@ -286,5 +299,7 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.IMAGE_VERSION }} \
             --label org.opencontainers.image.version=${{ env.IMAGE_VERSION }} \
             -f hypernode_server_gui/configurator.Dockerfile \
+            --cache-from=type=registry,ref=artecoglobalcompany/usee_configurator:buildcache \
+            --cache-to=type=registry,ref=artecoglobalcompany/usee_configurator:buildcache,mode=max \
             -t artecoglobalcompany/usee_configurator:${{ env.TAG }} \
             --push hypernode_server_gui

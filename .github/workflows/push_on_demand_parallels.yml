@@ -1,0 +1,301 @@
+name: Push USee Images (parallel mode)
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH_BACKEND_REF:
+        description: 'Checkout branch Backend (server)'
+        required: true
+        default: 'release_candidate'
+      BRANCH_CONFIGURATOR_REF:
+        description: 'Checkout branch Configurator (frontend)'
+        required: true
+        default: 'release_candidate'
+      TAG_REF:
+        description: 'Tag Docker (es. latest, v1.2.3)'
+        required: true
+        default: 'ATTENTION: usare "latest" solo per prod!'
+      SERVICES:
+        description: 'Seleziona il servizio da buildare (o "all" per tutti)'
+        required: true
+        type: choice
+        options:
+          - all
+          - live_streamer
+          - id_verifier
+          - event_manager
+          - metadata
+          - suite_manager
+          - media_recorder
+          - snapshot_recorder
+          - web_server
+          - port_broker
+          - message_broker
+          - database
+          # - media_storage
+          - configurator
+          - coretrust
+        default: 'all'
+      PLATFORMS:
+        description: 'Architettura target Docker (piattaforma di build)'
+        required: true
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/amd64,linux/arm64
+          - linux/arm/v7
+          - linux/arm/v6
+        default: 'linux/amd64,linux/arm64'
+
+jobs:
+  prepare_matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+    steps:
+      - name: Prepare services matrix
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INPUT_SERVICE="${{ github.event.inputs.SERVICES }}"
+          if [[ "${INPUT_SERVICE}" == "all" ]]; then
+            MATRIX='["live_streamer","id_verifier","event_manager","metadata","suite_manager","media_recorder","snapshot_recorder","web_server","port_broker","message_broker","database","configurator","coretrust"]'
+          else
+            case "${INPUT_SERVICE}" in
+              live_streamer|id_verifier|event_manager|metadata|suite_manager|media_recorder|snapshot_recorder|web_server|port_broker|message_broker|database|configurator|coretrust)
+                MATRIX="[\"${INPUT_SERVICE}\"]"
+                ;;
+              *)
+                echo "Unsupported service: ${INPUT_SERVICE}"
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+          echo "Selected matrix: ${MATRIX}"
+
+  build_and_push:
+    needs: prepare_matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 13
+      matrix:
+        service: ${{ fromJson(needs.prepare_matrix.outputs.matrix) }}
+    env:
+      TAG: ${{ github.event.inputs.TAG_REF }}
+      PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Resolve build parameters
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "${{ matrix.service }}" in
+            live_streamer)
+              echo "DOCKERFILE=hypernode-server/docker/camera.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_live_streamer" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            id_verifier)
+              echo "DOCKERFILE=hypernode-server/docker/auth.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_id_verifier" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            event_manager)
+              echo "DOCKERFILE=hypernode-server/docker/event.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_event_manager" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            metadata)
+              echo "DOCKERFILE=hypernode-server/docker/metadata.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_metadata_manager" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            suite_manager)
+              echo "DOCKERFILE=hypernode-server/docker/gateway.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_suite_manager" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            media_recorder)
+              echo "DOCKERFILE=hypernode-server/docker/recording.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_media_recorder" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            snapshot_recorder)
+              echo "DOCKERFILE=hypernode-server/docker/snapshot.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_snapshot_recorder" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            web_server)
+              echo "DOCKERFILE=hypernode-server/docker/webserver/nginx.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_web_server" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            port_broker)
+              echo "DOCKERFILE=hypernode-server/docker/portbroker/portBroker.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_port_broker" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            message_broker)
+              echo "DOCKERFILE=hypernode-server/docker/messagebroker/messageBroker.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_message_broker" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            database)
+              echo "DOCKERFILE=hypernode-server/docker/database/database.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_database" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=true" >> "$GITHUB_ENV"
+              ;;
+            coretrust)
+              echo "DOCKERFILE=hypernode-server/docker/coretrust.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_coretrust" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            configurator)
+              echo "DOCKERFILE=hypernode_server_gui/configurator.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_configurator" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode_server_gui" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=true" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unsupported matrix.service: ${{ matrix.service }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Checkout backend
+        if: ${{ env.IS_FRONTEND == 'false' }}
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode-server
+          ref: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
+          path: hypernode-server
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Checkout frontend
+        if: ${{ env.IS_FRONTEND == 'true' }}
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode_server_gui
+          ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
+          path: hypernode_server_gui
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Compute image version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION=""
+          if [ "${TAG}" != "latest" ]; then
+            VERSION="${TAG}"
+          elif [ "${IS_FRONTEND}" = "true" ]; then
+            VERSION="$(git -C hypernode_server_gui rev-parse --short HEAD)"
+          else
+            VERSION="$(git -C hypernode-server rev-parse --short HEAD)"
+          fi
+
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Image version: ${VERSION}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and Push ${{ matrix.service }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${IS_DATABASE:-false}" = "true" ]; then
+            docker buildx build \
+              --platform="${PLATFORMS}" \
+              --build-arg MONGO_VERSION=latest \
+              --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+              --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+              -f "${DOCKERFILE}" \
+              -t "${IMAGE_NAME}:${TAG}" \
+              --push "${BUILD_CONTEXT}"
+
+            if [ "${TAG}" = "latest" ]; then
+              docker buildx build \
+                --platform="${PLATFORMS}" \
+                --build-arg MONGO_VERSION=4.4.18 \
+                --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+                --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+                -f "${DOCKERFILE}" \
+                -t "${IMAGE_NAME}:avx_support" \
+                --push "${BUILD_CONTEXT}"
+            fi
+
+            exit 0
+          fi
+
+          docker buildx build \
+            --platform="${PLATFORMS}" \
+            --build-arg IMAGE_VERSION="${IMAGE_VERSION}" \
+            --label org.opencontainers.image.version="${IMAGE_VERSION}" \
+            --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+            --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+            -f "${DOCKERFILE}" \
+            -t "${IMAGE_NAME}:${TAG}" \
+            --push "${BUILD_CONTEXT}"
+
+      - name: Build summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${IS_FRONTEND:-false}" = "true" ]; then
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}"
+          else
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_BACKEND_REF }}"
+          fi
+
+          echo "===== Build summary (${{ matrix.service }}) ====="
+          echo "Service: ${{ matrix.service }}"
+          echo "Docker tag: ${IMAGE_NAME}:${TAG}"
+          if [ "${IS_DATABASE:-false}" = "true" ] && [ "${TAG}" = "latest" ]; then
+            echo "Docker extra tag: ${IMAGE_NAME}:avx_support"
+          fi
+          echo "Source branch: ${SOURCE_BRANCH}"
+          echo "Architecture: ${PLATFORMS}"
+          echo "==============================================="
