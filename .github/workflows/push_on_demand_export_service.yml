@@ -1,0 +1,102 @@
+name: Push Arteco Export Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH_REF:
+        description: 'Checkout branch arteco-export-service'
+        required: true
+        default: 'main'
+      TAG_REF:
+        description: 'Tag Docker (es. latest, v1.2.3)'
+        required: true
+        default: 'ATTENTION: usare "latest" solo per prod!'
+      PLATFORMS:
+        description: 'Architettura target Docker (piattaforma di build)'
+        required: true
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/amd64,linux/arm64
+          - linux/arm/v7
+          - linux/arm/v6
+        default: 'linux/amd64,linux/arm64'
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      IMAGE_NAME: artecoglobalcompany/arteco-export-service
+      TAG: ${{ github.event.inputs.TAG_REF }}
+      PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Checkout export service
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/arteco-export-service
+          ref: ${{ github.event.inputs.BRANCH_REF }}
+          path: arteco-export-service
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Compute image version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION=""
+          if [ "${TAG}" != "latest" ]; then
+            VERSION="${TAG}"
+          else
+            VERSION="$(git -C arteco-export-service rev-parse --short HEAD)"
+          fi
+
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Image version: ${VERSION}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and Push arteco-export-service
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker buildx build \
+            --platform="${PLATFORMS}" \
+            --build-arg IMAGE_VERSION="${IMAGE_VERSION}" \
+            --label org.opencontainers.image.version="${IMAGE_VERSION}" \
+            --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+            --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+            -t "${IMAGE_NAME}:${TAG}" \
+            --push arteco-export-service
+
+      - name: Build summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== Build summary ====="
+          echo "Service: arteco-export-service"
+          echo "Docker tag: ${IMAGE_NAME}:${TAG}"
+          echo "Source branch: ${{ github.event.inputs.BRANCH_REF }}"
+          echo "Architecture: ${PLATFORMS}"
+          echo "========================="
