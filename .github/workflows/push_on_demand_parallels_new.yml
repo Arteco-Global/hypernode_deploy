@@ -7,6 +7,10 @@ on:
         description: 'Checkout branch Backend (server)'
         required: true
         default: 'release_candidate'
+      BRANCH_EXPORT_REF:
+        description: 'Checkout branch arteco-export-service'
+        required: true
+        default: 'main'
       BRANCH_CONFIGURATOR_REF:
         description: 'Checkout branch Configurator (frontend)'
         required: true
@@ -34,6 +38,7 @@ on:
           - database
           # - media_storage
           - configurator
+          - export
           - coretrust
         default: 'all'
       PLATFORMS:
@@ -62,10 +67,10 @@ jobs:
 
           INPUT_SERVICE="${{ github.event.inputs.SERVICES }}"
           if [[ "${INPUT_SERVICE}" == "all" ]]; then
-            MATRIX='["live_streamer","id_verifier","event_manager","metadata","suite_manager","media_recorder","snapshot_recorder","web_server","port_broker","message_broker","database","configurator","coretrust"]'
+            MATRIX='["live_streamer","id_verifier","event_manager","metadata","suite_manager","media_recorder","snapshot_recorder","web_server","port_broker","message_broker","database","configurator","export","coretrust"]'
           else
             case "${INPUT_SERVICE}" in
-              live_streamer|id_verifier|event_manager|metadata|suite_manager|media_recorder|snapshot_recorder|web_server|port_broker|message_broker|database|configurator|coretrust)
+              live_streamer|id_verifier|event_manager|metadata|suite_manager|media_recorder|snapshot_recorder|web_server|port_broker|message_broker|database|configurator|export|coretrust)
                 MATRIX="[\"${INPUT_SERVICE}\"]"
                 ;;
               *)
@@ -183,6 +188,15 @@ jobs:
               echo "IMAGE_NAME=artecoglobalcompany/usee_configurator" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode_server_gui" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=true" >> "$GITHUB_ENV"
+              echo "IS_EXPORT=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            export)
+              echo "DOCKERFILE=arteco-export-service/Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/arteco-export-service" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=arteco-export-service" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_EXPORT=true" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
               ;;
             *)
@@ -192,7 +206,7 @@ jobs:
           esac
 
       - name: Checkout backend
-        if: ${{ env.IS_FRONTEND == 'false' }}
+        if: ${{ env.IS_FRONTEND == 'false' && env.IS_EXPORT != 'true' }}
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode-server
@@ -209,6 +223,15 @@ jobs:
           path: hypernode_server_gui
           token: ${{ secrets.GIT_PAT }}
 
+      - name: Checkout export service
+        if: ${{ env.IS_EXPORT == 'true' }}
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/arteco-export-service
+          ref: ${{ github.event.inputs.BRANCH_EXPORT_REF }}
+          path: arteco-export-service
+          token: ${{ secrets.GIT_PAT }}
+
       - name: Compute image version
         shell: bash
         run: |
@@ -217,6 +240,8 @@ jobs:
           VERSION=""
           if [ "${TAG}" != "latest" ]; then
             VERSION="${TAG}"
+          elif [ "${IS_EXPORT:-false}" = "true" ]; then
+            VERSION="$(git -C arteco-export-service rev-parse --short HEAD)"
           elif [ "${IS_FRONTEND}" = "true" ]; then
             VERSION="$(git -C hypernode_server_gui rev-parse --short HEAD)"
           else
@@ -284,7 +309,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "${IS_FRONTEND:-false}" = "true" ]; then
+          if [ "${IS_EXPORT:-false}" = "true" ]; then
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_EXPORT_REF }}"
+          elif [ "${IS_FRONTEND:-false}" = "true" ]; then
             SOURCE_BRANCH="${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}"
           else
             SOURCE_BRANCH="${{ github.event.inputs.BRANCH_BACKEND_REF }}"
