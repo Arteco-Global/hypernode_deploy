@@ -10,7 +10,7 @@ on:
       BRANCH_EXPORT_REF:
         description: 'Checkout branch arteco-export-service'
         required: true
-        default: 'main'
+        default: 'release_candidate'
       BRANCH_CONFIGURATOR_REF:
         description: 'Checkout branch Configurator (frontend)'
         required: true
