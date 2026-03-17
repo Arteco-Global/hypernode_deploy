@@ -241,6 +241,27 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  export:
+    image: artecoglobalcompany/arteco-export-service:${DOCKER_TAG:-latest}
+    container_name: arteco-export-service
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    ports:
+      - "5500:5500"
+    environment:
+      - PORT=5500
+      - LOCAL_DB_CONNECTION=mongodb://host.docker.internal:${DB_PORT:-27017}/exports
+    volumes:
+      - arteco_exports:/home/node/arteco-export-service/exports
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   webserver:
     image: artecoglobalcompany/usee_web_server:${DOCKER_TAG:-latest}
     container_name: webserver
@@ -305,6 +326,7 @@ volumes:
   hypernode_security_shared_files:
   gateway_config:
   coretrust_config:
+  arteco_exports:
 
 networks:
   hypernode-net:
