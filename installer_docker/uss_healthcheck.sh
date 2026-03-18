@@ -17,7 +17,6 @@ TMP_COMPOSES=()
 COMPOSE_SOURCES=()
 CONTAINERS=()
 HYPERNODE_DIR=""
-CONFIG_FILE=""
 USER_LOGIN_VALUE=""
 USER_PASSWORD_VALUE=""
 LICENSING_URL_VALUE=""
@@ -178,6 +177,10 @@ load_install_env() {
     DB_PORT
     SSL_PORT
     DOCKER_TAG
+    SERIAL_NUMBER
+    ARTECO_GLOBAL_EMAIL
+    ARTECO_GLOBAL_PASSWORD
+    LICENSE_PROVIDER_URL
     RECORDING_PATH
     SNAPSHOT_PATH
     STORAGE_PATH
@@ -210,6 +213,13 @@ load_install_env() {
 
   info "Env install rilevato: $ENV_LOG_FILE"
   return 0
+}
+
+normalize_existing_dir() {
+  local path="$1"
+
+  [[ -n "$path" && -d "$path" ]] || return 1
+  (cd "$path" 2>/dev/null && pwd -P) || return 1
 }
 
 resolve_compose_value() {
@@ -442,30 +452,40 @@ find_database_port() {
 }
 
 find_hypernode_dir() {
-  local parent search_paths=(
-    "$SCRIPT_DIR/.."
-    "/Users"
-    "/home"
-    "/root"
-    "/opt"
-    "/usr/local"
-    "/var"
-    "/"
-  )
+  local parent env_parent pwd_parent base resolved path
+  local -a search_paths=()
+
+  if [[ -n "$ENV_LOG_FILE" ]]; then
+    env_parent="$(normalize_existing_dir "$(dirname "$ENV_LOG_FILE")" || true)"
+    if [[ "$(basename "${env_parent:-}")" == "hypernode_deploy" ]]; then
+      HYPERNODE_DIR="$env_parent"
+      return 0
+    fi
+    [[ -n "$env_parent" ]] && search_paths+=("$env_parent")
+  fi
+
+  pwd_parent="$(normalize_existing_dir "$PWD" || true)"
+  if [[ "$(basename "${pwd_parent:-}")" == "hypernode_deploy" ]]; then
+    HYPERNODE_DIR="$pwd_parent"
+    return 0
+  fi
+  [[ -n "$pwd_parent" ]] && search_paths+=("$pwd_parent")
 
   parent="$(cd "$SCRIPT_DIR/.." && pwd)"
   if [[ "$(basename "$parent")" == "hypernode_deploy" ]]; then
     HYPERNODE_DIR="$parent"
     return 0
   fi
+  search_paths+=("$parent" "/Users" "/home" "/root" "/opt" "/usr/local" "/var" "/")
 
-  local base path
   for base in "${search_paths[@]}"; do
-    [[ -d "$base" ]] || continue
+    resolved="$(normalize_existing_dir "$base" || true)"
+    [[ -n "$resolved" ]] || continue
+    [[ -d "$resolved" ]] || continue
     while IFS= read -r path; do
-      HYPERNODE_DIR="$path"
+      HYPERNODE_DIR="$(normalize_existing_dir "$path" || printf "%s" "$path")"
       return 0
-    done < <(find "$base" -type d -name hypernode_deploy 2>/dev/null || true)
+    done < <(find "$resolved" -type d -name hypernode_deploy 2>/dev/null || true)
   done
 
   return 1
@@ -501,21 +521,46 @@ check_required_files() {
   return $missing
 }
 
-find_update_check_config() {
-  local base="$1"
-  local candidate
-  local -a candidates=(
-    "$SCRIPT_DIR/.hypernode-update-check.conf"
-    "$base/installer_docker/.hypernode-update-check.conf"
-    "$base/.hypernode-update-check.conf"
-  )
+find_serial_value() {
+  if [[ -n "${INSTALL_ENV[SERIAL_NUMBER]:-}" ]]; then
+    printf "%s" "${INSTALL_ENV[SERIAL_NUMBER]}"
+    return 0
+  fi
 
-  for candidate in "${candidates[@]}"; do
-    if [[ -f "$candidate" ]]; then
-      printf "%s" "$candidate"
-      return 0
-    fi
-  done
+  return 1
+}
+
+find_licensing_value() {
+  local kind="$1"
+
+  case "$kind" in
+    url)
+      if [[ -n "${INSTALL_ENV[LICENSE_PROVIDER_URL]:-}" ]]; then
+        printf "%s" "${INSTALL_ENV[LICENSE_PROVIDER_URL]}"
+        return 0
+      fi
+      ;;
+    login)
+      if [[ -n "${USER_LOGIN:-}" ]]; then
+        printf "%s" "${USER_LOGIN}"
+        return 0
+      fi
+      if [[ -n "${INSTALL_ENV[ARTECO_GLOBAL_EMAIL]:-}" ]]; then
+        printf "%s" "${INSTALL_ENV[ARTECO_GLOBAL_EMAIL]}"
+        return 0
+      fi
+      ;;
+    password)
+      if [[ -n "${USER_PASSWORD:-}" ]]; then
+        printf "%s" "${USER_PASSWORD}"
+        return 0
+      fi
+      if [[ -n "${INSTALL_ENV[ARTECO_GLOBAL_PASSWORD]:-}" ]]; then
+        printf "%s" "${INSTALL_ENV[ARTECO_GLOBAL_PASSWORD]}"
+        return 0
+      fi
+      ;;
+  esac
 
   return 1
 }
@@ -603,22 +648,6 @@ compare_dns_ip() {
   fi
 }
 
-read_config_var() {
-  local file="$1" var_name="$2" result=""
-  if [[ ! -f "$file" ]]; then
-    return 1
-  fi
-
-  # Usa una subshell bash per interpretare gli escape come farebbe la shell.
-  result=$(bash -c 'set -a; source "$1"; v="$2"; printf "%s" "${!v}"' bash "$file" "$var_name" 2>/dev/null || true)
-  if [[ -n "$result" ]]; then
-    echo "$result"
-    return 0
-  fi
-
-  return 1
-}
-
 parse_licensing_ports() {
   local response_file="$1" serial="$2"
 
@@ -684,8 +713,14 @@ PY
 
 licensing_sites_check() {
   local url="$1" login="$2" password="$3" serial="$4"
+  local -a missing=()
+
   if [[ -z "$url" || -z "$login" || -z "$password" || -z "$serial" ]]; then
-    warn "Parametri licensing incompleti: salto chiamata /sites."
+    [[ -z "$url" ]] && missing+=("LICENSING_URL")
+    [[ -z "$login" ]] && missing+=("USER_LOGIN")
+    [[ -z "$password" ]] && missing+=("USER_PASSWORD")
+    [[ -z "$serial" ]] && missing+=("SERIAL")
+    warn "Parametri licensing incompleti (${missing[*]}): salto chiamata /sites."
     return 1
   fi
 
@@ -938,29 +973,20 @@ fi
 
 check_required_files "$HYPERNODE_DIR" || true
 
-CONFIG_FILE="$(find_update_check_config "$HYPERNODE_DIR" || true)"
 SERIAL_VALUE=""
 USER_LOGIN_VALUE=""
 USER_PASSWORD_VALUE=""
 LICENSING_URL_VALUE=""
 
-if [[ -n "$CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
-  SERIAL_VALUE=$(read_config_var "$CONFIG_FILE" "SERIAL" || true)
-  USER_LOGIN_VALUE=$(read_config_var "$CONFIG_FILE" "USER_LOGIN" || true)
-  USER_PASSWORD_VALUE=$(read_config_var "$CONFIG_FILE" "USER_PASSWORD" || true)
-  LICENSING_URL_VALUE=$(read_config_var "$CONFIG_FILE" "LICENSING_URL" || true)
-else
-  warn "File di configurazione .hypernode-update-check.conf mancante."
-fi
+SERIAL_VALUE="$(find_serial_value || true)"
+USER_LOGIN_VALUE="$(find_licensing_value login || true)"
+USER_PASSWORD_VALUE="$(find_licensing_value password || true)"
+LICENSING_URL_VALUE="$(find_licensing_value url || true)"
 
 if [[ -n "$SERIAL_VALUE" ]]; then
   SERIAL_LOWER=$(echo "$SERIAL_VALUE" | tr '[:upper:]' '[:lower:]')
 else
-  if [[ -n "$CONFIG_FILE" ]]; then
-    warn "Impossibile leggere SERIAL da $CONFIG_FILE."
-  else
-    warn "Impossibile leggere SERIAL dal file di configurazione."
-  fi
+  warn "Impossibile leggere SERIAL_NUMBER dall'env install."
 fi
 
 section "4) NETWORK"
