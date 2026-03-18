@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
 ABSOLUTE_PATH="${ABSOLUTE_PATH:-}"
+SYSTEM_ENV_DIR="/etc/.hypernode"
+ENV_LOG_NAME=".hypernode-install-env.log"
 COMPOSE_FILES=(
   "$SCRIPT_DIR/composes/server/docker-compose.yaml"
   "$SCRIPT_DIR/composes/database/docker-compose.yaml"
@@ -15,6 +17,7 @@ TMP_COMPOSES=()
 COMPOSE_SOURCES=()
 CONTAINERS=()
 HYPERNODE_DIR=""
+CONFIG_FILE=""
 USER_LOGIN_VALUE=""
 USER_PASSWORD_VALUE=""
 LICENSING_URL_VALUE=""
@@ -26,6 +29,11 @@ SITE_IS_USS=""
 REACH_LAN_OK="false"
 REACH_WAN_OK="false"
 DB_PORT=""
+DB_NAME=""
+DB_CONTAINER=""
+ENV_LOG_FILE=""
+
+declare -A INSTALL_ENV=()
 
 info() { echo "ℹ️  $*"; }
 warn() { echo "⚠️  $*" >&2; }
@@ -127,6 +135,124 @@ ensure_docker_running() {
   ok "Docker è in esecuzione."
 }
 
+read_shell_var() {
+  local file="$1" var_name="$2" result=""
+
+  [[ -f "$file" ]] || return 1
+
+  result=$(bash -c 'set -a; source "$1"; v="$2"; printf "%s" "${!v}"' bash "$file" "$var_name" 2>/dev/null || true)
+  if [[ -n "$result" ]]; then
+    printf "%s" "$result"
+    return 0
+  fi
+
+  return 1
+}
+
+find_install_env_file() {
+  local candidate
+  local -a candidates=(
+    "$PWD/$ENV_LOG_NAME"
+    "$PWD/hypernode-install-env.log"
+    "$SCRIPT_DIR/$ENV_LOG_NAME"
+    "$SCRIPT_DIR/../$ENV_LOG_NAME"
+    "$SYSTEM_ENV_DIR/$ENV_LOG_NAME"
+    "$SYSTEM_ENV_DIR/hypernode-install-env.log"
+  )
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      printf "%s" "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+load_install_env() {
+  local file="${1:-}"
+  local key value
+  local -a vars=(
+    DB_NAME
+    DB_PORT
+    SSL_PORT
+    DOCKER_TAG
+    RECORDING_PATH
+    SNAPSHOT_PATH
+    STORAGE_PATH
+  )
+
+  if [[ -z "$file" ]]; then
+    file="$(find_install_env_file || true)"
+  fi
+
+  if [[ -z "$file" || ! -f "$file" ]]; then
+    warn "File env install non trovato: i controlli useranno fallback runtime."
+    return 1
+  fi
+
+  ENV_LOG_FILE="$file"
+  for key in "${vars[@]}"; do
+    value="$(read_shell_var "$file" "$key" || true)"
+    if [[ -n "$value" ]]; then
+      INSTALL_ENV["$key"]="$value"
+    fi
+  done
+
+  if [[ -n "${INSTALL_ENV[DB_NAME]:-}" ]]; then
+    DB_NAME="${INSTALL_ENV[DB_NAME]}"
+  fi
+
+  if [[ -n "${INSTALL_ENV[DB_PORT]:-}" ]]; then
+    DB_PORT="${INSTALL_ENV[DB_PORT]}"
+  fi
+
+  info "Env install rilevato: $ENV_LOG_FILE"
+  return 0
+}
+
+resolve_compose_value() {
+  local value="$1"
+  local match var_name default_value replacement="" use_default_when_empty="false"
+
+  while [[ "$value" =~ (\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}) ]]; do
+    match="${BASH_REMATCH[1]}"
+    var_name=""
+    default_value=""
+    replacement=""
+    use_default_when_empty="false"
+
+    if [[ "$match" =~ ^\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\}$ ]]; then
+      var_name="${BASH_REMATCH[1]}"
+      default_value="${BASH_REMATCH[2]}"
+      use_default_when_empty="true"
+    elif [[ "$match" =~ ^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$ ]]; then
+      var_name="${BASH_REMATCH[1]}"
+    else
+      break
+    fi
+
+    if [[ -n "$var_name" && -n "${!var_name+x}" ]]; then
+      replacement="${!var_name}"
+      if [[ "$use_default_when_empty" == "true" && -z "$replacement" ]]; then
+        replacement="$default_value"
+      fi
+    elif [[ -n "${INSTALL_ENV[$var_name]+x}" ]]; then
+      replacement="${INSTALL_ENV[$var_name]}"
+      if [[ "$use_default_when_empty" == "true" && -z "$replacement" ]]; then
+        replacement="$default_value"
+      fi
+    else
+      replacement="$default_value"
+    fi
+
+    value="${value//$match/$replacement}"
+  done
+
+  printf "%s" "$value"
+}
+
 download_compose_sources() {
   local idx file url tmp
 
@@ -206,7 +332,7 @@ parse_compose_container_names() {
     fi
 
     if [[ -n "$current_service" && "$line" =~ ^[[:space:]]{4}container_name:[[:space:]]*([^[:space:]]+) ]]; then
-      current_container="${BASH_REMATCH[1]}"
+      current_container="$(resolve_compose_value "${BASH_REMATCH[1]}")"
     fi
   done < "$file"
 
@@ -246,11 +372,48 @@ check_container_statuses() {
   return $all_ok
 }
 
-find_database_port() {
-  local container="uss_database" host_binding=""
+find_database_container() {
+  local name image
+  local -a candidates=()
 
-  if ! docker inspect "$container" >/dev/null 2>&1; then
-    warn "$container: container non trovato, porta DB non rilevata."
+  if [[ -n "${DB_NAME:-}" ]]; then
+    candidates+=("$DB_NAME")
+  fi
+
+  if [[ -n "${INSTALL_ENV[DB_NAME]:-}" ]]; then
+    candidates+=("${INSTALL_ENV[DB_NAME]}")
+  fi
+
+  while IFS="|" read -r name image; do
+    [[ -n "$name" && -n "$image" ]] || continue
+    if [[ "$image" == artecoglobalcompany/usee_database* ]]; then
+      candidates+=("$name")
+    fi
+  done < <(docker ps -a --format '{{.Names}}|{{.Image}}')
+
+  dedupe_array candidates
+
+  for name in "${candidates[@]}"; do
+    if docker inspect "$name" >/dev/null 2>&1; then
+      DB_CONTAINER="$name"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+find_database_port() {
+  local container="" host_binding=""
+
+  if find_database_container; then
+    container="$DB_CONTAINER"
+  elif [[ -n "${INSTALL_ENV[DB_PORT]:-}" ]]; then
+    DB_PORT="${INSTALL_ENV[DB_PORT]}"
+    warn "Container DB non trovato, uso DB_PORT dall'env install: $DB_PORT"
+    return 0
+  else
+    warn "Container DB non trovato e DB_PORT non disponibile nell'env install."
     return 1
   fi
 
@@ -265,6 +428,12 @@ find_database_port() {
   if [[ -n "$host_binding" ]]; then
     DB_PORT="${host_binding##*:}"
     ok "$container: porta DB host ${DB_PORT} (binding ${host_binding})"
+    return 0
+  fi
+
+  if [[ -n "${INSTALL_ENV[DB_PORT]:-}" ]]; then
+    DB_PORT="${INSTALL_ENV[DB_PORT]}"
+    warn "$container: binding 27017/tcp non rilevato, uso DB_PORT dall'env install: $DB_PORT"
     return 0
   fi
 
@@ -314,7 +483,8 @@ stat_summary() {
 check_required_files() {
   local base="$1"
   local -a required=(
-    "installer.sh"
+    "installer_docker/installer.sh"
+    "installer_docker/uss_healthcheck.sh"
   )
 
   local missing=0 path
@@ -329,6 +499,25 @@ check_required_files() {
   done
 
   return $missing
+}
+
+find_update_check_config() {
+  local base="$1"
+  local candidate
+  local -a candidates=(
+    "$SCRIPT_DIR/.hypernode-update-check.conf"
+    "$base/installer_docker/.hypernode-update-check.conf"
+    "$base/.hypernode-update-check.conf"
+  )
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      printf "%s" "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 resolve_host() {
@@ -723,6 +912,7 @@ check_prerequisites
 
 section "1) DOCKER"
 ensure_docker_running
+load_install_env || true
 
 download_compose_sources
 for compose in "${COMPOSE_SOURCES[@]:-}"; do
@@ -742,27 +932,35 @@ else
   exit 1
 fi
 
+if [[ -z "$ENV_LOG_FILE" ]]; then
+  load_install_env "$HYPERNODE_DIR/$ENV_LOG_NAME" || true
+fi
+
 check_required_files "$HYPERNODE_DIR" || true
 
-CONFIG_FILE="$HYPERNODE_DIR/.hypernode-update-check.conf"
+CONFIG_FILE="$(find_update_check_config "$HYPERNODE_DIR" || true)"
 SERIAL_VALUE=""
 USER_LOGIN_VALUE=""
 USER_PASSWORD_VALUE=""
 LICENSING_URL_VALUE=""
 
-if [[ -f "$CONFIG_FILE" ]]; then
+if [[ -n "$CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
   SERIAL_VALUE=$(read_config_var "$CONFIG_FILE" "SERIAL" || true)
   USER_LOGIN_VALUE=$(read_config_var "$CONFIG_FILE" "USER_LOGIN" || true)
   USER_PASSWORD_VALUE=$(read_config_var "$CONFIG_FILE" "USER_PASSWORD" || true)
   LICENSING_URL_VALUE=$(read_config_var "$CONFIG_FILE" "LICENSING_URL" || true)
 else
-  warn "File di configurazione $CONFIG_FILE mancante."
+  warn "File di configurazione .hypernode-update-check.conf mancante."
 fi
 
 if [[ -n "$SERIAL_VALUE" ]]; then
   SERIAL_LOWER=$(echo "$SERIAL_VALUE" | tr '[:upper:]' '[:lower:]')
 else
-  warn "Impossibile leggere SERIAL da $CONFIG_FILE."
+  if [[ -n "$CONFIG_FILE" ]]; then
+    warn "Impossibile leggere SERIAL da $CONFIG_FILE."
+  else
+    warn "Impossibile leggere SERIAL dal file di configurazione."
+  fi
 fi
 
 section "4) NETWORK"
