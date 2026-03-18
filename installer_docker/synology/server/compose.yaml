@@ -181,6 +181,10 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
+      gateway:
+        condition: service_started
+      configurator:
+        condition: service_started
     ports:
       - "8181:80"
 

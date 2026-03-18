@@ -250,10 +250,14 @@ services:
     depends_on:
       messagebroker:
         condition: service_healthy
+      gateway:
+        condition: service_started
+      configurator:
+        condition: service_started
     ports:
       - "8181:80"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 10s
       timeout: 5s
       retries: 30

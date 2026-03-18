@@ -170,6 +170,8 @@ services:
     restart: unless-stopped
     depends_on:
       - messagebroker
+      - gateway
+      - configurator
 
   configurator:
     image: artecoglobalcompany/usee_configurator:latest
