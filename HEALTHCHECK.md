@@ -6,9 +6,9 @@ Script: `installer_docker/uss_healthcheck.sh`
 - Verifica che Docker sia disponibile e in esecuzione; se trova `.hypernode-install-env.log` lo usa come sorgente primaria per risolvere i nomi templated dei compose e per recuperare parametri installativi utili al check.
 - Legge i compose server/database (remoti o locali) per ricavare i container reali e ne stampa stato/health.
 - Rileva il container del database dal runtime Docker e/o dall'env install, invece di assumere un nome fisso, e prova a ricavare la porta host effettiva del DB.
-- Cerca la cartella `hypernode_deploy` nel sistema e controlla la presenza dei file attesi.
+- Cerca la cartella `hypernode_deploy` nel sistema e controlla la presenza di `installer.sh` nel layout reale della target.
 - Usa `SERIAL_NUMBER` da `.hypernode-install-env.log` per i controlli DNS.
-- Chiama `${LICENSE_PROVIDER_URL}/sites` usando come credenziali `ARTECO_GLOBAL_EMAIL` e `ARTECO_GLOBAL_PASSWORD` dall'env install.
+- Chiama direttamente `${LICENSE_PROVIDER_URL}` usando come credenziali `ARTECO_GLOBAL_EMAIL` e `ARTECO_GLOBAL_PASSWORD` dall'env install.
 - Con le porte recuperate, interroga:
   - `https://<serial>.lan.omniaweb.cloud:<site_lan_port>/api/v1/` (LAN)
   - `https://<serial>.my.omniaweb.cloud:<site_port>/api/v1/` (WAN)
@@ -31,7 +31,7 @@ Script: `installer_docker/uss_healthcheck.sh`
 - Porta DB rilevata dal container reale o, in fallback, dall'env install.
 - Presenza dei file attesi in `hypernode_deploy`.
 - DNS LAN/Pubblico vs IP locali/pubblici.
-- Esito licensing `/sites` (HTTP 200 atteso) con `site_port`/`site_lan_port` per il serial in uso.
+- Esito endpoint licensing (HTTP 200 atteso) con `site_port`/`site_lan_port` per il serial in uso.
 - Verifica certificato HTTPS e scadenza su LAN/WAN (WAN solo se raggiungibile).
 - Esito reachability API (LAN/WAN) e confronto `server.serial`.
 

@@ -502,21 +502,23 @@ stat_summary() {
 
 check_required_files() {
   local base="$1"
-  local -a required=(
-    "installer_docker/installer.sh"
-    "installer_docker/uss_healthcheck.sh"
-  )
+  local found_path=""
+  local missing=0
 
-  local missing=0 path
-  for rel in "${required[@]}"; do
-    path="$base/$rel"
-    if [[ -e "$path" ]]; then
-      ok "$rel presente ($(stat_summary "$path"))"
-    else
-      warn "$rel mancante in $base"
-      missing=1
+  found_path=""
+  for candidate in "$base/installer.sh" "$base/installer_docker/installer.sh"; do
+    if [[ -e "$candidate" ]]; then
+      found_path="$candidate"
+      break
     fi
   done
+
+  if [[ -n "$found_path" ]]; then
+    ok "$(basename "$found_path") presente ($(stat_summary "$found_path"))"
+  else
+    warn "installer.sh mancante in $base"
+    missing=1
+  fi
 
   return $missing
 }
@@ -652,12 +654,12 @@ parse_licensing_ports() {
   local response_file="$1" serial="$2"
 
   if [[ -z "$serial" ]]; then
-    warn "Seriale non disponibile per l'analisi del payload /sites."
+    warn "Seriale non disponibile per l'analisi della risposta licensing."
     return 1
   fi
 
   if ! command -v python3 >/dev/null 2>&1; then
-    warn "python3 non disponibile: impossibile analizzare la risposta /sites."
+    warn "python3 non disponibile: impossibile analizzare la risposta licensing."
     return 1
   fi
 
@@ -681,7 +683,7 @@ try:
     with open(resp_file, "r", encoding="utf-8") as fh:
         data = json.load(fh)
 except Exception as exc:
-    print(f"⚠️  Impossibile leggere/parsare la risposta /sites: {exc}", file=sys.stdout)
+    print(f"⚠️  Impossibile leggere/parsare la risposta licensing: {exc}", file=sys.stdout)
     sys.exit(1)
 
 match = None
@@ -694,14 +696,14 @@ for obj in walk(data):
         site_lan_port = obj.get("site_lan_port", "n/d")
         status = obj.get("status", "n/d")
         is_uss = obj.get("is_uss", "n/d")
-        print(f"MSG:✅ Licensing /sites -> serial {serial}: site_port={site_port}, site_lan_port={site_lan_port}, status={status}, is_uss={is_uss}")
+        print(f"MSG:✅ Licensing endpoint -> serial {serial}: site_port={site_port}, site_lan_port={site_lan_port}, status={status}, is_uss={is_uss}")
         print(f"SITE_PORT:{site_port}")
         print(f"SITE_LAN_PORT:{site_lan_port}")
         print(f"STATUS:{status}")
         print(f"IS_USS:{is_uss}")
         sys.exit(0)
 
-print(f"MSG:⚠️  Nessun record con serial '{serial}' trovato nella risposta /sites.")
+print(f"MSG:⚠️  Nessun record con serial '{serial}' trovato nella risposta licensing.")
 sys.exit(1)
 PY
   ) || true
@@ -720,17 +722,17 @@ licensing_sites_check() {
     [[ -z "$login" ]] && missing+=("USER_LOGIN")
     [[ -z "$password" ]] && missing+=("USER_PASSWORD")
     [[ -z "$serial" ]] && missing+=("SERIAL")
-    warn "Parametri licensing incompleti (${missing[*]}): salto chiamata /sites."
+    warn "Parametri licensing incompleti (${missing[*]}): salto chiamata licensing."
     return 1
   fi
 
   if ! command -v curl >/dev/null 2>&1; then
-    warn "curl non disponibile: salto chiamata /sites."
+    warn "curl non disponibile: salto chiamata licensing."
     return 1
   fi
 
   local endpoint payload response_file error_file http_code masked_login masked_serial
-  endpoint="${url%/}/sites"
+  endpoint="$url"
 
   masked_login="$login"
   masked_serial="$serial"
@@ -743,7 +745,7 @@ print(json.dumps({
 }))
 PY
   ) || {
-    warn "Impossibile costruire il payload JSON per /sites."
+    warn "Impossibile costruire il payload JSON per il licensing."
     return 1
   }
 
@@ -756,7 +758,7 @@ PY
     -d "$payload" 2>"$error_file" || true)
 
   if [[ "$http_code" == "200" ]]; then
-    ok "Licensing /sites OK (HTTP 200) per serial $masked_serial, login $masked_login."
+    ok "Licensing endpoint OK (HTTP 200) per serial $masked_serial, login $masked_login."
     local parsed line
     parsed=$(parse_licensing_ports "$response_file" "$serial")
     while IFS= read -r line; do
@@ -781,7 +783,7 @@ PY
     local curl_err body
     curl_err=$(cat "$error_file")
     body=$(cat "$response_file")
-    warn "Licensing /sites non OK (HTTP ${http_code:-n/d}) - err: ${curl_err:-n/d} body: ${body:-n/d}"
+    warn "Licensing endpoint non OK (HTTP ${http_code:-n/d}) - err: ${curl_err:-n/d} body: ${body:-n/d}"
   fi
 
   rm -f "$response_file" "$error_file"
