@@ -346,64 +346,6 @@ jobs:
           echo "Architecture: ${PLATFORMS}"
           echo "==============================================="
 
-      - name: Save build result for sheet
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p sheet_rows
-          CREATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-          if [ "${IS_EXPORT:-false}" = "true" ]; then
-            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_EXPORT_REF }}"
-          elif [ "${IS_FRONTEND:-false}" = "true" ]; then
-            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}"
-          else
-            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_BACKEND_REF }}"
-          fi
-
-          EXTRA_TAG=""
-          if [ "${IS_DATABASE:-false}" = "true" ] && [ "${TAG}" = "latest" ]; then
-            EXTRA_TAG="${IMAGE_NAME}:avx_support"
-          fi
-
-          cat > "sheet_rows/${{ matrix.service }}.json" <<EOF
-          {
-            "created_at": "${CREATED_AT}",
-            "workflow_name": "${{ github.workflow }}",
-            "run_id": "${{ github.run_id }}",
-            "run_attempt": "${{ github.run_attempt }}",
-            "run_number": "${{ github.run_number }}",
-            "repository": "${{ github.repository }}",
-            "service": "${{ matrix.service }}",
-            "status": "${{ job.status }}",
-            "backend_branch": "${{ github.event.inputs.BRANCH_BACKEND_REF }}",
-            "export_branch": "${{ github.event.inputs.BRANCH_EXPORT_REF }}",
-            "configurator_branch": "${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}",
-            "source_branch": "${SOURCE_BRANCH}",
-            "requested_services": "${{ github.event.inputs.SERVICES }}",
-            "platforms": "${{ github.event.inputs.PLATFORMS }}",
-            "requested_tag": "${{ github.event.inputs.TAG_REF }}",
-            "docker_image": "${IMAGE_NAME}",
-            "docker_tag": "${IMAGE_NAME}:${TAG}",
-            "docker_extra_tag": "${EXTRA_TAG}",
-            "dockerfile": "${DOCKERFILE}",
-            "build_context": "${BUILD_CONTEXT}",
-            "recipe": "dockerfile=${DOCKERFILE}; context=${BUILD_CONTEXT}; source_branch=${SOURCE_BRANCH}; platforms=${{ github.event.inputs.PLATFORMS }}; requested_services=${{ github.event.inputs.SERVICES }}",
-            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          }
-          EOF
-
-      - name: Upload build result artifact
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: sheet-row-${{ matrix.service }}
-          path: sheet_rows/${{ matrix.service }}.json
-          if-no-files-found: error
-          retention-days: 7
-
   append_to_google_sheet:
     if: ${{ always() }}
     needs:
@@ -415,14 +357,7 @@ jobs:
       GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
       SHEET_NAME: USS deployments
     steps:
-      - name: Download build result artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: sheet-row-*
-          path: sheet_rows
-          merge-multiple: true
-
-      - name: Append rows to Google Sheet
+      - name: Append workflow row to Google Sheet
         shell: bash
         run: |
           set -euo pipefail
@@ -440,22 +375,15 @@ jobs:
           python -m pip install --quiet google-api-python-client google-auth
 
           cat > append_to_sheet.py <<'PY'
-          import glob
           import json
           import os
-          import sys
+          from datetime import datetime, timezone
           from google.oauth2 import service_account
           from googleapiclient.discovery import build
 
           sheet_id = os.environ["GOOGLE_SHEET_ID"]
           sheet_name = os.environ["SHEET_NAME"]
-          sheet_range_prefix = f"'{sheet_name}'"
           creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
-
-          files = sorted(glob.glob("sheet_rows/*.json"))
-          if not files:
-              print("No sheet row artifacts found.", file=sys.stderr)
-              sys.exit(1)
 
           credentials = service_account.Credentials.from_service_account_info(
               creds_info,
@@ -487,75 +415,82 @@ jobs:
               "run_attempt",
               "run_id",
               "repository",
-              "service",
               "status",
               "backend_branch",
               "export_branch",
               "configurator_branch",
-              "source_branch",
               "requested_services",
               "platforms",
               "requested_tag",
-              "docker_image",
-              "docker_tag",
-              "docker_extra_tag",
-              "dockerfile",
-              "build_context",
               "recipe",
               "run_url",
           ]]
 
           existing = service.spreadsheets().values().get(
               spreadsheetId=sheet_id,
-              range=f"'{resolved_sheet_name}'!A1:V1",
+              range=f"'{resolved_sheet_name}'!A1:O1",
           ).execute().get("values", [])
           if not existing:
               service.spreadsheets().values().update(
                   spreadsheetId=sheet_id,
-                  range=f"'{resolved_sheet_name}'!A1:V1",
+                  range=f"'{resolved_sheet_name}'!A1:O1",
                   valueInputOption="RAW",
                   body={"values": headers},
               ).execute()
 
-          values = []
-          for path in files:
-              with open(path, "r", encoding="utf-8") as fh:
-                  item = json.load(fh)
+          created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          workflow_name = os.environ["GITHUB_WORKFLOW"]
+          run_number = os.environ["GITHUB_RUN_NUMBER"]
+          run_attempt = os.environ["GITHUB_RUN_ATTEMPT"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+          repository = os.environ["GITHUB_REPOSITORY"]
+          status = os.environ["WORKFLOW_STATUS"]
+          backend_branch = os.environ["BRANCH_BACKEND_REF"]
+          export_branch = os.environ["BRANCH_EXPORT_REF"]
+          configurator_branch = os.environ["BRANCH_CONFIGURATOR_REF"]
+          requested_services = os.environ["REQUESTED_SERVICES"]
+          platforms = os.environ["PLATFORMS"]
+          requested_tag = os.environ["TAG_REF"]
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repository}/actions/runs/{run_id}"
+          recipe = (
+              f"backend={backend_branch}; export={export_branch}; "
+              f"configurator={configurator_branch}; services={requested_services}; "
+              f"platforms={platforms}; tag={requested_tag}"
+          )
 
-              values.append([
-                  item["created_at"],
-                  item["workflow_name"],
-                  item["run_number"],
-                  item["run_attempt"],
-                  item["run_id"],
-                  item["repository"],
-                  item["service"],
-                  item["status"],
-                  item["backend_branch"],
-                  item["export_branch"],
-                  item["configurator_branch"],
-                  item["source_branch"],
-                  item["requested_services"],
-                  item["platforms"],
-                  item["requested_tag"],
-                  item["docker_image"],
-                  item["docker_tag"],
-                  item["docker_extra_tag"],
-                  item["dockerfile"],
-                  item["build_context"],
-                  item["recipe"],
-                  item["run_url"],
-              ])
-
-          body = {"values": values}
+          body = {"values": [[
+              created_at,
+              workflow_name,
+              run_number,
+              run_attempt,
+              run_id,
+              repository,
+              status,
+              backend_branch,
+              export_branch,
+              configurator_branch,
+              requested_services,
+              platforms,
+              requested_tag,
+              recipe,
+              run_url,
+          ]]}
           service.spreadsheets().values().append(
               spreadsheetId=sheet_id,
-              range=f"'{resolved_sheet_name}'!A:V",
+              range=f"'{resolved_sheet_name}'!A:O",
               valueInputOption="USER_ENTERED",
               insertDataOption="INSERT_ROWS",
               body=body,
           ).execute()
-          print(f"Appended {len(values)} row(s) to {resolved_sheet_name}.")
+          print(f"Appended 1 row to {resolved_sheet_name}.")
           PY
 
           python append_to_sheet.py
+        env:
+          WORKFLOW_STATUS: ${{ needs.build_and_push.result }}
+          BRANCH_BACKEND_REF: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
+          BRANCH_EXPORT_REF: ${{ github.event.inputs.BRANCH_EXPORT_REF }}
+          BRANCH_CONFIGURATOR_REF: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
+          REQUESTED_SERVICES: ${{ github.event.inputs.SERVICES }}
+          PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+          TAG_REF: ${{ github.event.inputs.TAG_REF }}
