@@ -1,0 +1,543 @@
+name: Push USee Images (parallel mode SHEET)
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH_BACKEND_REF:
+        description: 'Checkout branch Backend (server)'
+        required: true
+        default: 'release_candidate'
+      BRANCH_EXPORT_REF:
+        description: 'Checkout branch arteco-export-service'
+        required: true
+        default: 'release_candidate'
+      BRANCH_CONFIGURATOR_REF:
+        description: 'Checkout branch Configurator (frontend)'
+        required: true
+        default: 'release_candidate'
+      TAG_REF:
+        description: 'Tag Docker (es. latest, v1.2.3)'
+        required: true
+        default: 'ATTENTION: usare "latest" solo per prod!'
+      SERVICES:
+        description: 'Seleziona il servizio da buildare (o "all" per tutti)'
+        required: true
+        type: choice
+        options:
+          - all
+          - live_streamer
+          - id_verifier
+          - event_manager
+          - metadata
+          - suite_manager
+          - media_recorder
+          - snapshot_recorder
+          - web_server
+          - port_broker
+          - message_broker
+          - database
+          # - media_storage
+          - configurator
+          - export
+          - coretrust
+        default: 'all'
+      PLATFORMS:
+        description: 'Architettura target Docker (piattaforma di build)'
+        required: true
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/amd64,linux/arm64
+          - linux/arm/v7
+          - linux/arm/v6
+        default: 'linux/amd64,linux/arm64'
+
+jobs:
+  prepare_matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+    steps:
+      - name: Print workflow inputs at start
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== Workflow inputs (start) ====="
+          echo "Backend branch: ${{ github.event.inputs.BRANCH_BACKEND_REF }}"
+          echo "Export branch: ${{ github.event.inputs.BRANCH_EXPORT_REF }}"
+          echo "Configurator branch: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}"
+          echo "Docker tag: ${{ github.event.inputs.TAG_REF }}"
+          echo "Services: ${{ github.event.inputs.SERVICES }}"
+          echo "Platforms: ${{ github.event.inputs.PLATFORMS }}"
+          echo "==================================="
+
+      - name: Prepare services matrix
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INPUT_SERVICE="${{ github.event.inputs.SERVICES }}"
+          if [[ "${INPUT_SERVICE}" == "all" ]]; then
+            MATRIX='["live_streamer","id_verifier","event_manager","metadata","suite_manager","media_recorder","snapshot_recorder","web_server","port_broker","message_broker","database","configurator","export","coretrust"]'
+          else
+            case "${INPUT_SERVICE}" in
+              live_streamer|id_verifier|event_manager|metadata|suite_manager|media_recorder|snapshot_recorder|web_server|port_broker|message_broker|database|configurator|export|coretrust)
+                MATRIX="[\"${INPUT_SERVICE}\"]"
+                ;;
+              *)
+                echo "Unsupported service: ${INPUT_SERVICE}"
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+          echo "Selected matrix: ${MATRIX}"
+
+  build_and_push:
+    needs: prepare_matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 13
+      matrix:
+        service: ${{ fromJson(needs.prepare_matrix.outputs.matrix) }}
+    env:
+      TAG: ${{ github.event.inputs.TAG_REF }}
+      PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Resolve build parameters
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "${{ matrix.service }}" in
+            live_streamer)
+              echo "DOCKERFILE=hypernode-server/docker/camera.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_live_streamer" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            id_verifier)
+              echo "DOCKERFILE=hypernode-server/docker/auth.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_id_verifier" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            event_manager)
+              echo "DOCKERFILE=hypernode-server/docker/event.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_event_manager" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            metadata)
+              echo "DOCKERFILE=hypernode-server/docker/metadata.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_metadata_manager" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            suite_manager)
+              echo "DOCKERFILE=hypernode-server/docker/gateway.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_suite_manager" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            media_recorder)
+              echo "DOCKERFILE=hypernode-server/docker/recording.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_media_recorder" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            snapshot_recorder)
+              echo "DOCKERFILE=hypernode-server/docker/snapshot.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_snapshot_recorder" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            web_server)
+              echo "DOCKERFILE=hypernode-server/docker/webserver/nginx.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_web_server" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            port_broker)
+              echo "DOCKERFILE=hypernode-server/docker/portbroker/portBroker.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_port_broker" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              ;;
+            message_broker)
+              echo "DOCKERFILE=hypernode-server/docker/messagebroker/messageBroker.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_message_broker" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            database)
+              echo "DOCKERFILE=hypernode-server/docker/database/database.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_database" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=true" >> "$GITHUB_ENV"
+              ;;
+            coretrust)
+              echo "DOCKERFILE=hypernode-server/docker/coretrust.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_coretrust" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            configurator)
+              echo "DOCKERFILE=hypernode_server_gui/configurator.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_configurator" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode_server_gui" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=true" >> "$GITHUB_ENV"
+              echo "IS_EXPORT=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            export)
+              echo "DOCKERFILE=arteco-export-service/Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/arteco-export-service" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=arteco-export-service" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_EXPORT=true" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unsupported matrix.service: ${{ matrix.service }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Checkout backend
+        if: ${{ env.IS_FRONTEND == 'false' && env.IS_EXPORT != 'true' }}
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode-server
+          ref: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
+          path: hypernode-server
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Checkout frontend
+        if: ${{ env.IS_FRONTEND == 'true' }}
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/hypernode_server_gui
+          ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
+          path: hypernode_server_gui
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Checkout export service
+        if: ${{ env.IS_EXPORT == 'true' }}
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/arteco-export-service
+          ref: ${{ github.event.inputs.BRANCH_EXPORT_REF }}
+          path: arteco-export-service
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Compute image version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION=""
+          if [ "${TAG}" != "latest" ]; then
+            VERSION="${TAG}"
+          elif [ "${IS_EXPORT:-false}" = "true" ]; then
+            VERSION="$(git -C arteco-export-service rev-parse --short HEAD)"
+          elif [ "${IS_FRONTEND}" = "true" ]; then
+            VERSION="$(git -C hypernode_server_gui rev-parse --short HEAD)"
+          else
+            VERSION="$(git -C hypernode-server rev-parse --short HEAD)"
+          fi
+
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Image version: ${VERSION}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and Push ${{ matrix.service }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${IS_DATABASE:-false}" = "true" ]; then
+            docker buildx build \
+              --platform="${PLATFORMS}" \
+              --build-arg MONGO_VERSION=latest \
+              --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+              --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+              -f "${DOCKERFILE}" \
+              -t "${IMAGE_NAME}:${TAG}" \
+              --push "${BUILD_CONTEXT}"
+
+            if [ "${TAG}" = "latest" ]; then
+              docker buildx build \
+                --platform="${PLATFORMS}" \
+                --build-arg MONGO_VERSION=4.4.18 \
+                --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+                --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+                -f "${DOCKERFILE}" \
+                -t "${IMAGE_NAME}:avx_support" \
+                --push "${BUILD_CONTEXT}"
+            fi
+
+            exit 0
+          fi
+
+          docker buildx build \
+            --platform="${PLATFORMS}" \
+            --build-arg IMAGE_VERSION="${IMAGE_VERSION}" \
+            --label org.opencontainers.image.version="${IMAGE_VERSION}" \
+            --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
+            --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
+            -f "${DOCKERFILE}" \
+            -t "${IMAGE_NAME}:${TAG}" \
+            --push "${BUILD_CONTEXT}"
+
+      - name: Build summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${IS_EXPORT:-false}" = "true" ]; then
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_EXPORT_REF }}"
+          elif [ "${IS_FRONTEND:-false}" = "true" ]; then
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}"
+          else
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_BACKEND_REF }}"
+          fi
+
+          echo "===== Build summary (${{ matrix.service }}) ====="
+          echo "Service: ${{ matrix.service }}"
+          echo "Backend branch: ${{ github.event.inputs.BRANCH_BACKEND_REF }}"
+          echo "Export branch: ${{ github.event.inputs.BRANCH_EXPORT_REF }}"
+          echo "Configurator branch: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}"
+          echo "Requested Docker tag: ${{ github.event.inputs.TAG_REF }}"
+          echo "Docker tag: ${IMAGE_NAME}:${TAG}"
+          if [ "${IS_DATABASE:-false}" = "true" ] && [ "${TAG}" = "latest" ]; then
+            echo "Docker extra tag: ${IMAGE_NAME}:avx_support"
+          fi
+          echo "Source branch: ${SOURCE_BRANCH}"
+          echo "Requested services: ${{ github.event.inputs.SERVICES }}"
+          echo "Architecture: ${PLATFORMS}"
+          echo "==============================================="
+
+      - name: Save build result for sheet
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p sheet_rows
+          CREATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          if [ "${IS_EXPORT:-false}" = "true" ]; then
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_EXPORT_REF }}"
+          elif [ "${IS_FRONTEND:-false}" = "true" ]; then
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}"
+          else
+            SOURCE_BRANCH="${{ github.event.inputs.BRANCH_BACKEND_REF }}"
+          fi
+
+          EXTRA_TAG=""
+          if [ "${IS_DATABASE:-false}" = "true" ] && [ "${TAG}" = "latest" ]; then
+            EXTRA_TAG="${IMAGE_NAME}:avx_support"
+          fi
+
+          cat > "sheet_rows/${{ matrix.service }}.json" <<EOF
+          {
+            "created_at": "${CREATED_AT}",
+            "workflow_name": "${{ github.workflow }}",
+            "run_id": "${{ github.run_id }}",
+            "run_attempt": "${{ github.run_attempt }}",
+            "run_number": "${{ github.run_number }}",
+            "repository": "${{ github.repository }}",
+            "service": "${{ matrix.service }}",
+            "status": "${{ job.status }}",
+            "backend_branch": "${{ github.event.inputs.BRANCH_BACKEND_REF }}",
+            "export_branch": "${{ github.event.inputs.BRANCH_EXPORT_REF }}",
+            "configurator_branch": "${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}",
+            "source_branch": "${SOURCE_BRANCH}",
+            "requested_services": "${{ github.event.inputs.SERVICES }}",
+            "platforms": "${{ github.event.inputs.PLATFORMS }}",
+            "requested_tag": "${{ github.event.inputs.TAG_REF }}",
+            "docker_image": "${IMAGE_NAME}",
+            "docker_tag": "${IMAGE_NAME}:${TAG}",
+            "docker_extra_tag": "${EXTRA_TAG}",
+            "dockerfile": "${DOCKERFILE}",
+            "build_context": "${BUILD_CONTEXT}",
+            "recipe": "dockerfile=${DOCKERFILE}; context=${BUILD_CONTEXT}; source_branch=${SOURCE_BRANCH}; platforms=${{ github.event.inputs.PLATFORMS }}; requested_services=${{ github.event.inputs.SERVICES }}",
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
+
+      - name: Upload build result artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sheet-row-${{ matrix.service }}
+          path: sheet_rows/${{ matrix.service }}.json
+          if-no-files-found: error
+          retention-days: 7
+
+  append_to_google_sheet:
+    if: ${{ always() }}
+    needs:
+      - prepare_matrix
+      - build_and_push
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_SHEET_ID: ${{ vars.USS_DEPLOYMENTS_SHEET_ID }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      SHEET_NAME: USS deployments
+    steps:
+      - name: Download build result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sheet-row-*
+          path: sheet_rows
+          merge-multiple: true
+
+      - name: Append rows to Google Sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_SHEET_ID}" ]; then
+            echo "GOOGLE_SHEET_ID is empty. Configure vars.USS_DEPLOYMENTS_SHEET_ID."
+            exit 1
+          fi
+
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_JSON is empty. Configure the secret with a service account key."
+            exit 1
+          fi
+
+          python -m pip install --quiet google-api-python-client google-auth
+
+          cat > append_to_sheet.py <<'PY'
+          import glob
+          import json
+          import os
+          import sys
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          sheet_id = os.environ["GOOGLE_SHEET_ID"]
+          sheet_name = os.environ["SHEET_NAME"]
+          creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+
+          files = sorted(glob.glob("sheet_rows/*.json"))
+          if not files:
+              print("No sheet row artifacts found.", file=sys.stderr)
+              sys.exit(1)
+
+          credentials = service_account.Credentials.from_service_account_info(
+              creds_info,
+              scopes=["https://www.googleapis.com/auth/spreadsheets"],
+          )
+          service = build("sheets", "v4", credentials=credentials)
+
+          headers = [[
+              "created_at",
+              "workflow_name",
+              "run_number",
+              "run_attempt",
+              "run_id",
+              "repository",
+              "service",
+              "status",
+              "backend_branch",
+              "export_branch",
+              "configurator_branch",
+              "source_branch",
+              "requested_services",
+              "platforms",
+              "requested_tag",
+              "docker_image",
+              "docker_tag",
+              "docker_extra_tag",
+              "dockerfile",
+              "build_context",
+              "recipe",
+              "run_url",
+          ]]
+
+          existing = service.spreadsheets().values().get(
+              spreadsheetId=sheet_id,
+              range=f"{sheet_name}!A1:V1",
+          ).execute().get("values", [])
+          if not existing:
+              service.spreadsheets().values().update(
+                  spreadsheetId=sheet_id,
+                  range=f"{sheet_name}!A1:V1",
+                  valueInputOption="RAW",
+                  body={"values": headers},
+              ).execute()
+
+          values = []
+          for path in files:
+              with open(path, "r", encoding="utf-8") as fh:
+                  item = json.load(fh)
+
+              values.append([
+                  item["created_at"],
+                  item["workflow_name"],
+                  item["run_number"],
+                  item["run_attempt"],
+                  item["run_id"],
+                  item["repository"],
+                  item["service"],
+                  item["status"],
+                  item["backend_branch"],
+                  item["export_branch"],
+                  item["configurator_branch"],
+                  item["source_branch"],
+                  item["requested_services"],
+                  item["platforms"],
+                  item["requested_tag"],
+                  item["docker_image"],
+                  item["docker_tag"],
+                  item["docker_extra_tag"],
+                  item["dockerfile"],
+                  item["build_context"],
+                  item["recipe"],
+                  item["run_url"],
+              ])
+
+          body = {"values": values}
+          service.spreadsheets().values().append(
+              spreadsheetId=sheet_id,
+              range=f"{sheet_name}!A:V",
+              valueInputOption="USER_ENTERED",
+              insertDataOption="INSERT_ROWS",
+              body=body,
+          ).execute()
+          print(f"Appended {len(values)} row(s) to {sheet_name}.")
+          PY
+
+          python append_to_sheet.py

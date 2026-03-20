@@ -1,0 +1,160 @@
+name: Test Google Sheet Write
+
+on:
+  workflow_dispatch:
+    inputs:
+      TEST_STATUS:
+        description: 'Valore di test per la colonna status'
+        required: true
+        default: 'test'
+      TEST_SERVICE:
+        description: 'Valore di test per la colonna service'
+        required: true
+        default: 'sheet_write_test'
+      TEST_TAG:
+        description: 'Valore di test per la colonna requested_tag'
+        required: true
+        default: 'test-tag'
+      TEST_NOTE:
+        description: 'Nota libera per identificare la prova'
+        required: false
+        default: ''
+
+jobs:
+  write_test_row:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_SHEET_ID: ${{ vars.USS_DEPLOYMENTS_SHEET_ID }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      SHEET_NAME: USS deployments
+    steps:
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_SHEET_ID}" ]; then
+            echo "GOOGLE_SHEET_ID is empty. Configure vars.USS_DEPLOYMENTS_SHEET_ID."
+            exit 1
+          fi
+
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_JSON is empty. Configure secrets.GOOGLE_SERVICE_ACCOUNT_JSON."
+            exit 1
+          fi
+
+      - name: Append test row to Google Sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python -m pip install --quiet google-api-python-client google-auth
+
+          cat > append_test_row.py <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          sheet_id = os.environ["GOOGLE_SHEET_ID"]
+          sheet_name = os.environ["SHEET_NAME"]
+          creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+
+          credentials = service_account.Credentials.from_service_account_info(
+              creds_info,
+              scopes=["https://www.googleapis.com/auth/spreadsheets"],
+          )
+          service = build("sheets", "v4", credentials=credentials)
+
+          headers = [[
+              "created_at",
+              "workflow_name",
+              "run_number",
+              "run_attempt",
+              "run_id",
+              "repository",
+              "service",
+              "status",
+              "backend_branch",
+              "export_branch",
+              "configurator_branch",
+              "source_branch",
+              "requested_services",
+              "platforms",
+              "requested_tag",
+              "docker_image",
+              "docker_tag",
+              "docker_extra_tag",
+              "dockerfile",
+              "build_context",
+              "recipe",
+              "run_url",
+          ]]
+
+          existing = service.spreadsheets().values().get(
+              spreadsheetId=sheet_id,
+              range=f"{sheet_name}!A1:V1",
+          ).execute().get("values", [])
+          if not existing:
+              service.spreadsheets().values().update(
+                  spreadsheetId=sheet_id,
+                  range=f"{sheet_name}!A1:V1",
+                  valueInputOption="RAW",
+                  body={"values": headers},
+              ).execute()
+
+          created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          workflow_name = os.environ["GITHUB_WORKFLOW"]
+          run_number = os.environ["GITHUB_RUN_NUMBER"]
+          run_attempt = os.environ["GITHUB_RUN_ATTEMPT"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+          repository = os.environ["GITHUB_REPOSITORY"]
+          service_name = os.environ["TEST_SERVICE"]
+          status = os.environ["TEST_STATUS"]
+          requested_tag = os.environ["TEST_TAG"]
+          note = os.environ.get("TEST_NOTE", "")
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repository}/actions/runs/{run_id}"
+
+          values = [[
+              created_at,
+              workflow_name,
+              run_number,
+              run_attempt,
+              run_id,
+              repository,
+              service_name,
+              status,
+              "test-backend-branch",
+              "test-export-branch",
+              "test-configurator-branch",
+              "test-source-branch",
+              service_name,
+              "test-platform",
+              requested_tag,
+              "test/image",
+              f"test/image:{requested_tag}",
+              "",
+              "test/Dockerfile",
+              "test-context",
+              f"manual test write; note={note}",
+              run_url,
+          ]]
+
+          service.spreadsheets().values().append(
+              spreadsheetId=sheet_id,
+              range=f"{sheet_name}!A:V",
+              valueInputOption="USER_ENTERED",
+              insertDataOption="INSERT_ROWS",
+              body={"values": values},
+          ).execute()
+
+          print(f"Appended 1 test row to {sheet_name}.")
+          PY
+
+          python append_test_row.py
+        env:
+          TEST_STATUS: ${{ github.event.inputs.TEST_STATUS }}
+          TEST_SERVICE: ${{ github.event.inputs.TEST_SERVICE }}
+          TEST_TAG: ${{ github.event.inputs.TEST_TAG }}
+          TEST_NOTE: ${{ github.event.inputs.TEST_NOTE }}
