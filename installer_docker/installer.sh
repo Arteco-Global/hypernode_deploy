@@ -228,6 +228,53 @@ log_env_before_compose() {
     fi
 }
 
+print_compose_failure_diagnostics() {
+    local containers=(
+        uss_database
+        messagebroker
+        gateway
+        camera
+        metadata
+        coretrust
+        recording
+        event
+        auth
+        snapshot
+        webserver
+        configurator
+        portbroker
+    )
+    local name status health
+
+    printf "\n\nContainer diagnostics after compose failure:\n"
+    docker ps -a --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null || true
+
+    for name in "${containers[@]}"; do
+        if ! docker inspect "$name" >/dev/null 2>&1; then
+            continue
+        fi
+
+        status=$(docker inspect --format '{{.State.Status}}' "$name" 2>/dev/null || echo "unknown")
+        health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$name" 2>/dev/null || true)
+
+        printf "\n[%s] status=%s" "$name" "$status"
+        if [[ -n "$health" ]]; then
+            printf " health=%s" "$health"
+        fi
+        printf "\n"
+
+        if [[ "$status" != "running" || ( -n "$health" && "$health" != "healthy" ) ]]; then
+            printf "Recent logs for %s:\n" "$name"
+            docker logs --tail 40 "$name" 2>&1 || true
+
+            if [[ -n "$health" ]]; then
+                printf "Recent healthcheck output for %s:\n" "$name"
+                docker inspect --format '{{range .State.Health.Log}}{{println .Output}}{{end}}' "$name" 2>/dev/null | tail -n 10 || true
+            fi
+        fi
+    done
+}
+
 
 
 
@@ -244,7 +291,10 @@ execute_command() {
         printf "\r✅ %s - Done.\n" "$MESSAGE"
     else
         printf "\r❌ %s - Failed.\n" "$MESSAGE"
-        exit 1
+        if [[ "$COMMAND" == *"docker compose"* || "$COMMAND" == *"docker-compose"* ]]; then
+            print_compose_failure_diagnostics
+        fi
+        return 1
     fi
 }
 

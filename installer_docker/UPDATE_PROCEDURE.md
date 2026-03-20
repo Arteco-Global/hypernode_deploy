@@ -147,10 +147,34 @@ Se questi path sono vuoti, Docker Compose fallisce con errori simili a:
 invalid spec: :/recording_files: empty section between colons
 ```
 
+Se questi path puntano a device o pseudo-filesystem host, l'update fallisce con
+errori di mount simili a:
+
+```
+Error response from daemon: error while creating mount source path '/dev/sdb2/snapshot': mkdir /dev/sdb2: file exists
+```
+
+Esempi di valori non validi:
+
+- `/dev/sdb2/snapshot`
+- `/dev/nvme0n1p1/recording`
+- `/proc/...`
+- `/sys/...`
+
+Usa sempre una directory reale su un filesystem montato, ad esempio:
+
+- `/mnt/data/snapshot`
+- `/mnt/data/recording`
+- `/mnt/data/storage`
+
 ## Note operative
 
 - I compose vengono scaricati dal branch `main` (override con `--deploy-branch`).
 - Entrambi gli script sincronizzano l’env in `/etc/.hypernode/`.
+- `native_update.sh` ricrea prima i servizi core della suite; se
+  `RECORDING_PATH` o `SNAPSHOT_PATH` non sono validi, `recording` e `snapshot`
+  vengono saltati con warning, ma `webserver` e `portbroker` possono comunque
+  essere rialzati.
 - Se l’update riguarda la suite, **non** usare `native_service_update.sh`.
 - Se l’update riguarda un servizio accessorio, **non** usare `native_update.sh`
   (usa il compose della suite e può fallire se mancano path/variabili).

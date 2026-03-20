@@ -27,6 +27,59 @@ Options:
 EOF
 }
 
+suggest_mount_path() {
+    case "$1" in
+        RECORDING_PATH) printf "/mnt/data/recording" ;;
+        SNAPSHOT_PATH) printf "/mnt/data/snapshot" ;;
+        STORAGE_PATH) printf "/mnt/data/storage" ;;
+        *) printf "/mnt/data/service" ;;
+    esac
+}
+
+validate_directory_mount_path() {
+    local var_name="$1"
+    local value="$2"
+    local prefix="❌"
+    local parent=""
+    local example=""
+
+    example="$(suggest_mount_path "$var_name")"
+
+    if [[ -z "$value" ]]; then
+        echo "$prefix Missing required value: $var_name"
+        echo "   Set $var_name to a host directory path such as $example in the env file and rerun the update."
+        return 1
+    fi
+
+    if [[ "$value" != /* ]]; then
+        echo "$prefix $var_name must be an absolute host directory path. Current value: $value"
+        echo "   Use a mounted filesystem path such as $example, not a relative path."
+        return 1
+    fi
+
+    case "$value" in
+        "/"|"/."|"/.."|"/dev"|"/dev/"*|"/proc"|"/proc/"*|"/sys"|"/sys/"*)
+            echo "$prefix $var_name points to a system/device path: $value"
+            echo "   Use a mounted filesystem directory such as $example, not a block device like /dev/sdb2."
+            return 1
+            ;;
+    esac
+
+    if [[ -e "$value" && ! -d "$value" ]]; then
+        echo "$prefix $var_name must point to a directory. Current value exists but is not a directory: $value"
+        return 1
+    fi
+
+    parent="$(dirname "$value")"
+    if [[ -e "$parent" && ! -d "$parent" ]]; then
+        echo "$prefix Parent path for $var_name is not a directory: $parent"
+        echo "   Current value: $value"
+        return 1
+    fi
+
+    return 0
+}
+
 generate_machine_id() {
     if command -v uuidgen >/dev/null 2>&1; then
         uuidgen
@@ -243,15 +296,6 @@ is_valid_service() {
     esac
 }
 
-require_nonempty() {
-    local var_name="$1"
-    local value="${!var_name:-}"
-    if [[ -z "$value" ]]; then
-        echo "❌ Missing required value: $var_name"
-        return 1
-    fi
-}
-
 pull_images_from_compose() {
     local label="$1"
     shift
@@ -403,13 +447,13 @@ update_with_env_file() {
 
         case "$service_name" in
             storage)
-                require_nonempty STORAGE_PATH
+                validate_directory_mount_path "STORAGE_PATH" "${STORAGE_PATH:-}"
                 ;;
             snapshot)
-                require_nonempty SNAPSHOT_PATH
+                validate_directory_mount_path "SNAPSHOT_PATH" "${SNAPSHOT_PATH:-}"
                 ;;
             recording)
-                require_nonempty RECORDING_PATH
+                validate_directory_mount_path "RECORDING_PATH" "${RECORDING_PATH:-}"
                 ;;
         esac
 

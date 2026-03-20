@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
 ABSOLUTE_PATH="${ABSOLUTE_PATH:-}"
+SYSTEM_ENV_DIR="/etc/.hypernode"
+ENV_LOG_NAME=".hypernode-install-env.log"
 COMPOSE_FILES=(
   "$SCRIPT_DIR/composes/server/docker-compose.yaml"
   "$SCRIPT_DIR/composes/database/docker-compose.yaml"
@@ -26,6 +28,11 @@ SITE_IS_USS=""
 REACH_LAN_OK="false"
 REACH_WAN_OK="false"
 DB_PORT=""
+DB_NAME=""
+DB_CONTAINER=""
+ENV_LOG_FILE=""
+
+declare -A INSTALL_ENV=()
 
 info() { echo "ℹ️  $*"; }
 warn() { echo "⚠️  $*" >&2; }
@@ -127,6 +134,135 @@ ensure_docker_running() {
   ok "Docker è in esecuzione."
 }
 
+read_shell_var() {
+  local file="$1" var_name="$2" result=""
+
+  [[ -f "$file" ]] || return 1
+
+  result=$(bash -c 'set -a; source "$1"; v="$2"; printf "%s" "${!v}"' bash "$file" "$var_name" 2>/dev/null || true)
+  if [[ -n "$result" ]]; then
+    printf "%s" "$result"
+    return 0
+  fi
+
+  return 1
+}
+
+find_install_env_file() {
+  local candidate
+  local -a candidates=(
+    "$PWD/$ENV_LOG_NAME"
+    "$PWD/hypernode-install-env.log"
+    "$SCRIPT_DIR/$ENV_LOG_NAME"
+    "$SCRIPT_DIR/../$ENV_LOG_NAME"
+    "$SYSTEM_ENV_DIR/$ENV_LOG_NAME"
+    "$SYSTEM_ENV_DIR/hypernode-install-env.log"
+  )
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      printf "%s" "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+load_install_env() {
+  local file="${1:-}"
+  local key value
+  local -a vars=(
+    DB_NAME
+    DB_PORT
+    SSL_PORT
+    DOCKER_TAG
+    SERIAL_NUMBER
+    ARTECO_GLOBAL_EMAIL
+    ARTECO_GLOBAL_PASSWORD
+    LICENSE_PROVIDER_URL
+    RECORDING_PATH
+    SNAPSHOT_PATH
+    STORAGE_PATH
+  )
+
+  if [[ -z "$file" ]]; then
+    file="$(find_install_env_file || true)"
+  fi
+
+  if [[ -z "$file" || ! -f "$file" ]]; then
+    warn "File env install non trovato: i controlli useranno fallback runtime."
+    return 1
+  fi
+
+  ENV_LOG_FILE="$file"
+  for key in "${vars[@]}"; do
+    value="$(read_shell_var "$file" "$key" || true)"
+    if [[ -n "$value" ]]; then
+      INSTALL_ENV["$key"]="$value"
+    fi
+  done
+
+  if [[ -n "${INSTALL_ENV[DB_NAME]:-}" ]]; then
+    DB_NAME="${INSTALL_ENV[DB_NAME]}"
+  fi
+
+  if [[ -n "${INSTALL_ENV[DB_PORT]:-}" ]]; then
+    DB_PORT="${INSTALL_ENV[DB_PORT]}"
+  fi
+
+  info "Env install rilevato: $ENV_LOG_FILE"
+  return 0
+}
+
+normalize_existing_dir() {
+  local path="$1"
+
+  [[ -n "$path" && -d "$path" ]] || return 1
+  (cd "$path" 2>/dev/null && pwd -P) || return 1
+}
+
+resolve_compose_value() {
+  local value="$1"
+  local match var_name default_value replacement="" use_default_when_empty="false"
+
+  while [[ "$value" =~ (\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}) ]]; do
+    match="${BASH_REMATCH[1]}"
+    var_name=""
+    default_value=""
+    replacement=""
+    use_default_when_empty="false"
+
+    if [[ "$match" =~ ^\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\}$ ]]; then
+      var_name="${BASH_REMATCH[1]}"
+      default_value="${BASH_REMATCH[2]}"
+      use_default_when_empty="true"
+    elif [[ "$match" =~ ^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$ ]]; then
+      var_name="${BASH_REMATCH[1]}"
+    else
+      break
+    fi
+
+    if [[ -n "$var_name" && -n "${!var_name+x}" ]]; then
+      replacement="${!var_name}"
+      if [[ "$use_default_when_empty" == "true" && -z "$replacement" ]]; then
+        replacement="$default_value"
+      fi
+    elif [[ -n "${INSTALL_ENV[$var_name]+x}" ]]; then
+      replacement="${INSTALL_ENV[$var_name]}"
+      if [[ "$use_default_when_empty" == "true" && -z "$replacement" ]]; then
+        replacement="$default_value"
+      fi
+    else
+      replacement="$default_value"
+    fi
+
+    value="${value//$match/$replacement}"
+  done
+
+  printf "%s" "$value"
+}
+
 download_compose_sources() {
   local idx file url tmp
 
@@ -206,7 +342,7 @@ parse_compose_container_names() {
     fi
 
     if [[ -n "$current_service" && "$line" =~ ^[[:space:]]{4}container_name:[[:space:]]*([^[:space:]]+) ]]; then
-      current_container="${BASH_REMATCH[1]}"
+      current_container="$(resolve_compose_value "${BASH_REMATCH[1]}")"
     fi
   done < "$file"
 
@@ -246,11 +382,48 @@ check_container_statuses() {
   return $all_ok
 }
 
-find_database_port() {
-  local container="uss_database" host_binding=""
+find_database_container() {
+  local name image
+  local -a candidates=()
 
-  if ! docker inspect "$container" >/dev/null 2>&1; then
-    warn "$container: container non trovato, porta DB non rilevata."
+  if [[ -n "${DB_NAME:-}" ]]; then
+    candidates+=("$DB_NAME")
+  fi
+
+  if [[ -n "${INSTALL_ENV[DB_NAME]:-}" ]]; then
+    candidates+=("${INSTALL_ENV[DB_NAME]}")
+  fi
+
+  while IFS="|" read -r name image; do
+    [[ -n "$name" && -n "$image" ]] || continue
+    if [[ "$image" == artecoglobalcompany/usee_database* ]]; then
+      candidates+=("$name")
+    fi
+  done < <(docker ps -a --format '{{.Names}}|{{.Image}}')
+
+  dedupe_array candidates
+
+  for name in "${candidates[@]}"; do
+    if docker inspect "$name" >/dev/null 2>&1; then
+      DB_CONTAINER="$name"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+find_database_port() {
+  local container="" host_binding=""
+
+  if find_database_container; then
+    container="$DB_CONTAINER"
+  elif [[ -n "${INSTALL_ENV[DB_PORT]:-}" ]]; then
+    DB_PORT="${INSTALL_ENV[DB_PORT]}"
+    warn "Container DB non trovato, uso DB_PORT dall'env install: $DB_PORT"
+    return 0
+  else
+    warn "Container DB non trovato e DB_PORT non disponibile nell'env install."
     return 1
   fi
 
@@ -268,35 +441,51 @@ find_database_port() {
     return 0
   fi
 
+  if [[ -n "${INSTALL_ENV[DB_PORT]:-}" ]]; then
+    DB_PORT="${INSTALL_ENV[DB_PORT]}"
+    warn "$container: binding 27017/tcp non rilevato, uso DB_PORT dall'env install: $DB_PORT"
+    return 0
+  fi
+
   warn "$container: impossibile determinare la porta DB (27017/tcp)."
   return 1
 }
 
 find_hypernode_dir() {
-  local parent search_paths=(
-    "$SCRIPT_DIR/.."
-    "/Users"
-    "/home"
-    "/root"
-    "/opt"
-    "/usr/local"
-    "/var"
-    "/"
-  )
+  local parent env_parent pwd_parent base resolved path
+  local -a search_paths=()
+
+  if [[ -n "$ENV_LOG_FILE" ]]; then
+    env_parent="$(normalize_existing_dir "$(dirname "$ENV_LOG_FILE")" || true)"
+    if [[ "$(basename "${env_parent:-}")" == "hypernode_deploy" ]]; then
+      HYPERNODE_DIR="$env_parent"
+      return 0
+    fi
+    [[ -n "$env_parent" ]] && search_paths+=("$env_parent")
+  fi
+
+  pwd_parent="$(normalize_existing_dir "$PWD" || true)"
+  if [[ "$(basename "${pwd_parent:-}")" == "hypernode_deploy" ]]; then
+    HYPERNODE_DIR="$pwd_parent"
+    return 0
+  fi
+  [[ -n "$pwd_parent" ]] && search_paths+=("$pwd_parent")
 
   parent="$(cd "$SCRIPT_DIR/.." && pwd)"
   if [[ "$(basename "$parent")" == "hypernode_deploy" ]]; then
     HYPERNODE_DIR="$parent"
     return 0
   fi
+  search_paths+=("$parent" "/Users" "/home" "/root" "/opt" "/usr/local" "/var" "/")
 
-  local base path
   for base in "${search_paths[@]}"; do
-    [[ -d "$base" ]] || continue
+    resolved="$(normalize_existing_dir "$base" || true)"
+    [[ -n "$resolved" ]] || continue
+    [[ -d "$resolved" ]] || continue
     while IFS= read -r path; do
-      HYPERNODE_DIR="$path"
+      HYPERNODE_DIR="$(normalize_existing_dir "$path" || printf "%s" "$path")"
       return 0
-    done < <(find "$base" -type d -name hypernode_deploy 2>/dev/null || true)
+    done < <(find "$resolved" -type d -name hypernode_deploy 2>/dev/null || true)
   done
 
   return 1
@@ -313,22 +502,69 @@ stat_summary() {
 
 check_required_files() {
   local base="$1"
-  local -a required=(
-    "installer.sh"
-  )
+  local found_path=""
+  local missing=0
 
-  local missing=0 path
-  for rel in "${required[@]}"; do
-    path="$base/$rel"
-    if [[ -e "$path" ]]; then
-      ok "$rel presente ($(stat_summary "$path"))"
-    else
-      warn "$rel mancante in $base"
-      missing=1
+  found_path=""
+  for candidate in "$base/installer.sh" "$base/installer_docker/installer.sh"; do
+    if [[ -e "$candidate" ]]; then
+      found_path="$candidate"
+      break
     fi
   done
 
+  if [[ -n "$found_path" ]]; then
+    ok "$(basename "$found_path") presente ($(stat_summary "$found_path"))"
+  else
+    warn "installer.sh mancante in $base"
+    missing=1
+  fi
+
   return $missing
+}
+
+find_serial_value() {
+  if [[ -n "${INSTALL_ENV[SERIAL_NUMBER]:-}" ]]; then
+    printf "%s" "${INSTALL_ENV[SERIAL_NUMBER]}"
+    return 0
+  fi
+
+  return 1
+}
+
+find_licensing_value() {
+  local kind="$1"
+
+  case "$kind" in
+    url)
+      if [[ -n "${INSTALL_ENV[LICENSE_PROVIDER_URL]:-}" ]]; then
+        printf "%s" "${INSTALL_ENV[LICENSE_PROVIDER_URL]}"
+        return 0
+      fi
+      ;;
+    login)
+      if [[ -n "${USER_LOGIN:-}" ]]; then
+        printf "%s" "${USER_LOGIN}"
+        return 0
+      fi
+      if [[ -n "${INSTALL_ENV[ARTECO_GLOBAL_EMAIL]:-}" ]]; then
+        printf "%s" "${INSTALL_ENV[ARTECO_GLOBAL_EMAIL]}"
+        return 0
+      fi
+      ;;
+    password)
+      if [[ -n "${USER_PASSWORD:-}" ]]; then
+        printf "%s" "${USER_PASSWORD}"
+        return 0
+      fi
+      if [[ -n "${INSTALL_ENV[ARTECO_GLOBAL_PASSWORD]:-}" ]]; then
+        printf "%s" "${INSTALL_ENV[ARTECO_GLOBAL_PASSWORD]}"
+        return 0
+      fi
+      ;;
+  esac
+
+  return 1
 }
 
 resolve_host() {
@@ -414,32 +650,16 @@ compare_dns_ip() {
   fi
 }
 
-read_config_var() {
-  local file="$1" var_name="$2" result=""
-  if [[ ! -f "$file" ]]; then
-    return 1
-  fi
-
-  # Usa una subshell bash per interpretare gli escape come farebbe la shell.
-  result=$(bash -c 'set -a; source "$1"; v="$2"; printf "%s" "${!v}"' bash "$file" "$var_name" 2>/dev/null || true)
-  if [[ -n "$result" ]]; then
-    echo "$result"
-    return 0
-  fi
-
-  return 1
-}
-
 parse_licensing_ports() {
   local response_file="$1" serial="$2"
 
   if [[ -z "$serial" ]]; then
-    warn "Seriale non disponibile per l'analisi del payload /sites."
+    warn "Seriale non disponibile per l'analisi della risposta licensing."
     return 1
   fi
 
   if ! command -v python3 >/dev/null 2>&1; then
-    warn "python3 non disponibile: impossibile analizzare la risposta /sites."
+    warn "python3 non disponibile: impossibile analizzare la risposta licensing."
     return 1
   fi
 
@@ -463,7 +683,7 @@ try:
     with open(resp_file, "r", encoding="utf-8") as fh:
         data = json.load(fh)
 except Exception as exc:
-    print(f"⚠️  Impossibile leggere/parsare la risposta /sites: {exc}", file=sys.stdout)
+    print(f"⚠️  Impossibile leggere/parsare la risposta licensing: {exc}", file=sys.stdout)
     sys.exit(1)
 
 match = None
@@ -476,14 +696,14 @@ for obj in walk(data):
         site_lan_port = obj.get("site_lan_port", "n/d")
         status = obj.get("status", "n/d")
         is_uss = obj.get("is_uss", "n/d")
-        print(f"MSG:✅ Licensing /sites -> serial {serial}: site_port={site_port}, site_lan_port={site_lan_port}, status={status}, is_uss={is_uss}")
+        print(f"MSG:✅ Licensing endpoint -> serial {serial}: site_port={site_port}, site_lan_port={site_lan_port}, status={status}, is_uss={is_uss}")
         print(f"SITE_PORT:{site_port}")
         print(f"SITE_LAN_PORT:{site_lan_port}")
         print(f"STATUS:{status}")
         print(f"IS_USS:{is_uss}")
         sys.exit(0)
 
-print(f"MSG:⚠️  Nessun record con serial '{serial}' trovato nella risposta /sites.")
+print(f"MSG:⚠️  Nessun record con serial '{serial}' trovato nella risposta licensing.")
 sys.exit(1)
 PY
   ) || true
@@ -495,18 +715,24 @@ PY
 
 licensing_sites_check() {
   local url="$1" login="$2" password="$3" serial="$4"
+  local -a missing=()
+
   if [[ -z "$url" || -z "$login" || -z "$password" || -z "$serial" ]]; then
-    warn "Parametri licensing incompleti: salto chiamata /sites."
+    [[ -z "$url" ]] && missing+=("LICENSING_URL")
+    [[ -z "$login" ]] && missing+=("USER_LOGIN")
+    [[ -z "$password" ]] && missing+=("USER_PASSWORD")
+    [[ -z "$serial" ]] && missing+=("SERIAL")
+    warn "Parametri licensing incompleti (${missing[*]}): salto chiamata licensing."
     return 1
   fi
 
   if ! command -v curl >/dev/null 2>&1; then
-    warn "curl non disponibile: salto chiamata /sites."
+    warn "curl non disponibile: salto chiamata licensing."
     return 1
   fi
 
   local endpoint payload response_file error_file http_code masked_login masked_serial
-  endpoint="${url%/}/sites"
+  endpoint="$url"
 
   masked_login="$login"
   masked_serial="$serial"
@@ -519,7 +745,7 @@ print(json.dumps({
 }))
 PY
   ) || {
-    warn "Impossibile costruire il payload JSON per /sites."
+    warn "Impossibile costruire il payload JSON per il licensing."
     return 1
   }
 
@@ -532,7 +758,7 @@ PY
     -d "$payload" 2>"$error_file" || true)
 
   if [[ "$http_code" == "200" ]]; then
-    ok "Licensing /sites OK (HTTP 200) per serial $masked_serial, login $masked_login."
+    ok "Licensing endpoint OK (HTTP 200) per serial $masked_serial, login $masked_login."
     local parsed line
     parsed=$(parse_licensing_ports "$response_file" "$serial")
     while IFS= read -r line; do
@@ -557,7 +783,7 @@ PY
     local curl_err body
     curl_err=$(cat "$error_file")
     body=$(cat "$response_file")
-    warn "Licensing /sites non OK (HTTP ${http_code:-n/d}) - err: ${curl_err:-n/d} body: ${body:-n/d}"
+    warn "Licensing endpoint non OK (HTTP ${http_code:-n/d}) - err: ${curl_err:-n/d} body: ${body:-n/d}"
   fi
 
   rm -f "$response_file" "$error_file"
@@ -723,6 +949,7 @@ check_prerequisites
 
 section "1) DOCKER"
 ensure_docker_running
+load_install_env || true
 
 download_compose_sources
 for compose in "${COMPOSE_SOURCES[@]:-}"; do
@@ -742,27 +969,26 @@ else
   exit 1
 fi
 
+if [[ -z "$ENV_LOG_FILE" ]]; then
+  load_install_env "$HYPERNODE_DIR/$ENV_LOG_NAME" || true
+fi
+
 check_required_files "$HYPERNODE_DIR" || true
 
-CONFIG_FILE="$HYPERNODE_DIR/.hypernode-update-check.conf"
 SERIAL_VALUE=""
 USER_LOGIN_VALUE=""
 USER_PASSWORD_VALUE=""
 LICENSING_URL_VALUE=""
 
-if [[ -f "$CONFIG_FILE" ]]; then
-  SERIAL_VALUE=$(read_config_var "$CONFIG_FILE" "SERIAL" || true)
-  USER_LOGIN_VALUE=$(read_config_var "$CONFIG_FILE" "USER_LOGIN" || true)
-  USER_PASSWORD_VALUE=$(read_config_var "$CONFIG_FILE" "USER_PASSWORD" || true)
-  LICENSING_URL_VALUE=$(read_config_var "$CONFIG_FILE" "LICENSING_URL" || true)
-else
-  warn "File di configurazione $CONFIG_FILE mancante."
-fi
+SERIAL_VALUE="$(find_serial_value || true)"
+USER_LOGIN_VALUE="$(find_licensing_value login || true)"
+USER_PASSWORD_VALUE="$(find_licensing_value password || true)"
+LICENSING_URL_VALUE="$(find_licensing_value url || true)"
 
 if [[ -n "$SERIAL_VALUE" ]]; then
   SERIAL_LOWER=$(echo "$SERIAL_VALUE" | tr '[:upper:]' '[:lower:]')
 else
-  warn "Impossibile leggere SERIAL da $CONFIG_FILE."
+  warn "Impossibile leggere SERIAL_NUMBER dall'env install."
 fi
 
 section "4) NETWORK"
