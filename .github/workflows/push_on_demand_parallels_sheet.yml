@@ -109,6 +109,7 @@ jobs:
     env:
       TAG: ${{ github.event.inputs.TAG_REF }}
       PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+      BUILD_LABEL: tag=${{ github.event.inputs.TAG_REF }}|backend=${{ github.event.inputs.BRANCH_BACKEND_REF }}|export=${{ github.event.inputs.BRANCH_EXPORT_REF }}|configurator=${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}|services=${{ github.event.inputs.SERVICES }}|run=${{ github.run_number }}
 
     steps:
       - name: Checkout deploy repo
@@ -287,6 +288,7 @@ jobs:
             docker buildx build \
               --platform="${PLATFORMS}" \
               --build-arg MONGO_VERSION=latest \
+              --build-arg BUILD_LABEL="${BUILD_LABEL}" \
               --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
               --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
               -f "${DOCKERFILE}" \
@@ -297,6 +299,7 @@ jobs:
               docker buildx build \
                 --platform="${PLATFORMS}" \
                 --build-arg MONGO_VERSION=4.4.18 \
+                --build-arg BUILD_LABEL="${BUILD_LABEL}" \
                 --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
                 --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
                 -f "${DOCKERFILE}" \
@@ -310,6 +313,7 @@ jobs:
           docker buildx build \
             --platform="${PLATFORMS}" \
             --build-arg IMAGE_VERSION="${IMAGE_VERSION}" \
+            --build-arg BUILD_LABEL="${BUILD_LABEL}" \
             --label org.opencontainers.image.version="${IMAGE_VERSION}" \
             --cache-from=type=registry,ref="${IMAGE_NAME}:buildcache" \
             --cache-to=type=registry,ref="${IMAGE_NAME}:buildcache",mode=max \
