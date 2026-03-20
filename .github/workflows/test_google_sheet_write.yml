@@ -59,6 +59,7 @@ jobs:
 
           sheet_id = os.environ["GOOGLE_SHEET_ID"]
           sheet_name = os.environ["SHEET_NAME"]
+          sheet_range_prefix = f"'{sheet_name}'"
           creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
 
           credentials = service_account.Credentials.from_service_account_info(
@@ -94,12 +95,12 @@ jobs:
 
           existing = service.spreadsheets().values().get(
               spreadsheetId=sheet_id,
-              range=f"{sheet_name}!A1:V1",
+              range=f"{sheet_range_prefix}!A1:V1",
           ).execute().get("values", [])
           if not existing:
               service.spreadsheets().values().update(
                   spreadsheetId=sheet_id,
-                  range=f"{sheet_name}!A1:V1",
+                  range=f"{sheet_range_prefix}!A1:V1",
                   valueInputOption="RAW",
                   body={"values": headers},
               ).execute()
@@ -143,7 +144,7 @@ jobs:
 
           service.spreadsheets().values().append(
               spreadsheetId=sheet_id,
-              range=f"{sheet_name}!A:V",
+              range=f"{sheet_range_prefix}!A:V",
               valueInputOption="USER_ENTERED",
               insertDataOption="INSERT_ROWS",
               body={"values": values},
