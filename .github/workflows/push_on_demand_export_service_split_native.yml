@@ -1,0 +1,216 @@
+name: Push Arteco Export Service (split native amd64-arm64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH_REF:
+        description: 'Checkout branch arteco-export-service'
+        required: true
+        default: 'main'
+      TAG_REF:
+        description: 'Tag Docker (es. latest, v1.2.3)'
+        required: true
+        default: 'ATTENTION: usare "latest" solo per prod!'
+      PLATFORMS:
+        description: 'Architettura target Docker, con split nativo amd64/arm64'
+        required: true
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/amd64,linux/arm64
+        default: 'linux/amd64,linux/arm64'
+
+jobs:
+  prepare_matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      build_matrix: ${{ steps.prepare.outputs.build_matrix }}
+    steps:
+      - name: Prepare platform matrix
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IFS=',' read -r -a RAW_PLATFORMS <<< "${{ github.event.inputs.PLATFORMS }}"
+
+          BUILD_MATRIX='['
+          FIRST_ENTRY=true
+
+          for RAW_PLATFORM in "${RAW_PLATFORMS[@]}"; do
+            PLATFORM="${RAW_PLATFORM//[[:space:]]/}"
+
+            case "${PLATFORM}" in
+              linux/amd64)
+                RUNNER="ubuntu-latest"
+                PLATFORM_SLUG="linux-amd64"
+                ;;
+              linux/arm64)
+                RUNNER="ubuntu-24.04-arm"
+                PLATFORM_SLUG="linux-arm64"
+                ;;
+              *)
+                echo "Unsupported platform for native split workflow: ${PLATFORM}"
+                exit 1
+                ;;
+            esac
+
+            if [[ "${FIRST_ENTRY}" == "true" ]]; then
+              FIRST_ENTRY=false
+            else
+              BUILD_MATRIX+=","
+            fi
+
+            BUILD_MATRIX+="{\"platform\":\"${PLATFORM}\",\"runner\":\"${RUNNER}\",\"platform_slug\":\"${PLATFORM_SLUG}\"}"
+          done
+
+          BUILD_MATRIX+=']'
+
+          echo "build_matrix=${BUILD_MATRIX}" >> "$GITHUB_OUTPUT"
+          echo "Selected build matrix: ${BUILD_MATRIX}"
+
+  build_and_push:
+    needs: prepare_matrix
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include: ${{ fromJson(needs.prepare_matrix.outputs.build_matrix) }}
+    env:
+      IMAGE_NAME: artecoglobalcompany/arteco-export-service
+      TAG: ${{ github.event.inputs.TAG_REF }}
+      PLATFORM: ${{ matrix.platform }}
+      PLATFORM_SLUG: ${{ matrix.platform_slug }}
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Checkout export service
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/arteco-export-service
+          ref: ${{ github.event.inputs.BRANCH_REF }}
+          path: arteco-export-service
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Compute image version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION=""
+          if [ "${TAG}" != "latest" ]; then
+            VERSION="${TAG}"
+          else
+            VERSION="$(git -C arteco-export-service rev-parse --short HEAD)"
+          fi
+
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Image version: ${VERSION}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and Push (${{ matrix.platform }})
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CACHE_REF="${IMAGE_NAME}:buildcache-${PLATFORM_SLUG}"
+          TARGET_TAG="${IMAGE_NAME}:${TAG}-${PLATFORM_SLUG}"
+
+          docker buildx build \
+            --platform="${PLATFORM}" \
+            --build-arg IMAGE_VERSION="${IMAGE_VERSION}" \
+            --label org.opencontainers.image.version="${IMAGE_VERSION}" \
+            --cache-from=type=registry,ref="${CACHE_REF}" \
+            --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
+            -t "${TARGET_TAG}" \
+            --push arteco-export-service
+
+      - name: Build summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== Native build summary ====="
+          echo "Platform: ${PLATFORM}"
+          echo "Runner: ${{ matrix.runner }}"
+          echo "Docker tag: ${IMAGE_NAME}:${TAG}-${PLATFORM_SLUG}"
+          echo "Source branch: ${{ github.event.inputs.BRANCH_REF }}"
+          echo "==============================="
+
+  publish_manifest:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      IMAGE_NAME: artecoglobalcompany/arteco-export-service
+      TAG: ${{ github.event.inputs.TAG_REF }}
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Publish manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IFS=',' read -r -a RAW_PLATFORMS <<< "${{ github.event.inputs.PLATFORMS }}"
+
+          TAG_SOURCES=()
+
+          for RAW_PLATFORM in "${RAW_PLATFORMS[@]}"; do
+            PLATFORM="${RAW_PLATFORM//[[:space:]]/}"
+
+            case "${PLATFORM}" in
+              linux/amd64)
+                PLATFORM_SLUG="linux-amd64"
+                ;;
+              linux/arm64)
+                PLATFORM_SLUG="linux-arm64"
+                ;;
+              *)
+                echo "Unsupported platform for native split workflow: ${PLATFORM}"
+                exit 1
+                ;;
+            esac
+
+            TAG_SOURCES+=("${IMAGE_NAME}:${TAG}-${PLATFORM_SLUG}")
+          done
+
+          docker buildx imagetools create \
+            -t "${IMAGE_NAME}:${TAG}" \
+            "${TAG_SOURCES[@]}"
+
+          docker buildx imagetools inspect "${IMAGE_NAME}:${TAG}"
+
+      - name: Manifest summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== Manifest summary ====="
+          echo "Docker tag: ${IMAGE_NAME}:${TAG}"
+          echo "Source branch: ${{ github.event.inputs.BRANCH_REF }}"
+          echo "Platforms: ${{ github.event.inputs.PLATFORMS }}"
+          echo "============================"
