@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../hypernode-server"
+		},
+		{
+			"path": "../arteco-export-service"
 		}
 	],
 	"settings": {}
