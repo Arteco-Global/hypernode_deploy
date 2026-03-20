@@ -462,6 +462,23 @@ jobs:
               scopes=["https://www.googleapis.com/auth/spreadsheets"],
           )
           service = build("sheets", "v4", credentials=credentials)
+          spreadsheet = service.spreadsheets().get(spreadsheetId=sheet_id).execute()
+          available_sheets = [
+              sheet["properties"]["title"]
+              for sheet in spreadsheet.get("sheets", [])
+          ]
+          print(f"Available sheet tabs: {available_sheets}")
+
+          if sheet_name in available_sheets:
+              resolved_sheet_name = sheet_name
+          elif available_sheets:
+              resolved_sheet_name = available_sheets[0]
+              print(
+                  f"Sheet tab '{sheet_name}' not found. Using first available tab: "
+                  f"{resolved_sheet_name}"
+              )
+          else:
+              raise RuntimeError("No sheet tabs found in the spreadsheet.")
 
           headers = [[
               "created_at",
@@ -490,12 +507,12 @@ jobs:
 
           existing = service.spreadsheets().values().get(
               spreadsheetId=sheet_id,
-              range=f"{sheet_range_prefix}!A1:V1",
+              range=f"'{resolved_sheet_name}'!A1:V1",
           ).execute().get("values", [])
           if not existing:
               service.spreadsheets().values().update(
                   spreadsheetId=sheet_id,
-                  range=f"{sheet_range_prefix}!A1:V1",
+                  range=f"'{resolved_sheet_name}'!A1:V1",
                   valueInputOption="RAW",
                   body={"values": headers},
               ).execute()
@@ -533,12 +550,12 @@ jobs:
           body = {"values": values}
           service.spreadsheets().values().append(
               spreadsheetId=sheet_id,
-              range=f"{sheet_range_prefix}!A:V",
+              range=f"'{resolved_sheet_name}'!A:V",
               valueInputOption="USER_ENTERED",
               insertDataOption="INSERT_ROWS",
               body=body,
           ).execute()
-          print(f"Appended {len(values)} row(s) to {sheet_name}.")
+          print(f"Appended {len(values)} row(s) to {resolved_sheet_name}.")
           PY
 
           python append_to_sheet.py
