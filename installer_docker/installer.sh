@@ -240,6 +240,7 @@ print_compose_failure_diagnostics() {
         event
         auth
         snapshot
+        export
         webserver
         configurator
         portbroker

@@ -275,6 +275,8 @@ services:
         condition: service_started
       configurator:
         condition: service_started
+      export:
+        condition: service_started
     ports:
       - "8181:80"
     healthcheck:

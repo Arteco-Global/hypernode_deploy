@@ -206,6 +206,7 @@ update_server_suite() {
         coretrust
         event
         auth
+        export
         webserver
         configurator
         portbroker
