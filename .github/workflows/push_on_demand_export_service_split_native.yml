@@ -84,6 +84,7 @@ jobs:
       TAG: ${{ github.event.inputs.TAG_REF }}
       PLATFORM: ${{ matrix.platform }}
       PLATFORM_SLUG: ${{ matrix.platform_slug }}
+      BUILD_LABEL: tag=${{ github.event.inputs.TAG_REF }}|backend=|export=${{ github.event.inputs.BRANCH_REF }}|configurator=|services=export|run=${{ github.run_number }}
 
     steps:
       - name: Checkout deploy repo
@@ -133,6 +134,7 @@ jobs:
           docker buildx build \
             --platform="${PLATFORM}" \
             --build-arg IMAGE_VERSION="${IMAGE_VERSION}" \
+            --build-arg BUILD_LABEL="${BUILD_LABEL}" \
             --label org.opencontainers.image.version="${IMAGE_VERSION}" \
             --cache-from=type=registry,ref="${CACHE_REF}" \
             --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
@@ -214,3 +216,152 @@ jobs:
           echo "Source branch: ${{ github.event.inputs.BRANCH_REF }}"
           echo "Platforms: ${{ github.event.inputs.PLATFORMS }}"
           echo "============================"
+
+  append_to_google_sheet:
+    if: ${{ always() }}
+    needs:
+      - build_and_push
+      - publish_manifest
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_SHEET_ID: ${{ vars.USS_DEPLOYMENTS_SHEET_ID }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      SHEET_NAME: USS deployments
+    steps:
+      - name: Append workflow row to Google Sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_SHEET_ID}" ]; then
+            echo "GOOGLE_SHEET_ID is empty. Configure vars.USS_DEPLOYMENTS_SHEET_ID."
+            exit 1
+          fi
+
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_JSON is empty. Configure the secret with a service account key."
+            exit 1
+          fi
+
+          python -m pip install --quiet google-api-python-client google-auth
+
+          cat > append_to_sheet.py <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          sheet_id = os.environ["GOOGLE_SHEET_ID"]
+          sheet_name = os.environ["SHEET_NAME"]
+          creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+
+          credentials = service_account.Credentials.from_service_account_info(
+              creds_info,
+              scopes=["https://www.googleapis.com/auth/spreadsheets"],
+          )
+          service = build("sheets", "v4", credentials=credentials)
+          spreadsheet = service.spreadsheets().get(spreadsheetId=sheet_id).execute()
+          available_sheets = [
+              sheet["properties"]["title"]
+              for sheet in spreadsheet.get("sheets", [])
+          ]
+          print(f"Available sheet tabs: {available_sheets}")
+
+          if sheet_name in available_sheets:
+              resolved_sheet_name = sheet_name
+          elif available_sheets:
+              resolved_sheet_name = available_sheets[0]
+              print(
+                  f"Sheet tab '{sheet_name}' not found. Using first available tab: "
+                  f"{resolved_sheet_name}"
+              )
+          else:
+              raise RuntimeError("No sheet tabs found in the spreadsheet.")
+
+          headers = [[
+              "created_at",
+              "workflow_name",
+              "run_number",
+              "run_attempt",
+              "run_id",
+              "repository",
+              "status",
+              "backend_branch",
+              "export_branch",
+              "configurator_branch",
+              "requested_services",
+              "platforms",
+              "requested_tag",
+              "recipe",
+              "run_url",
+          ]]
+
+          existing = service.spreadsheets().values().get(
+              spreadsheetId=sheet_id,
+              range=f"'{resolved_sheet_name}'!A1:O1",
+          ).execute().get("values", [])
+          if not existing:
+              service.spreadsheets().values().update(
+                  spreadsheetId=sheet_id,
+                  range=f"'{resolved_sheet_name}'!A1:O1",
+                  valueInputOption="RAW",
+                  body={"values": headers},
+              ).execute()
+
+          created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          workflow_name = os.environ["GITHUB_WORKFLOW"]
+          run_number = os.environ["GITHUB_RUN_NUMBER"]
+          run_attempt = os.environ["GITHUB_RUN_ATTEMPT"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+          repository = os.environ["GITHUB_REPOSITORY"]
+          status = os.environ["WORKFLOW_STATUS"]
+          backend_branch = os.environ["BRANCH_BACKEND_REF"]
+          export_branch = os.environ["BRANCH_EXPORT_REF"]
+          configurator_branch = os.environ["BRANCH_CONFIGURATOR_REF"]
+          requested_services = os.environ["REQUESTED_SERVICES"]
+          platforms = os.environ["PLATFORMS"]
+          requested_tag = os.environ["TAG_REF"]
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repository}/actions/runs/{run_id}"
+          recipe = (
+              f"backend={backend_branch}; export={export_branch}; "
+              f"configurator={configurator_branch}; services={requested_services}; "
+              f"platforms={platforms}; tag={requested_tag}"
+          )
+
+          body = {"values": [[
+              created_at,
+              workflow_name,
+              run_number,
+              run_attempt,
+              run_id,
+              repository,
+              status,
+              backend_branch,
+              export_branch,
+              configurator_branch,
+              requested_services,
+              platforms,
+              requested_tag,
+              recipe,
+              run_url,
+          ]]}
+          service.spreadsheets().values().append(
+              spreadsheetId=sheet_id,
+              range=f"'{resolved_sheet_name}'!A:O",
+              valueInputOption="USER_ENTERED",
+              insertDataOption="INSERT_ROWS",
+              body=body,
+          ).execute()
+          print(f"Appended 1 row to {resolved_sheet_name}.")
+          PY
+
+          python append_to_sheet.py
+        env:
+          WORKFLOW_STATUS: ${{ needs.build_and_push.result != 'success' && needs.build_and_push.result || needs.publish_manifest.result }}
+          BRANCH_BACKEND_REF: ""
+          BRANCH_EXPORT_REF: ${{ github.event.inputs.BRANCH_REF }}
+          BRANCH_CONFIGURATOR_REF: ""
+          REQUESTED_SERVICES: export
+          PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+          TAG_REF: ${{ github.event.inputs.TAG_REF }}
