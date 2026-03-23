@@ -281,7 +281,6 @@ jobs:
           esac
 
       - name: Checkout backend
-        if: ${{ env.IS_FRONTEND == 'false' && env.IS_EXPORT != 'true' }}
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode-server
@@ -290,7 +289,6 @@ jobs:
           token: ${{ secrets.GIT_PAT }}
 
       - name: Checkout frontend
-        if: ${{ env.IS_FRONTEND == 'true' }}
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/hypernode_server_gui
@@ -299,7 +297,6 @@ jobs:
           token: ${{ secrets.GIT_PAT }}
 
       - name: Checkout export service
-        if: ${{ env.IS_EXPORT == 'true' }}
         uses: actions/checkout@v3
         with:
           repository: Arteco-Global/arteco-export-service
@@ -332,7 +329,10 @@ jobs:
           set -euo pipefail
 
           BUILD_TIMESTAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-          BUILD_LABEL="tag=${TAG}|backend=${{ github.event.inputs.BRANCH_BACKEND_REF }}|export=${{ github.event.inputs.BRANCH_EXPORT_REF }}|configurator=${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}|services=${{ github.event.inputs.SERVICES }}|run=${{ github.run_number }}|built_at=${BUILD_TIMESTAMP}"
+          BACKEND_COMMIT_HASH="$(git -C hypernode-server rev-parse --short HEAD)"
+          EXPORT_COMMIT_HASH="$(git -C arteco-export-service rev-parse --short HEAD)"
+          CONFIGURATOR_COMMIT_HASH="$(git -C hypernode_server_gui rev-parse --short HEAD)"
+          BUILD_LABEL="tag=${TAG}|backend=${{ github.event.inputs.BRANCH_BACKEND_REF }}@${BACKEND_COMMIT_HASH}|export=${{ github.event.inputs.BRANCH_EXPORT_REF }}@${EXPORT_COMMIT_HASH}|configurator=${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}@${CONFIGURATOR_COMMIT_HASH}|services=${{ github.event.inputs.SERVICES }}|run=${{ github.run_number }}|built_at=${BUILD_TIMESTAMP}"
 
           echo "BUILD_LABEL=${BUILD_LABEL}" >> "$GITHUB_ENV"
           echo "Build label: ${BUILD_LABEL}"
