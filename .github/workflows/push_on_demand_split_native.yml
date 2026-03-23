@@ -149,7 +149,6 @@ jobs:
       TAG: ${{ github.event.inputs.TAG_REF }}
       PLATFORM: ${{ matrix.platform }}
       PLATFORM_SLUG: ${{ matrix.platform_slug }}
-      BUILD_LABEL: tag=${{ github.event.inputs.TAG_REF }}|backend=${{ github.event.inputs.BRANCH_BACKEND_REF }}|export=${{ github.event.inputs.BRANCH_EXPORT_REF }}|configurator=${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}|services=${{ github.event.inputs.SERVICES }}|run=${{ github.run_number }}
 
     steps:
       - name: Checkout deploy repo
@@ -326,6 +325,17 @@ jobs:
 
           echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "Image version: ${VERSION}"
+
+      - name: Compute build label
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD_TIMESTAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          BUILD_LABEL="tag=${TAG}|backend=${{ github.event.inputs.BRANCH_BACKEND_REF }}|export=${{ github.event.inputs.BRANCH_EXPORT_REF }}|configurator=${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}|services=${{ github.event.inputs.SERVICES }}|run=${{ github.run_number }}|built_at=${BUILD_TIMESTAMP}"
+
+          echo "BUILD_LABEL=${BUILD_LABEL}" >> "$GITHUB_ENV"
+          echo "Build label: ${BUILD_LABEL}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
