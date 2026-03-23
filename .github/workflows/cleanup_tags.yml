@@ -1,8 +1,6 @@
 name: Cleanup Docker Hub Tags
 
 on:
-  # schedule:
-  #   - cron: '0 3 * * 1'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -20,15 +18,141 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      DOCKERHUB_NAMESPACE: artecoglobalcompany
+      DEFAULT_REPOSITORIES: usee_live_streamer,usee_id_verifier,usee_event_manager,usee_metadata_manager,usee_suite_manager,usee_media_recorder,usee_snapshot_recorder,usee_web_server,usee_port_broker,usee_message_broker,usee_database,usee_coretrust,usee_configurator,arteco-export-service
+      RETENTION_DAYS: '60'
+      PROTECTED_TAGS: latest,staging,production,pre-release
+      INPUT_REPOSITORIES: ${{ github.event.inputs.repositories }}
+      INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+      DOCKER_TAG_CLEANUP_USERNAME: ${{ secrets.DOCKER_TAG_CLEANUP_USERNAME }}
+      DOCKER_TAG_CLEANUP_TOKEN: ${{ secrets.DOCKER_TAG_CLEANUP_TOKEN }}
     steps:
       - name: Cleanup old tags
-        uses: lostlink/docker-cleanup@v1.0.1
-        with:
-          username: ${{ secrets.DOCKER_TAG_CLEANUP_USERNAME }}
-          password: ${{ secrets.DOCKER_TAG_CLEANUP_TOKEN }}
-          organization: artecoglobalcompany
-          repositories: ${{ github.event.inputs.repositories || 'usee_live_streamer,usee_id_verifier,usee_event_manager,usee_metadata_manager,usee_suite_manager,usee_media_recorder,usee_snapshot_recorder,usee_web_server,usee_port_broker,usee_message_broker,usee_database,usee_coretrust,usee_configurator,arteco-export-service' }}
-          dry-run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
-          verbose: true
-          protected-tags: 'latest,staging,production,pre-release'
-          custom-patterns: '{"^.*$": 30}'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          username="${DOCKER_TAG_CLEANUP_USERNAME:-}"
+          secret="${DOCKER_TAG_CLEANUP_TOKEN:-}"
+
+          if [[ -z "${username}" || -z "${secret}" ]]; then
+            echo "Missing Docker Hub credentials."
+            echo "Configure DOCKER_TAG_CLEANUP_USERNAME and DOCKER_TAG_CLEANUP_TOKEN."
+            exit 1
+          fi
+
+          repositories_raw="${INPUT_REPOSITORIES:-${DEFAULT_REPOSITORIES}}"
+          dry_run="${INPUT_DRY_RUN:-true}"
+          cutoff_epoch="$(date -u -d "${RETENTION_DAYS} days ago" '+%s')"
+
+          echo "Namespace: ${DOCKERHUB_NAMESPACE}"
+          echo "Retention days: ${RETENTION_DAYS}"
+          echo "Protected tags: ${PROTECTED_TAGS}"
+          echo "Dry run: ${dry_run}"
+          echo "Cutoff epoch: ${cutoff_epoch}"
+
+          jwt="$(
+            curl --silent --show-error --fail \
+              -X POST "https://hub.docker.com/v2/auth/token" \
+              -H "Content-Type: application/json" \
+              -d "{\"identifier\":\"${username}\",\"secret\":\"${secret}\"}" \
+              | jq -r '.access_token'
+          )"
+
+          if [[ -z "${jwt}" || "${jwt}" == "null" ]]; then
+            echo "Failed to obtain Docker Hub JWT."
+            exit 1
+          fi
+
+          IFS=',' read -r -a repositories <<< "${repositories_raw}"
+          IFS=',' read -r -a protected_tags <<< "${PROTECTED_TAGS}"
+          protected_json="$(printf '%s\n' "${protected_tags[@]}" | sed 's/^ *//;s/ *$//' | jq -R . | jq -s .)"
+
+          deleted_count=0
+          candidate_count=0
+          kept_count=0
+
+          for raw_repo in "${repositories[@]}"; do
+            repo="$(echo "${raw_repo}" | xargs)"
+            [[ -z "${repo}" ]] && continue
+
+            echo ""
+            echo "===== Repository: ${DOCKERHUB_NAMESPACE}/${repo} ====="
+
+            next_url="https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${repo}/tags?page_size=100"
+
+            while [[ -n "${next_url}" && "${next_url}" != "null" ]]; do
+              response="$(
+                curl --silent --show-error --fail \
+                  -H "Authorization: Bearer ${jwt}" \
+                  "${next_url}"
+              )"
+
+              while IFS=$'\t' read -r tag_name last_updated; do
+                [[ -z "${tag_name}" ]] && continue
+
+                if [[ -z "${last_updated}" || "${last_updated}" == "null" ]]; then
+                  echo "Keep ${repo}:${tag_name} because last_updated is missing"
+                  kept_count=$((kept_count + 1))
+                  continue
+                fi
+
+                tag_epoch="$(date -u -d "${last_updated}" '+%s')"
+
+                if (( tag_epoch >= cutoff_epoch )); then
+                  echo "Keep ${repo}:${tag_name} (${last_updated})"
+                  kept_count=$((kept_count + 1))
+                  continue
+                fi
+
+                echo "Delete candidate ${repo}:${tag_name} (${last_updated})"
+                candidate_count=$((candidate_count + 1))
+
+                if [[ "${dry_run}" == "true" ]]; then
+                  continue
+                fi
+
+                http_code="$(
+                  curl --silent --show-error \
+                    -o /tmp/dockerhub-delete-response.txt \
+                    -w '%{http_code}' \
+                    -X DELETE \
+                    -H "Authorization: Bearer ${jwt}" \
+                    "https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${repo}/tags/${tag_name}/"
+                )"
+
+                case "${http_code}" in
+                  200|202|204)
+                    echo "Deleted ${repo}:${tag_name}"
+                    deleted_count=$((deleted_count + 1))
+                    ;;
+                  *)
+                    echo "Failed deleting ${repo}:${tag_name} (HTTP ${http_code})"
+                    cat /tmp/dockerhub-delete-response.txt
+                    exit 1
+                    ;;
+                esac
+              done < <(
+                echo "${response}" | jq -r \
+                  --argjson protected "${protected_json}" \
+                  '.results[]
+                  | select((.name as $name | $protected | index($name)) | not)
+                  | [.name, .last_updated] | @tsv'
+              )
+
+              next_url="$(echo "${response}" | jq -r '.next')"
+            done
+          done
+
+          {
+            echo "## Docker Hub Cleanup Summary"
+            echo ""
+            echo "- Namespace: \`${DOCKERHUB_NAMESPACE}\`"
+            echo "- Retention: \`${RETENTION_DAYS}\` days"
+            echo "- Protected tags: \`${PROTECTED_TAGS}\`"
+            echo "- Dry run: \`${dry_run}\`"
+            echo "- Candidates: \`${candidate_count}\`"
+            echo "- Deleted: \`${deleted_count}\`"
+            echo "- Kept: \`${kept_count}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
