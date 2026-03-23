@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       BRANCH_BACKEND_REF:
-        description: 'Checkout branch Backend (server)'
+        description: 'Checkout branch Backend (hypernode-server)'
         required: true
         default: 'release_candidate'
       BRANCH_EXPORT_REF:
-        description: 'Checkout branch arteco-export-service'
+        description: 'Checkout branch export (arteco-export-service)'
         required: true
         default: 'release_candidate'
       BRANCH_CONFIGURATOR_REF:
-        description: 'Checkout branch Configurator (frontend)'
+        description: 'Checkout branch Configurator (hypernode_server_gui)'
         required: true
         default: 'release_candidate'
       TAG_REF:
