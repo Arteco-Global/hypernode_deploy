@@ -1,0 +1,197 @@
+name: Export Docker Hub Tags To Google Sheet
+
+on:
+  workflow_dispatch:
+    inputs:
+      repositories:
+        description: 'Lista repository Docker Hub separati da virgola'
+        required: false
+        default: 'usee_live_streamer,usee_id_verifier,usee_event_manager,usee_metadata_manager,usee_suite_manager,usee_media_recorder,usee_snapshot_recorder,usee_web_server,usee_port_broker,usee_message_broker,usee_database,usee_coretrust,usee_configurator,arteco-export-service'
+      sheet_name:
+        description: 'Nome del tab Google Sheet da aggiornare'
+        required: false
+        default: 'Current tags'
+
+jobs:
+  export_tags:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DOCKERHUB_NAMESPACE: artecoglobalcompany
+      DEFAULT_REPOSITORIES: usee_live_streamer,usee_id_verifier,usee_event_manager,usee_metadata_manager,usee_suite_manager,usee_media_recorder,usee_snapshot_recorder,usee_web_server,usee_port_broker,usee_message_broker,usee_database,usee_coretrust,usee_configurator,arteco-export-service
+      INPUT_REPOSITORIES: ${{ github.event.inputs.repositories }}
+      SHEET_NAME: ${{ github.event.inputs.sheet_name }}
+      GOOGLE_SHEET_ID: ${{ vars.USS_DEPLOYMENTS_SHEET_ID }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      DOCKER_TAG_CLEANUP_USERNAME: ${{ secrets.DOCKER_TAG_CLEANUP_USERNAME }}
+      DOCKER_TAG_CLEANUP_TOKEN: ${{ secrets.DOCKER_TAG_CLEANUP_TOKEN }}
+    steps:
+      - name: Export Docker Hub tags to Google Sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_SHEET_ID}" ]; then
+            echo "GOOGLE_SHEET_ID is empty. Configure vars.USS_DEPLOYMENTS_SHEET_ID."
+            exit 1
+          fi
+
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_JSON is empty. Configure the secret with a service account key."
+            exit 1
+          fi
+
+          if [ -z "${DOCKER_TAG_CLEANUP_USERNAME}" ] || [ -z "${DOCKER_TAG_CLEANUP_TOKEN}" ]; then
+            echo "Missing Docker Hub credentials."
+            echo "Configure DOCKER_TAG_CLEANUP_USERNAME and DOCKER_TAG_CLEANUP_TOKEN."
+            exit 1
+          fi
+
+          python -m pip install --quiet google-api-python-client google-auth requests
+
+          cat > export_tags_to_sheet.py <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          import requests
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+
+          def ensure_sheet(service, spreadsheet_id, sheet_name):
+              spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+              sheets = spreadsheet.get("sheets", [])
+              for sheet in sheets:
+                  props = sheet.get("properties", {})
+                  if props.get("title") == sheet_name:
+                      return sheet_name
+
+              service.spreadsheets().batchUpdate(
+                  spreadsheetId=spreadsheet_id,
+                  body={
+                      "requests": [
+                          {
+                              "addSheet": {
+                                  "properties": {
+                                      "title": sheet_name,
+                                  }
+                              }
+                          }
+                      ]
+                  },
+              ).execute()
+              return sheet_name
+
+
+          def get_dockerhub_jwt(username, secret):
+              response = requests.post(
+                  "https://hub.docker.com/v2/auth/token",
+                  json={"identifier": username, "secret": secret},
+                  timeout=30,
+              )
+              response.raise_for_status()
+              token = response.json().get("access_token")
+              if not token:
+                  raise RuntimeError("Failed to obtain Docker Hub JWT.")
+              return token
+
+
+          def iter_repo_tags(namespace, repository, token):
+              url = (
+                  f"https://hub.docker.com/v2/namespaces/{namespace}/"
+                  f"repositories/{repository}/tags?page_size=100"
+              )
+              headers = {"Authorization": f"Bearer {token}"}
+
+              while url:
+                  response = requests.get(url, headers=headers, timeout=30)
+                  response.raise_for_status()
+                  payload = response.json()
+                  for tag in payload.get("results", []):
+                      yield tag
+                  url = payload.get("next")
+
+
+          sheet_id = os.environ["GOOGLE_SHEET_ID"]
+          sheet_name = os.environ["SHEET_NAME"]
+          namespace = os.environ["DOCKERHUB_NAMESPACE"]
+          repositories_raw = os.environ.get("INPUT_REPOSITORIES") or os.environ["DEFAULT_REPOSITORIES"]
+          username = os.environ["DOCKER_TAG_CLEANUP_USERNAME"]
+          secret = os.environ["DOCKER_TAG_CLEANUP_TOKEN"]
+          creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+
+          repositories = [repo.strip() for repo in repositories_raw.split(",") if repo.strip()]
+          exported_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          run_id = os.environ["GITHUB_RUN_ID"]
+          repository_slug = os.environ["GITHUB_REPOSITORY"]
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repository_slug}/actions/runs/{run_id}"
+
+          credentials = service_account.Credentials.from_service_account_info(
+              creds_info,
+              scopes=["https://www.googleapis.com/auth/spreadsheets"],
+          )
+          sheets_service = build("sheets", "v4", credentials=credentials)
+          resolved_sheet_name = ensure_sheet(sheets_service, sheet_id, sheet_name)
+
+          token = get_dockerhub_jwt(username, secret)
+
+          rows = [[
+              "exported_at",
+              "namespace",
+              "repository",
+              "tag",
+              "last_updated",
+              "full_image",
+              "run_url",
+          ]]
+
+          tag_count = 0
+          for repo in repositories:
+              repo_tags = []
+              for tag in iter_repo_tags(namespace, repo, token):
+                  repo_tags.append(tag)
+
+              repo_tags.sort(
+                  key=lambda item: (
+                      item.get("last_updated") or "",
+                      item.get("name") or "",
+                  ),
+                  reverse=True,
+              )
+
+              for tag in repo_tags:
+                  tag_name = tag.get("name", "")
+                  last_updated = tag.get("last_updated", "")
+                  rows.append([
+                      exported_at,
+                      namespace,
+                      repo,
+                      tag_name,
+                      last_updated,
+                      f"{namespace}/{repo}:{tag_name}",
+                      run_url,
+                  ])
+                  tag_count += 1
+
+          sheets_service.spreadsheets().values().clear(
+              spreadsheetId=sheet_id,
+              range=f"'{resolved_sheet_name}'!A:Z",
+              body={},
+          ).execute()
+
+          sheets_service.spreadsheets().values().update(
+              spreadsheetId=sheet_id,
+              range=f"'{resolved_sheet_name}'!A1:G{len(rows)}",
+              valueInputOption="RAW",
+              body={"values": rows},
+          ).execute()
+
+          print(
+              f"Wrote {tag_count} tags across {len(repositories)} repositories "
+              f"to Google Sheet tab '{resolved_sheet_name}'."
+          )
+          PY
+
+          python export_tags_to_sheet.py
