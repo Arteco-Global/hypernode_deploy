@@ -3,7 +3,7 @@ name: hypernode_stack
 services:
 
   database:
-    image: artecoglobalcompany/usee_database:latest
+    image: artecoglobalcompany/usee_database:pre-release
     container_name: database
     networks:
       - hypernode-net
@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   messagebroker:
-    image: artecoglobalcompany/usee_message_broker:latest
+    image: artecoglobalcompany/usee_message_broker:pre-release
     container_name: messagebroker
     networks:
       - hypernode-net
@@ -35,7 +35,7 @@ services:
       start_period: 30s
 
   gateway:
-    image: artecoglobalcompany/usee_suite_manager:latest
+    image: artecoglobalcompany/usee_suite_manager:pre-release
     container_name: gateway
     networks:
       - hypernode-net
@@ -54,33 +54,33 @@ services:
       - database
 
   camera:
-    image: artecoglobalcompany/usee_live_streamer:latest
+    image: artecoglobalcompany/usee_live_streamer:pre-release
     container_name: camera
     network_mode: host
     restart: unless-stopped
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@10.30.6.89:5672
+      - RABBITMQ_URI=amqp://hypernode:hypernode@192.168.10.89:5672
       - GATEWAY_URI=ws://localhost:8181
-      - DATABASE_URI=mongodb://10.30.6.89:27017/camera-db
+      - DATABASE_URI=mongodb://192.168.10.89:27017/camera-db
     depends_on:
       - messagebroker
       - database
 
   metadata:
-    image: artecoglobalcompany/usee_metadata_manager:latest
+    image: artecoglobalcompany/usee_metadata_manager:pre-release
     container_name: metadata
     network_mode: host
     restart: unless-stopped
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@10.30.6.89:5672
+      - RABBITMQ_URI=amqp://hypernode:hypernode@192.168.10.89:5672
       - GATEWAY_URI=ws://localhost:8181
-      - DATABASE_URI=mongodb://10.30.6.89:27017/metadata-db
+      - DATABASE_URI=mongodb://192.168.10.89:27017/metadata-db
     depends_on:
       - messagebroker
       - database
 
   coretrust:
-    image: artecoglobalcompany/usee_coretrust:latest
+    image: artecoglobalcompany/usee_coretrust:pre-release
     container_name: coretrust
     networks:
       - hypernode-net
@@ -89,7 +89,7 @@ services:
       - DATABASE_URI=mongodb://database:27017/coretrust-db
       - CERT_PATH=/ssl
       - SERIAL_NUMBER=V02260031
-      - SERVER_IP_ADDRESS=10.30.6.89
+      - SERVER_IP_ADDRESS=192.168.10.89
     volumes:
       - hypernode_security_shared_files:/ssl
       - coretrust_config:/data/coretrust
@@ -99,7 +99,7 @@ services:
       - database
 
   recording:
-    image: artecoglobalcompany/usee_media_recorder:latest
+    image: artecoglobalcompany/usee_media_recorder:pre-release
     container_name: recording
     networks:
       - hypernode-net
@@ -117,7 +117,7 @@ services:
       - database
 
   event:
-    image: artecoglobalcompany/usee_event_manager:latest
+    image: artecoglobalcompany/usee_event_manager:pre-release
     container_name: event
     networks:
       - hypernode-net
@@ -130,7 +130,7 @@ services:
       - database
 
   auth:
-    image: artecoglobalcompany/usee_id_verifier:latest
+    image: artecoglobalcompany/usee_id_verifier:pre-release
     container_name: auth
     networks:
       - hypernode-net
@@ -143,7 +143,7 @@ services:
       - database
 
   snapshot:
-    image: artecoglobalcompany/usee_snapshot_recorder:latest
+    image: artecoglobalcompany/usee_snapshot_recorder:pre-release
     container_name: snapshot
     networks:
       - hypernode-net
@@ -160,8 +160,30 @@ services:
       - messagebroker
       - database
 
+  export:
+    image: artecoglobalcompany/arteco-export-service:pre-release
+    container_name: export
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    ports:
+      - "5500:5500"
+    environment:
+      - PORT=5500
+      - LOCAL_DB_CONNECTION=mongodb://192.168.10.89:27017/camera-db/exports
+      - REACT_APP_EXPORTS_TIMEZONE=Europe/Rome
+    volumes:
+      - arteco_exports:/home/node/arteco-export-service/exports
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   webserver:
-    image: artecoglobalcompany/usee_web_server:latest
+    image: artecoglobalcompany/usee_web_server:pre-release
     container_name: webserver
     networks:
       - hypernode-net
@@ -170,11 +192,9 @@ services:
     restart: unless-stopped
     depends_on:
       - messagebroker
-      - gateway
-      - configurator
 
   configurator:
-    image: artecoglobalcompany/usee_configurator:latest
+    image: artecoglobalcompany/usee_configurator:pre-release
     container_name: configurator
     networks:
       - hypernode-net
@@ -183,7 +203,7 @@ services:
       - messagebroker
 
   portbroker:
-    image: artecoglobalcompany/usee_port_broker:latest
+    image: artecoglobalcompany/usee_port_broker:pre-release
     container_name: portbroker
     networks:
       - hypernode-net
