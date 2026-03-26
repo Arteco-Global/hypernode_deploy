@@ -50,8 +50,22 @@ services:
       - gateway_config:/data/gateway
     restart: unless-stopped
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const http=require('http');const port=process.env.MS_GATEWAY_SERVICE_PORT || 5001;const req=http.get({host:'127.0.0.1',port,path:'/health/ready'},res=>process.exit(res.statusCode===200?0:1));req.on('error',()=>process.exit(1));req.setTimeout(5000,()=>{req.destroy();process.exit(1);});"
+        ]
+      interval: 10s
+      timeout: 6s
+      retries: 30
+      start_period: 60s
 
   camera:
     image: artecoglobalcompany/usee_live_streamer:pre-release
@@ -63,8 +77,12 @@ services:
       - GATEWAY_URI=ws://localhost:8181
       - DATABASE_URI=mongodb://192.168.10.89:27017/camera-db
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+      gateway:
+        condition: service_healthy
 
   metadata:
     image: artecoglobalcompany/usee_metadata_manager:pre-release
@@ -76,8 +94,12 @@ services:
       - GATEWAY_URI=ws://localhost:8181
       - DATABASE_URI=mongodb://192.168.10.89:27017/metadata-db
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+      gateway:
+        condition: service_healthy
 
   coretrust:
     image: artecoglobalcompany/usee_coretrust:pre-release
@@ -113,8 +135,12 @@ services:
       - /volume1/arteco/recordings:/recording_files
     restart: unless-stopped
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+      webserver:
+        condition: service_healthy
 
   event:
     image: artecoglobalcompany/usee_event_manager:pre-release
@@ -157,8 +183,12 @@ services:
       - /volume1/arteco/snapshots:/snapshot_files
     restart: unless-stopped
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+      webserver:
+        condition: service_healthy
 
   export:
     image: artecoglobalcompany/arteco-export-service:pre-release
@@ -191,7 +221,18 @@ services:
       - "8181:80"
     restart: unless-stopped
     depends_on:
-      - messagebroker
+      messagebroker:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+      configurator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
 
   configurator:
     image: artecoglobalcompany/usee_configurator:pre-release
@@ -213,8 +254,10 @@ services:
       - hypernode_security_shared_files:/ssl
     restart: unless-stopped
     depends_on:
-      - messagebroker
-      - webserver
+      messagebroker:
+        condition: service_healthy
+      webserver:
+        condition: service_healthy
 
 volumes:
   rabbitmq_data:

@@ -299,6 +299,33 @@ execute_command() {
     fi
 }
 
+wait_for_tcp_port() {
+    local label="$1"
+    local host="$2"
+    local port="$3"
+    local timeout="${4:-180}"
+    local started_at
+    local elapsed
+
+    started_at=$(date +%s)
+    printf "\nWaiting for %s on %s:%s\n" "$label" "$host" "$port"
+
+    while true; do
+        if (echo >"/dev/tcp/${host}/${port}") >/dev/null 2>&1; then
+            printf "✅ %s is reachable on %s:%s\n" "$label" "$host" "$port"
+            return 0
+        fi
+
+        elapsed=$(( $(date +%s) - started_at ))
+        if (( elapsed >= timeout )); then
+            printf "❌ Timeout waiting for %s on %s:%s\n" "$label" "$host" "$port"
+            return 1
+        fi
+
+        sleep 2
+    done
+}
+
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
     -fi|--force-install)
@@ -496,6 +523,7 @@ installLocalDb() {
 
     execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" \
         "Installing local database" || return 1
+    wait_for_tcp_port "database" "127.0.0.1" "${DB_PORT:-27017}" || return 1
 
     return 0
 }

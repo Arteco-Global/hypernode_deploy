@@ -197,6 +197,33 @@ validate_directory_mount_path() {
     return 0
 }
 
+wait_for_tcp_port() {
+    local label="$1"
+    local host="$2"
+    local port="$3"
+    local timeout="${4:-180}"
+    local started_at
+    local elapsed
+
+    started_at=$(date +%s)
+    echo "⌛ Waiting for $label on ${host}:${port}"
+
+    while true; do
+        if (echo >"/dev/tcp/${host}/${port}") >/dev/null 2>&1; then
+            echo "✅ $label is reachable on ${host}:${port}"
+            return 0
+        fi
+
+        elapsed=$(( $(date +%s) - started_at ))
+        if (( elapsed >= timeout )); then
+            echo "❌ Timeout waiting for $label on ${host}:${port}"
+            return 1
+        fi
+
+        sleep 2
+    done
+}
+
 update_server_suite() {
     local core_services=(
         messagebroker
@@ -498,6 +525,7 @@ pull_images_from_compose "$SERVICE_NAME" "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_S
 
 echo "▶️  Recreate database"
 $COMPOSE_CMD -f "$TMP_DB_COMPOSE" up -d --force-recreate --remove-orphans
+wait_for_tcp_port "database" "127.0.0.1" "${DB_PORT:-27017}"
 
 echo "▶️  Recreate $SERVICE_NAME"
 if [[ "$SERVICE_NAME" == "server" ]]; then
