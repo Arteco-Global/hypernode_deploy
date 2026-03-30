@@ -3,7 +3,7 @@ name: hypernode_stack
 services:
 
   database:
-    image: artecoglobalcompany/usee_database:pre-release
+    image: artecoglobalcompany/usee_database:fantasia
     container_name: database
     networks:
       - hypernode-net
@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   messagebroker:
-    image: artecoglobalcompany/usee_message_broker:pre-release
+    image: artecoglobalcompany/usee_message_broker:fantasia
     container_name: messagebroker
     networks:
       - hypernode-net
@@ -35,7 +35,7 @@ services:
       start_period: 30s
 
   gateway:
-    image: artecoglobalcompany/usee_suite_manager:pre-release
+    image: artecoglobalcompany/usee_suite_manager:fantasia
     container_name: gateway
     networks:
       - hypernode-net
@@ -68,7 +68,7 @@ services:
       start_period: 60s
 
   camera:
-    image: artecoglobalcompany/usee_live_streamer:pre-release
+    image: artecoglobalcompany/usee_live_streamer:fantasia
     container_name: camera
     network_mode: host
     restart: unless-stopped
@@ -85,7 +85,7 @@ services:
         condition: service_healthy
 
   metadata:
-    image: artecoglobalcompany/usee_metadata_manager:pre-release
+    image: artecoglobalcompany/usee_metadata_manager:fantasia
     container_name: metadata
     network_mode: host
     restart: unless-stopped
@@ -102,7 +102,7 @@ services:
         condition: service_healthy
 
   coretrust:
-    image: artecoglobalcompany/usee_coretrust:pre-release
+    image: artecoglobalcompany/usee_coretrust:fantasia
     container_name: coretrust
     networks:
       - hypernode-net
@@ -121,7 +121,7 @@ services:
       - database
 
   recording:
-    image: artecoglobalcompany/usee_media_recorder:pre-release
+    image: artecoglobalcompany/usee_media_recorder:fantasia
     container_name: recording
     networks:
       - hypernode-net
@@ -130,7 +130,7 @@ services:
       - DATABASE_URI=mongodb://database:27017/recording-db
       - GATEWAY_URI=ws://webserver
       - RECORDING_PATH=/recording_files
-      - RECORDING_DISK_SPACE=100000000
+      - RECORDING_DISK_SPACE=3000000000
     volumes:
       - /volume1/arteco/recordings:/recording_files
     restart: unless-stopped
@@ -143,7 +143,7 @@ services:
         condition: service_healthy
 
   event:
-    image: artecoglobalcompany/usee_event_manager:pre-release
+    image: artecoglobalcompany/usee_event_manager:fantasia
     container_name: event
     networks:
       - hypernode-net
@@ -156,7 +156,7 @@ services:
       - database
 
   auth:
-    image: artecoglobalcompany/usee_id_verifier:pre-release
+    image: artecoglobalcompany/usee_id_verifier:fantasia
     container_name: auth
     networks:
       - hypernode-net
@@ -169,7 +169,7 @@ services:
       - database
 
   snapshot:
-    image: artecoglobalcompany/usee_snapshot_recorder:pre-release
+    image: artecoglobalcompany/usee_snapshot_recorder:fantasia
     container_name: snapshot
     networks:
       - hypernode-net
@@ -178,7 +178,7 @@ services:
       - DATABASE_URI=mongodb://database:27017/snapshot-db
       - GATEWAY_URI=ws://webserver
       - SNAPSHOT_PATH=/snapshot_files
-      - SNAPSHOT_DISK_SPACE=100000000
+      - SNAPSHOT_DISK_SPACE=3000000000
     volumes:
       - /volume1/arteco/snapshots:/snapshot_files
     restart: unless-stopped
@@ -191,7 +191,7 @@ services:
         condition: service_healthy
 
   export:
-    image: artecoglobalcompany/arteco-export-service:pre-release
+    image: artecoglobalcompany/arteco-export-service:fantasia
     container_name: export
     networks:
       - hypernode-net
@@ -213,7 +213,7 @@ services:
         max-file: "5"
 
   webserver:
-    image: artecoglobalcompany/usee_web_server:pre-release
+    image: artecoglobalcompany/usee_web_server:fantasia
     container_name: webserver
     networks:
       - hypernode-net
@@ -235,7 +235,7 @@ services:
       start_period: 60s
 
   configurator:
-    image: artecoglobalcompany/usee_configurator:pre-release
+    image: artecoglobalcompany/usee_configurator:fantasia
     container_name: configurator
     networks:
       - hypernode-net
@@ -244,7 +244,7 @@ services:
       - messagebroker
 
   portbroker:
-    image: artecoglobalcompany/usee_port_broker:pre-release
+    image: artecoglobalcompany/usee_port_broker:fantasia
     container_name: portbroker
     networks:
       - hypernode-net
@@ -266,6 +266,7 @@ volumes:
   coretrust_config:
   mongodb_data:
   mongodb_config:
+  arteco_exports:
 
 networks:
   hypernode-net:
