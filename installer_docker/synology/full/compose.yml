@@ -200,7 +200,7 @@ services:
       - "5500:5500"
     environment:
       - PORT=5500
-      - LOCAL_DB_CONNECTION=mongodb://192.168.10.89:27017/camera-db/exports
+      - LOCAL_DB_CONNECTION=mongodb://192.168.10.89:27017/exports
       - REACT_APP_EXPORTS_TIMEZONE=Europe/Rome
     volumes:
       - arteco_exports:/home/node/arteco-export-service/exports
