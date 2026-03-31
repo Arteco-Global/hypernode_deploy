@@ -1,4 +1,4 @@
-name: clean tag on demand
+name: Clean tag on demand
 
 on:
   workflow_dispatch:
