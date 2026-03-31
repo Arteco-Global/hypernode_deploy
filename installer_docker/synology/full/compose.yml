@@ -3,7 +3,7 @@ name: hypernode_stack
 services:
 
   database:
-    image: artecoglobalcompany/usee_database:fantasia
+    image: artecoglobalcompany/usee_database:latest
     container_name: database
     networks:
       - hypernode-net
@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   messagebroker:
-    image: artecoglobalcompany/usee_message_broker:fantasia
+    image: artecoglobalcompany/usee_message_broker:latest
     container_name: messagebroker
     networks:
       - hypernode-net
@@ -35,7 +35,7 @@ services:
       start_period: 30s
 
   gateway:
-    image: artecoglobalcompany/usee_suite_manager:fantasia
+    image: artecoglobalcompany/usee_suite_manager:latest
     container_name: gateway
     networks:
       - hypernode-net
@@ -68,7 +68,7 @@ services:
       start_period: 60s
 
   camera:
-    image: artecoglobalcompany/usee_live_streamer:fantasia
+    image: artecoglobalcompany/usee_live_streamer:latest
     container_name: camera
     network_mode: host
     restart: unless-stopped
@@ -85,7 +85,7 @@ services:
         condition: service_healthy
 
   metadata:
-    image: artecoglobalcompany/usee_metadata_manager:fantasia
+    image: artecoglobalcompany/usee_metadata_manager:latest
     container_name: metadata
     network_mode: host
     restart: unless-stopped
@@ -102,7 +102,7 @@ services:
         condition: service_healthy
 
   coretrust:
-    image: artecoglobalcompany/usee_coretrust:fantasia
+    image: artecoglobalcompany/usee_coretrust:latest
     container_name: coretrust
     networks:
       - hypernode-net
@@ -121,7 +121,7 @@ services:
       - database
 
   recording:
-    image: artecoglobalcompany/usee_media_recorder:fantasia
+    image: artecoglobalcompany/usee_media_recorder:latest
     container_name: recording
     networks:
       - hypernode-net
@@ -143,7 +143,7 @@ services:
         condition: service_healthy
 
   event:
-    image: artecoglobalcompany/usee_event_manager:fantasia
+    image: artecoglobalcompany/usee_event_manager:latest
     container_name: event
     networks:
       - hypernode-net
@@ -156,7 +156,7 @@ services:
       - database
 
   auth:
-    image: artecoglobalcompany/usee_id_verifier:fantasia
+    image: artecoglobalcompany/usee_id_verifier:latest
     container_name: auth
     networks:
       - hypernode-net
@@ -169,7 +169,7 @@ services:
       - database
 
   snapshot:
-    image: artecoglobalcompany/usee_snapshot_recorder:fantasia
+    image: artecoglobalcompany/usee_snapshot_recorder:latest
     container_name: snapshot
     networks:
       - hypernode-net
@@ -191,7 +191,7 @@ services:
         condition: service_healthy
 
   export:
-    image: artecoglobalcompany/arteco-export-service:fantasia
+    image: artecoglobalcompany/arteco-export-service:latest
     container_name: export
     networks:
       - hypernode-net
@@ -213,7 +213,7 @@ services:
         max-file: "5"
 
   webserver:
-    image: artecoglobalcompany/usee_web_server:fantasia
+    image: artecoglobalcompany/usee_web_server:latest
     container_name: webserver
     networks:
       - hypernode-net
@@ -235,7 +235,7 @@ services:
       start_period: 60s
 
   configurator:
-    image: artecoglobalcompany/usee_configurator:fantasia
+    image: artecoglobalcompany/usee_configurator:latest
     container_name: configurator
     networks:
       - hypernode-net
@@ -244,7 +244,7 @@ services:
       - messagebroker
 
   portbroker:
-    image: artecoglobalcompany/usee_port_broker:fantasia
+    image: artecoglobalcompany/usee_port_broker:latest
     container_name: portbroker
     networks:
       - hypernode-net
