@@ -1,6 +1,8 @@
-name: Export Docker Hub Tags To Google Sheet
+name: (AUTO) Export Docker Hub Tags To Google Sheet
 
 on:
+  schedule:
+    - cron: '0 8 * * 1'
   workflow_dispatch:
     inputs:
       repositories:

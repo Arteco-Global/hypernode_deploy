@@ -1,4 +1,4 @@
-name: Cleanup Docker Hub Tags
+name: (AUTO) Cleanup Docker Hub Tags
 
 on:
   schedule:
