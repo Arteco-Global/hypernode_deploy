@@ -1,0 +1,122 @@
+name: clean tag on demand
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag Docker da cancellare'
+        required: true
+      repositories:
+        description: 'Lista repository Docker Hub separati da virgola'
+        required: false
+        default: 'usee_live_streamer,usee_id_verifier,usee_event_manager,usee_metadata_manager,usee_suite_manager,usee_media_recorder,usee_snapshot_recorder,usee_web_server,usee_port_broker,usee_message_broker,usee_database,usee_coretrust,usee_configurator,arteco-export-service'
+
+jobs:
+  delete_tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DOCKERHUB_NAMESPACE: artecoglobalcompany
+      DEFAULT_REPOSITORIES: usee_live_streamer,usee_id_verifier,usee_event_manager,usee_metadata_manager,usee_suite_manager,usee_media_recorder,usee_snapshot_recorder,usee_web_server,usee_port_broker,usee_message_broker,usee_database,usee_coretrust,usee_configurator,arteco-export-service
+      PROTECTED_TAGS: latest,staging,production,pre-release,pre-release-linux-amd64,pre-release-linux-arm64
+      INPUT_TAG: ${{ github.event.inputs.tag }}
+      INPUT_REPOSITORIES: ${{ github.event.inputs.repositories }}
+      DOCKER_TAG_CLEANUP_USERNAME: ${{ secrets.DOCKER_TAG_CLEANUP_USERNAME }}
+      DOCKER_TAG_CLEANUP_TOKEN: ${{ secrets.DOCKER_TAG_CLEANUP_TOKEN }}
+    steps:
+      - name: Delete tag from Docker Hub repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          username="${DOCKER_TAG_CLEANUP_USERNAME:-}"
+          secret="${DOCKER_TAG_CLEANUP_TOKEN:-}"
+
+          if [[ -z "${username}" || -z "${secret}" ]]; then
+            echo "Missing Docker Hub credentials."
+            echo "Configure DOCKER_TAG_CLEANUP_USERNAME and DOCKER_TAG_CLEANUP_TOKEN."
+            exit 1
+          fi
+
+          tag="$(echo "${INPUT_TAG:-}" | xargs)"
+          repositories_raw="${INPUT_REPOSITORIES:-${DEFAULT_REPOSITORIES}}"
+
+          if [[ -z "${tag}" ]]; then
+            echo "Input tag is required."
+            exit 1
+          fi
+
+          IFS=',' read -r -a protected_tags <<< "${PROTECTED_TAGS}"
+          for protected_tag in "${protected_tags[@]}"; do
+            protected_tag="$(echo "${protected_tag}" | xargs)"
+            if [[ "${tag}" == "${protected_tag}" ]]; then
+              echo "Refusing to delete protected tag: ${tag}"
+              exit 1
+            fi
+          done
+
+          echo "Namespace: ${DOCKERHUB_NAMESPACE}"
+          echo "Tag to delete: ${tag}"
+          echo "Protected tags: ${PROTECTED_TAGS}"
+
+          jwt="$(
+            curl --silent --show-error --fail \
+              -X POST "https://hub.docker.com/v2/auth/token" \
+              -H "Content-Type: application/json" \
+              -d "{\"identifier\":\"${username}\",\"secret\":\"${secret}\"}" \
+              | jq -r '.access_token'
+          )"
+
+          if [[ -z "${jwt}" || "${jwt}" == "null" ]]; then
+            echo "Failed to obtain Docker Hub JWT."
+            exit 1
+          fi
+
+          IFS=',' read -r -a repositories <<< "${repositories_raw}"
+
+          deleted_count=0
+          missing_count=0
+
+          for raw_repo in "${repositories[@]}"; do
+            repo="$(echo "${raw_repo}" | xargs)"
+            [[ -z "${repo}" ]] && continue
+
+            echo ""
+            echo "===== Repository: ${DOCKERHUB_NAMESPACE}/${repo} ====="
+
+            http_code="$(
+              curl --silent --show-error \
+                -o /tmp/dockerhub-delete-response.txt \
+                -w '%{http_code}' \
+                -X DELETE \
+                -H "Authorization: Bearer ${jwt}" \
+                "https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${repo}/tags/${tag}/"
+            )"
+
+            case "${http_code}" in
+              200|202|204)
+                echo "Deleted ${repo}:${tag}"
+                deleted_count=$((deleted_count + 1))
+                ;;
+              404)
+                echo "Tag not found on ${repo}:${tag}"
+                missing_count=$((missing_count + 1))
+                ;;
+              *)
+                echo "Failed deleting ${repo}:${tag} (HTTP ${http_code})"
+                cat /tmp/dockerhub-delete-response.txt
+                exit 1
+                ;;
+            esac
+          done
+
+          {
+            echo "## Docker Hub Tag Deletion Summary"
+            echo ""
+            echo "- Namespace: \`${DOCKERHUB_NAMESPACE}\`"
+            echo "- Tag: \`${tag}\`"
+            echo "- Protected tags: \`${PROTECTED_TAGS}\`"
+            echo "- Deleted: \`${deleted_count}\`"
+            echo "- Not found: \`${missing_count}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
