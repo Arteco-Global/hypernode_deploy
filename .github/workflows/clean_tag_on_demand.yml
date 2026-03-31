@@ -30,6 +30,12 @@ jobs:
         run: |
           set -euo pipefail
 
+          matches_tag_family() {
+            local candidate="$1"
+            local base_tag="$2"
+            [[ "${candidate}" == "${base_tag}" || "${candidate}" == "${base_tag}-linux-amd64" || "${candidate}" == "${base_tag}-linux-arm64" ]]
+          }
+
           username="${DOCKER_TAG_CLEANUP_USERNAME:-}"
           secret="${DOCKER_TAG_CLEANUP_TOKEN:-}"
 
@@ -50,7 +56,7 @@ jobs:
           IFS=',' read -r -a protected_tags <<< "${PROTECTED_TAGS}"
           for protected_tag in "${protected_tags[@]}"; do
             protected_tag="$(echo "${protected_tag}" | xargs)"
-            if [[ "${tag}" == "${protected_tag}" ]]; then
+            if matches_tag_family "${tag}" "${protected_tag}" || matches_tag_family "${protected_tag}" "${tag}"; then
               echo "Refusing to delete protected tag: ${tag}"
               exit 1
             fi
@@ -74,6 +80,7 @@ jobs:
           fi
 
           IFS=',' read -r -a repositories <<< "${repositories_raw}"
+          tags_to_delete=("${tag}" "${tag}-linux-amd64" "${tag}-linux-arm64")
 
           deleted_count=0
           missing_count=0
@@ -85,37 +92,39 @@ jobs:
             echo ""
             echo "===== Repository: ${DOCKERHUB_NAMESPACE}/${repo} ====="
 
-            http_code="$(
-              curl --silent --show-error \
-                -o /tmp/dockerhub-delete-response.txt \
-                -w '%{http_code}' \
-                -X DELETE \
-                -H "Authorization: Bearer ${jwt}" \
-                "https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${repo}/tags/${tag}/"
-            )"
+            for tag_candidate in "${tags_to_delete[@]}"; do
+              http_code="$(
+                curl --silent --show-error \
+                  -o /tmp/dockerhub-delete-response.txt \
+                  -w '%{http_code}' \
+                  -X DELETE \
+                  -H "Authorization: Bearer ${jwt}" \
+                  "https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${repo}/tags/${tag_candidate}/"
+              )"
 
-            case "${http_code}" in
-              200|202|204)
-                echo "Deleted ${repo}:${tag}"
-                deleted_count=$((deleted_count + 1))
-                ;;
-              404)
-                echo "Tag not found on ${repo}:${tag}"
-                missing_count=$((missing_count + 1))
-                ;;
-              *)
-                echo "Failed deleting ${repo}:${tag} (HTTP ${http_code})"
-                cat /tmp/dockerhub-delete-response.txt
-                exit 1
-                ;;
-            esac
+              case "${http_code}" in
+                200|202|204)
+                  echo "Deleted ${repo}:${tag_candidate}"
+                  deleted_count=$((deleted_count + 1))
+                  ;;
+                404)
+                  echo "Tag not found on ${repo}:${tag_candidate}"
+                  missing_count=$((missing_count + 1))
+                  ;;
+                *)
+                  echo "Failed deleting ${repo}:${tag_candidate} (HTTP ${http_code})"
+                  cat /tmp/dockerhub-delete-response.txt
+                  exit 1
+                  ;;
+              esac
+            done
           done
 
           {
             echo "## Docker Hub Tag Deletion Summary"
             echo ""
             echo "- Namespace: \`${DOCKERHUB_NAMESPACE}\`"
-            echo "- Tag: \`${tag}\`"
+            echo "- Tag family: \`${tag}\`, \`${tag}-linux-amd64\`, \`${tag}-linux-arm64\`"
             echo "- Protected tags: \`${PROTECTED_TAGS}\`"
             echo "- Deleted: \`${deleted_count}\`"
             echo "- Not found: \`${missing_count}\`"

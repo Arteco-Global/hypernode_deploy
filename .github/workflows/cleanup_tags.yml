@@ -35,6 +35,20 @@ jobs:
         run: |
           set -euo pipefail
 
+          is_protected_tag() {
+            local candidate="$1"
+            shift
+
+            local protected_tag
+            for protected_tag in "$@"; do
+              if [[ "${candidate}" == "${protected_tag}" || "${candidate}" == "${protected_tag}-linux-amd64" || "${candidate}" == "${protected_tag}-linux-arm64" ]]; then
+                return 0
+              fi
+            done
+
+            return 1
+          }
+
           username="${DOCKER_TAG_CLEANUP_USERNAME:-}"
           secret="${DOCKER_TAG_CLEANUP_TOKEN:-}"
 
@@ -74,7 +88,9 @@ jobs:
 
           IFS=',' read -r -a repositories <<< "${repositories_raw}"
           IFS=',' read -r -a protected_tags <<< "${PROTECTED_TAGS}"
-          protected_json="$(printf '%s\n' "${protected_tags[@]}" | sed 's/^ *//;s/ *$//' | jq -R . | jq -s .)"
+          for i in "${!protected_tags[@]}"; do
+            protected_tags[$i]="$(echo "${protected_tags[$i]}" | xargs)"
+          done
 
           deleted_count=0
           candidate_count=0
@@ -98,6 +114,12 @@ jobs:
 
               while IFS=$'\t' read -r tag_name last_updated; do
                 [[ -z "${tag_name}" ]] && continue
+
+                if is_protected_tag "${tag_name}" "${protected_tags[@]}"; then
+                  echo "Keep ${repo}:${tag_name} because it is protected"
+                  kept_count=$((kept_count + 1))
+                  continue
+                fi
 
                 if [[ -z "${last_updated}" || "${last_updated}" == "null" ]]; then
                   echo "Keep ${repo}:${tag_name} because last_updated is missing"
@@ -140,13 +162,7 @@ jobs:
                     exit 1
                     ;;
                 esac
-              done < <(
-                echo "${response}" | jq -r \
-                  --argjson protected "${protected_json}" \
-                  '.results[]
-                  | select((.name as $name | $protected | index($name)) | not)
-                  | [.name, .last_updated] | @tsv'
-              )
+              done < <(echo "${response}" | jq -r '.results[] | [.name, .last_updated] | @tsv')
 
               next_url="$(echo "${response}" | jq -r '.next')"
             done
