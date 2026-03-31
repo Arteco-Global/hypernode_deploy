@@ -337,13 +337,13 @@ jobs:
           echo "BUILD_LABEL=${BUILD_LABEL}" >> "$GITHUB_ENV"
           echo "Build label: ${BUILD_LABEL}"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: DockerHub Login
         run: |
           echo "${{ secrets.DOCKER_TOKEN }}" \
             | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
       - name: Build and Push ${{ matrix.service }} (${{ matrix.platform }})
         shell: bash
@@ -499,13 +499,13 @@ jobs:
               ;;
           esac
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: DockerHub Login
         run: |
           echo "${{ secrets.DOCKER_TOKEN }}" \
             | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
       - name: Publish manifest ${{ matrix.service }}
         shell: bash
