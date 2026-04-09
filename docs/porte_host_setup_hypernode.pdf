@@ -1,0 +1,143 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 1605 >>
+stream
+BT
+/F1 16 Tf
+50 790 Td
+(Porte Host usate dal setup Hypernode \(Docker Compose\)) Tj
+ET
+BT
+/F1 11 Tf
+50 762 Td
+(Sorgenti analizzate:) Tj
+ET
+BT
+/F1 11 Tf
+50 747 Td
+(- installer_docker/composes/database/docker-compose.yaml) Tj
+ET
+BT
+/F1 11 Tf
+50 732 Td
+(- installer_docker/composes/server/docker-compose.yaml) Tj
+ET
+BT
+/F1 11 Tf
+50 717 Td
+() Tj
+ET
+BT
+/F1 11 Tf
+50 702 Td
+(Porte pubblicate sull'host \(binding host:container\):) Tj
+ET
+BT
+/F1 11 Tf
+50 687 Td
+(- DB_PORT \(default 27017\) -> 27017/tcp   [MongoDB]) Tj
+ET
+BT
+/F1 11 Tf
+50 672 Td
+(- 5672 -> 5672/tcp                        [RabbitMQ]) Tj
+ET
+BT
+/F1 11 Tf
+50 657 Td
+(- 5500 -> 5500/tcp                        [Export service]) Tj
+ET
+BT
+/F1 11 Tf
+50 642 Td
+(- 8181 -> 80/tcp                          [Webserver]) Tj
+ET
+BT
+/F1 11 Tf
+50 627 Td
+(- SSL_PORT \(default 443\) -> 443/tcp       [Portbroker/HTTPS]) Tj
+ET
+BT
+/F1 11 Tf
+50 612 Td
+() Tj
+ET
+BT
+/F1 11 Tf
+50 597 Td
+(Riepilogo porte host da riservare \(default\):) Tj
+ET
+BT
+/F1 11 Tf
+50 582 Td
+(443, 5500, 5672, 8181, 27017) Tj
+ET
+BT
+/F1 11 Tf
+50 567 Td
+() Tj
+ET
+BT
+/F1 11 Tf
+50 552 Td
+(Nota importante:) Tj
+ET
+BT
+/F1 11 Tf
+50 537 Td
+(- I servizi camera e metadata usano network_mode: host.) Tj
+ET
+BT
+/F1 11 Tf
+50 522 Td
+(- Con host network non c'e NAT Docker: eventuali porte ascoltate) Tj
+ET
+BT
+/F1 11 Tf
+50 507 Td
+(  internamente dai container vengono aperte direttamente sull'host.) Tj
+ET
+BT
+/F1 11 Tf
+50 492 Td
+(- Queste porte aggiuntive non sono deducibili in modo certo dai soli compose.) Tj
+ET
+BT
+/F1 11 Tf
+50 477 Td
+() Tj
+ET
+BT
+/F1 11 Tf
+50 462 Td
+(Generato il: 2026-04-09 09:43:59) Tj
+ET
+
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000247 00000 n 
+0000000317 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1974
+%%EOF
