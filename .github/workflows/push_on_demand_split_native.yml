@@ -10,7 +10,7 @@ on:
       BRANCH_EXPORT_REF:
         description: 'Checkout branch export (arteco-export-service)'
         required: true
-        default: 'release_candidate'
+        default: 'main'
       BRANCH_CONFIGURATOR_REF:
         description: 'Checkout branch Configurator (hypernode_server_gui)'
         required: true
