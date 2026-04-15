@@ -10,7 +10,7 @@ on:
       BRANCH_EXPORT_REF:
         description: 'Checkout branch export (arteco-export-service)'
         required: true
-        default: 'release_candidate'
+        default: 'main'
       BRANCH_CONFIGURATOR_REF:
         description: 'Checkout branch Configurator (hypernode_server_gui)'
         required: true
@@ -151,11 +151,6 @@ jobs:
       PLATFORM_SLUG: ${{ matrix.platform_slug }}
 
     steps:
-      - name: Checkout deploy repo
-        uses: actions/checkout@v3
-        with:
-          path: deploy
-
       - name: Resolve build parameters
         shell: bash
         run: |
@@ -166,6 +161,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/camera.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_live_streamer" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -174,6 +171,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/auth.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_id_verifier" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -182,6 +181,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/event.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_event_manager" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -190,6 +191,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/metadata.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_metadata_manager" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -198,6 +201,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/gateway.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_suite_manager" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -206,6 +211,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/recording.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_media_recorder" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -214,6 +221,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/snapshot.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_snapshot_recorder" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -222,6 +231,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/webserver/nginx.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_web_server" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -230,6 +241,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/portbroker/portBroker.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_port_broker" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -238,6 +251,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/messagebroker/messageBroker.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_message_broker" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -246,6 +261,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/database/database.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_database" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=true" >> "$GITHUB_ENV"
@@ -254,6 +271,8 @@ jobs:
               echo "DOCKERFILE=hypernode-server/docker/coretrust.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_coretrust" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode-server" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_BACKEND_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -262,6 +281,8 @@ jobs:
               echo "DOCKERFILE=hypernode_server_gui/configurator.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_configurator" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode_server_gui" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=hypernode_server_gui" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=true" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -270,6 +291,8 @@ jobs:
               echo "DOCKERFILE=arteco-export-service/Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/arteco-export-service" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=arteco-export-service" >> "$GITHUB_ENV"
+              echo "SOURCE_PATH=arteco-export-service" >> "$GITHUB_ENV"
+              echo "SOURCE_REF=${{ github.event.inputs.BRANCH_EXPORT_REF }}" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=true" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
@@ -281,28 +304,34 @@ jobs:
           esac
 
       - name: Checkout backend
-        uses: actions/checkout@v3
+        if: ${{ env.SOURCE_PATH == 'hypernode-server' }}
+        uses: actions/checkout@v4
         with:
           repository: Arteco-Global/hypernode-server
           ref: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
           path: hypernode-server
           token: ${{ secrets.GIT_PAT }}
+          fetch-depth: 1
 
       - name: Checkout frontend
-        uses: actions/checkout@v3
+        if: ${{ env.SOURCE_PATH == 'hypernode_server_gui' }}
+        uses: actions/checkout@v4
         with:
           repository: Arteco-Global/hypernode_server_gui
           ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
           path: hypernode_server_gui
           token: ${{ secrets.GIT_PAT }}
+          fetch-depth: 1
 
       - name: Checkout export service
-        uses: actions/checkout@v3
+        if: ${{ env.SOURCE_PATH == 'arteco-export-service' }}
+        uses: actions/checkout@v4
         with:
           repository: Arteco-Global/arteco-export-service
           ref: ${{ github.event.inputs.BRANCH_EXPORT_REF }}
           path: arteco-export-service
           token: ${{ secrets.GIT_PAT }}
+          fetch-depth: 1
 
       - name: Compute image version
         shell: bash
@@ -312,12 +341,8 @@ jobs:
           VERSION=""
           if [ "${TAG}" != "latest" ]; then
             VERSION="${TAG}"
-          elif [ "${IS_EXPORT:-false}" = "true" ]; then
-            VERSION="$(git -C arteco-export-service rev-parse --short HEAD)"
-          elif [ "${IS_FRONTEND}" = "true" ]; then
-            VERSION="$(git -C hypernode_server_gui rev-parse --short HEAD)"
           else
-            VERSION="$(git -C hypernode-server rev-parse --short HEAD)"
+            VERSION="$(git -C "${SOURCE_PATH}" rev-parse --short HEAD)"
           fi
 
           echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
@@ -329,12 +354,25 @@ jobs:
           set -euo pipefail
 
           BUILD_TIMESTAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-          BACKEND_COMMIT_HASH="$(git -C hypernode-server rev-parse --short HEAD)"
-          EXPORT_COMMIT_HASH="$(git -C arteco-export-service rev-parse --short HEAD)"
-          CONFIGURATOR_COMMIT_HASH="$(git -C hypernode_server_gui rev-parse --short HEAD)"
+          BACKEND_COMMIT_HASH="not_checked_out"
+          EXPORT_COMMIT_HASH="not_checked_out"
+          CONFIGURATOR_COMMIT_HASH="not_checked_out"
+          SOURCE_COMMIT_HASH="$(git -C "${SOURCE_PATH}" rev-parse --short HEAD)"
+
+          if [ -d hypernode-server/.git ]; then
+            BACKEND_COMMIT_HASH="$(git -C hypernode-server rev-parse --short HEAD)"
+          fi
+          if [ -d arteco-export-service/.git ]; then
+            EXPORT_COMMIT_HASH="$(git -C arteco-export-service rev-parse --short HEAD)"
+          fi
+          if [ -d hypernode_server_gui/.git ]; then
+            CONFIGURATOR_COMMIT_HASH="$(git -C hypernode_server_gui rev-parse --short HEAD)"
+          fi
+
           BUILD_LABEL="tag=${TAG}|backend=${{ github.event.inputs.BRANCH_BACKEND_REF }}@${BACKEND_COMMIT_HASH}|export=${{ github.event.inputs.BRANCH_EXPORT_REF }}@${EXPORT_COMMIT_HASH}|configurator=${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}@${CONFIGURATOR_COMMIT_HASH}|services=${{ github.event.inputs.SERVICES }}|run=${{ github.run_number }}|built_at=${BUILD_TIMESTAMP}"
 
           echo "BUILD_LABEL=${BUILD_LABEL}" >> "$GITHUB_ENV"
+          echo "SOURCE_COMMIT_HASH=${SOURCE_COMMIT_HASH}" >> "$GITHUB_ENV"
           echo "Build label: ${BUILD_LABEL}"
 
       - name: DockerHub Login
