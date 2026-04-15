@@ -6,7 +6,7 @@ on:
       BRANCH_BACKEND_REF:
         description: 'Checkout branch Backend (hypernode-server)'
         required: true
-        default: 'release_candidate'
+        default: 'pre-release'
       BRANCH_EXPORT_REF:
         description: 'Checkout branch export (arteco-export-service)'
         required: true
@@ -14,7 +14,7 @@ on:
       BRANCH_CONFIGURATOR_REF:
         description: 'Checkout branch Configurator (hypernode_server_gui)'
         required: true
-        default: 'release_candidate'
+        default: 'pre-release'
       TAG_REF:
         description: 'Tag Docker (es. latest, v1.2.3)'
         required: true
