@@ -238,6 +238,54 @@ log_env_before_compose() {
     fi
 }
 
+print_compose_failure_diagnostics() {
+    local containers=(
+        uss_database
+        messagebroker
+        gateway
+        camera
+        metadata
+        coretrust
+        recording
+        event
+        auth
+        snapshot
+        export
+        webserver
+        configurator
+        portbroker
+    )
+    local name status health
+
+    printf "\n\nContainer diagnostics after compose failure:\n"
+    docker ps -a --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null || true
+
+    for name in "${containers[@]}"; do
+        if ! docker inspect "$name" >/dev/null 2>&1; then
+            continue
+        fi
+
+        status=$(docker inspect --format '{{.State.Status}}' "$name" 2>/dev/null || echo "unknown")
+        health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$name" 2>/dev/null || true)
+
+        printf "\n[%s] status=%s" "$name" "$status"
+        if [[ -n "$health" ]]; then
+            printf " health=%s" "$health"
+        fi
+        printf "\n"
+
+        if [[ "$status" != "running" || ( -n "$health" && "$health" != "healthy" ) ]]; then
+            printf "Recent logs for %s:\n" "$name"
+            docker logs --tail 40 "$name" 2>&1 || true
+
+            if [[ -n "$health" ]]; then
+                printf "Recent healthcheck output for %s:\n" "$name"
+                docker inspect --format '{{range .State.Health.Log}}{{println .Output}}{{end}}' "$name" 2>/dev/null | tail -n 10 || true
+            fi
+        fi
+    done
+}
+
 
 
 
@@ -254,8 +302,38 @@ execute_command() {
         printf "\r✅ %s - Done.\n" "$MESSAGE"
     else
         printf "\r❌ %s - Failed.\n" "$MESSAGE"
-        exit 1
+        if [[ "$COMMAND" == *"docker compose"* || "$COMMAND" == *"docker-compose"* ]]; then
+            print_compose_failure_diagnostics
+        fi
+        return 1
     fi
+}
+
+wait_for_tcp_port() {
+    local label="$1"
+    local host="$2"
+    local port="$3"
+    local timeout="${4:-180}"
+    local started_at
+    local elapsed
+
+    started_at=$(date +%s)
+    printf "\nWaiting for %s on %s:%s\n" "$label" "$host" "$port"
+
+    while true; do
+        if (echo >"/dev/tcp/${host}/${port}") >/dev/null 2>&1; then
+            printf "✅ %s is reachable on %s:%s\n" "$label" "$host" "$port"
+            return 0
+        fi
+
+        elapsed=$(( $(date +%s) - started_at ))
+        if (( elapsed >= timeout )); then
+            printf "❌ Timeout waiting for %s on %s:%s\n" "$label" "$host" "$port"
+            return 1
+        fi
+
+        sleep 2
+    done
 }
 
 while [[ "$#" -gt 0 ]]; do
@@ -482,6 +560,7 @@ installLocalDb() {
 
     execute_command "$COMPOSE_CMD -f <(curl -sSL "$ABSOLUTE_PATH/database/docker-compose.yaml") up -d --build --remove-orphans" \
         "Installing local database" || return 1
+    wait_for_tcp_port "database" "127.0.0.1" "${DB_PORT:-27017}" || return 1
 
     return 0
 }

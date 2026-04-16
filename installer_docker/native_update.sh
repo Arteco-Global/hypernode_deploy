@@ -139,6 +139,137 @@ Options:
 EOF
 }
 
+suggest_mount_path() {
+    case "$1" in
+        RECORDING_PATH) printf "/mnt/data/recording" ;;
+        SNAPSHOT_PATH) printf "/mnt/data/snapshot" ;;
+        STORAGE_PATH) printf "/mnt/data/storage" ;;
+        *) printf "/mnt/data/service" ;;
+    esac
+}
+
+validate_directory_mount_path() {
+    local var_name="$1"
+    local value="$2"
+    local severity="${3:-error}"
+    local prefix="❌"
+    local parent=""
+    local example=""
+
+    if [[ "$severity" == "warn" ]]; then
+        prefix="⚠️ "
+    fi
+
+    example="$(suggest_mount_path "$var_name")"
+
+    if [[ -z "$value" ]]; then
+        echo "$prefix Missing required value: $var_name"
+        echo "   Set $var_name to a host directory path such as $example in $ENV_FILE and rerun the update."
+        return 1
+    fi
+
+    if [[ "$value" != /* ]]; then
+        echo "$prefix $var_name must be an absolute host directory path. Current value: $value"
+        echo "   Use a mounted filesystem path such as $example, not a relative path."
+        return 1
+    fi
+
+    case "$value" in
+        "/"|"/."|"/.."|"/dev"|"/dev/"*|"/proc"|"/proc/"*|"/sys"|"/sys/"*)
+            echo "$prefix $var_name points to a system/device path: $value"
+            echo "   Use a mounted filesystem directory such as $example, not a block device like /dev/sdb2."
+            return 1
+            ;;
+    esac
+
+    if [[ -e "$value" && ! -d "$value" ]]; then
+        echo "$prefix $var_name must point to a directory. Current value exists but is not a directory: $value"
+        return 1
+    fi
+
+    parent="$(dirname "$value")"
+    if [[ -e "$parent" && ! -d "$parent" ]]; then
+        echo "$prefix Parent path for $var_name is not a directory: $parent"
+        echo "   Current value: $value"
+        return 1
+    fi
+
+    return 0
+}
+
+wait_for_tcp_port() {
+    local label="$1"
+    local host="$2"
+    local port="$3"
+    local timeout="${4:-180}"
+    local started_at
+    local elapsed
+
+    started_at=$(date +%s)
+    echo "⌛ Waiting for $label on ${host}:${port}"
+
+    while true; do
+        if (echo >"/dev/tcp/${host}/${port}") >/dev/null 2>&1; then
+            echo "✅ $label is reachable on ${host}:${port}"
+            return 0
+        fi
+
+        elapsed=$(( $(date +%s) - started_at ))
+        if (( elapsed >= timeout )); then
+            echo "❌ Timeout waiting for $label on ${host}:${port}"
+            return 1
+        fi
+
+        sleep 2
+    done
+}
+
+update_server_suite() {
+    local core_services=(
+        messagebroker
+        gateway
+        camera
+        metadata
+        coretrust
+        event
+        auth
+        export
+        webserver
+        configurator
+        portbroker
+    )
+    local media_services=()
+    local skipped_services=()
+
+    if validate_directory_mount_path "RECORDING_PATH" "${RECORDING_PATH:-}" "warn"; then
+        media_services+=(recording)
+    else
+        skipped_services+=(recording)
+    fi
+
+    if validate_directory_mount_path "SNAPSHOT_PATH" "${SNAPSHOT_PATH:-}" "warn"; then
+        media_services+=(snapshot)
+    else
+        skipped_services+=(snapshot)
+    fi
+
+    echo "▶️  Recreate server core services"
+    $COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate --remove-orphans "${core_services[@]}"
+
+    if [[ "${#media_services[@]}" -gt 0 ]]; then
+        echo "▶️  Recreate optional media services: ${media_services[*]}"
+        if ! $COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate "${media_services[@]}"; then
+            echo "⚠️  Optional media services failed to start: ${media_services[*]}"
+            echo "   Fix RECORDING_PATH/SNAPSHOT_PATH in $ENV_FILE and rerun the update for those services."
+        fi
+    fi
+
+    if [[ "${#skipped_services[@]}" -gt 0 ]]; then
+        echo "⚠️  Suite update completed without: ${skipped_services[*]}"
+        echo "   Fix the related mount path variables in $ENV_FILE before retrying those services."
+    fi
+}
+
 sync_env_to_system() {
     local src="$1"
 
@@ -394,8 +525,24 @@ pull_images_from_compose "$SERVICE_NAME" "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_S
 
 echo "▶️  Recreate database"
 $COMPOSE_CMD -f "$TMP_DB_COMPOSE" up -d --force-recreate --remove-orphans
+wait_for_tcp_port "database" "127.0.0.1" "${DB_PORT:-27017}"
 
 echo "▶️  Recreate $SERVICE_NAME"
-$COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate --remove-orphans
+if [[ "$SERVICE_NAME" == "server" ]]; then
+    update_server_suite
+else
+    case "$SERVICE_NAME" in
+        recording)
+            validate_directory_mount_path "RECORDING_PATH" "${RECORDING_PATH:-}"
+            ;;
+        snapshot)
+            validate_directory_mount_path "SNAPSHOT_PATH" "${SNAPSHOT_PATH:-}"
+            ;;
+        storage)
+            validate_directory_mount_path "STORAGE_PATH" "${STORAGE_PATH:-}"
+            ;;
+    esac
+    $COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate --remove-orphans
+fi
 
 echo "✅ Update completed for $SERVICE_NAME."

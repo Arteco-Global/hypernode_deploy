@@ -1,0 +1,367 @@
+name: Push Arteco Export Service (split native amd64-arm64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      BRANCH_REF:
+        description: 'Checkout branch arteco-export-service'
+        required: true
+        default: 'main'
+      TAG_REF:
+        description: 'Tag Docker (es. latest, v1.2.3)'
+        required: true
+        default: 'ATTENTION: usare "latest" solo per prod!'
+      PLATFORMS:
+        description: 'Architettura target Docker, con split nativo amd64/arm64'
+        required: true
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/amd64,linux/arm64
+        default: 'linux/amd64,linux/arm64'
+
+jobs:
+  prepare_matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      build_matrix: ${{ steps.prepare.outputs.build_matrix }}
+    steps:
+      - name: Prepare platform matrix
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IFS=',' read -r -a RAW_PLATFORMS <<< "${{ github.event.inputs.PLATFORMS }}"
+
+          BUILD_MATRIX='['
+          FIRST_ENTRY=true
+
+          for RAW_PLATFORM in "${RAW_PLATFORMS[@]}"; do
+            PLATFORM="${RAW_PLATFORM//[[:space:]]/}"
+
+            case "${PLATFORM}" in
+              linux/amd64)
+                RUNNER="ubuntu-latest"
+                PLATFORM_SLUG="linux-amd64"
+                ;;
+              linux/arm64)
+                RUNNER="ubuntu-24.04-arm"
+                PLATFORM_SLUG="linux-arm64"
+                ;;
+              *)
+                echo "Unsupported platform for native split workflow: ${PLATFORM}"
+                exit 1
+                ;;
+            esac
+
+            if [[ "${FIRST_ENTRY}" == "true" ]]; then
+              FIRST_ENTRY=false
+            else
+              BUILD_MATRIX+=","
+            fi
+
+            BUILD_MATRIX+="{\"platform\":\"${PLATFORM}\",\"runner\":\"${RUNNER}\",\"platform_slug\":\"${PLATFORM_SLUG}\"}"
+          done
+
+          BUILD_MATRIX+=']'
+
+          echo "build_matrix=${BUILD_MATRIX}" >> "$GITHUB_OUTPUT"
+          echo "Selected build matrix: ${BUILD_MATRIX}"
+
+  build_and_push:
+    needs: prepare_matrix
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include: ${{ fromJson(needs.prepare_matrix.outputs.build_matrix) }}
+    env:
+      IMAGE_NAME: artecoglobalcompany/arteco-export-service
+      TAG: ${{ github.event.inputs.TAG_REF }}
+      PLATFORM: ${{ matrix.platform }}
+      PLATFORM_SLUG: ${{ matrix.platform_slug }}
+      BUILD_LABEL: tag=${{ github.event.inputs.TAG_REF }}|backend=|export=${{ github.event.inputs.BRANCH_REF }}|configurator=|services=export|run=${{ github.run_number }}
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v3
+        with:
+          path: deploy
+
+      - name: Checkout export service
+        uses: actions/checkout@v3
+        with:
+          repository: Arteco-Global/arteco-export-service
+          ref: ${{ github.event.inputs.BRANCH_REF }}
+          path: arteco-export-service
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Compute image version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION=""
+          if [ "${TAG}" != "latest" ]; then
+            VERSION="${TAG}"
+          else
+            VERSION="$(git -C arteco-export-service rev-parse --short HEAD)"
+          fi
+
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Image version: ${VERSION}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and Push (${{ matrix.platform }})
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CACHE_REF="${IMAGE_NAME}:buildcache-${PLATFORM_SLUG}"
+          TARGET_TAG="${IMAGE_NAME}:${TAG}-${PLATFORM_SLUG}"
+
+          docker buildx build \
+            --platform="${PLATFORM}" \
+            --build-arg IMAGE_VERSION="${IMAGE_VERSION}" \
+            --build-arg BUILD_LABEL="${BUILD_LABEL}" \
+            --label org.opencontainers.image.version="${IMAGE_VERSION}" \
+            --cache-from=type=registry,ref="${CACHE_REF}" \
+            --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
+            -t "${TARGET_TAG}" \
+            --push arteco-export-service
+
+      - name: Build summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== Native build summary ====="
+          echo "Platform: ${PLATFORM}"
+          echo "Runner: ${{ matrix.runner }}"
+          echo "Docker tag: ${IMAGE_NAME}:${TAG}-${PLATFORM_SLUG}"
+          echo "Source branch: ${{ github.event.inputs.BRANCH_REF }}"
+          echo "==============================="
+
+  publish_manifest:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      IMAGE_NAME: artecoglobalcompany/arteco-export-service
+      TAG: ${{ github.event.inputs.TAG_REF }}
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: DockerHub Login
+        run: |
+          echo "${{ secrets.DOCKER_TOKEN }}" \
+            | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Publish manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IFS=',' read -r -a RAW_PLATFORMS <<< "${{ github.event.inputs.PLATFORMS }}"
+
+          TAG_SOURCES=()
+
+          for RAW_PLATFORM in "${RAW_PLATFORMS[@]}"; do
+            PLATFORM="${RAW_PLATFORM//[[:space:]]/}"
+
+            case "${PLATFORM}" in
+              linux/amd64)
+                PLATFORM_SLUG="linux-amd64"
+                ;;
+              linux/arm64)
+                PLATFORM_SLUG="linux-arm64"
+                ;;
+              *)
+                echo "Unsupported platform for native split workflow: ${PLATFORM}"
+                exit 1
+                ;;
+            esac
+
+            TAG_SOURCES+=("${IMAGE_NAME}:${TAG}-${PLATFORM_SLUG}")
+          done
+
+          docker buildx imagetools create \
+            -t "${IMAGE_NAME}:${TAG}" \
+            "${TAG_SOURCES[@]}"
+
+          docker buildx imagetools inspect "${IMAGE_NAME}:${TAG}"
+
+      - name: Manifest summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== Manifest summary ====="
+          echo "Docker tag: ${IMAGE_NAME}:${TAG}"
+          echo "Source branch: ${{ github.event.inputs.BRANCH_REF }}"
+          echo "Platforms: ${{ github.event.inputs.PLATFORMS }}"
+          echo "============================"
+
+  append_to_google_sheet:
+    if: ${{ always() }}
+    needs:
+      - build_and_push
+      - publish_manifest
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_SHEET_ID: ${{ vars.USS_DEPLOYMENTS_SHEET_ID }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      SHEET_NAME: USS deployments
+    steps:
+      - name: Append workflow row to Google Sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_SHEET_ID}" ]; then
+            echo "GOOGLE_SHEET_ID is empty. Configure vars.USS_DEPLOYMENTS_SHEET_ID."
+            exit 1
+          fi
+
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_JSON is empty. Configure the secret with a service account key."
+            exit 1
+          fi
+
+          python -m pip install --quiet google-api-python-client google-auth
+
+          cat > append_to_sheet.py <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          sheet_id = os.environ["GOOGLE_SHEET_ID"]
+          sheet_name = os.environ["SHEET_NAME"]
+          creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+
+          credentials = service_account.Credentials.from_service_account_info(
+              creds_info,
+              scopes=["https://www.googleapis.com/auth/spreadsheets"],
+          )
+          service = build("sheets", "v4", credentials=credentials)
+          spreadsheet = service.spreadsheets().get(spreadsheetId=sheet_id).execute()
+          available_sheets = [
+              sheet["properties"]["title"]
+              for sheet in spreadsheet.get("sheets", [])
+          ]
+          print(f"Available sheet tabs: {available_sheets}")
+
+          if sheet_name in available_sheets:
+              resolved_sheet_name = sheet_name
+          elif available_sheets:
+              resolved_sheet_name = available_sheets[0]
+              print(
+                  f"Sheet tab '{sheet_name}' not found. Using first available tab: "
+                  f"{resolved_sheet_name}"
+              )
+          else:
+              raise RuntimeError("No sheet tabs found in the spreadsheet.")
+
+          headers = [[
+              "created_at",
+              "workflow_name",
+              "run_number",
+              "run_attempt",
+              "run_id",
+              "repository",
+              "status",
+              "backend_branch",
+              "export_branch",
+              "configurator_branch",
+              "requested_services",
+              "platforms",
+              "requested_tag",
+              "recipe",
+              "run_url",
+          ]]
+
+          existing = service.spreadsheets().values().get(
+              spreadsheetId=sheet_id,
+              range=f"'{resolved_sheet_name}'!A1:O1",
+          ).execute().get("values", [])
+          if not existing:
+              service.spreadsheets().values().update(
+                  spreadsheetId=sheet_id,
+                  range=f"'{resolved_sheet_name}'!A1:O1",
+                  valueInputOption="RAW",
+                  body={"values": headers},
+              ).execute()
+
+          created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          workflow_name = os.environ["GITHUB_WORKFLOW"]
+          run_number = os.environ["GITHUB_RUN_NUMBER"]
+          run_attempt = os.environ["GITHUB_RUN_ATTEMPT"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+          repository = os.environ["GITHUB_REPOSITORY"]
+          status = os.environ["WORKFLOW_STATUS"]
+          backend_branch = os.environ["BRANCH_BACKEND_REF"]
+          export_branch = os.environ["BRANCH_EXPORT_REF"]
+          configurator_branch = os.environ["BRANCH_CONFIGURATOR_REF"]
+          requested_services = os.environ["REQUESTED_SERVICES"]
+          platforms = os.environ["PLATFORMS"]
+          requested_tag = os.environ["TAG_REF"]
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repository}/actions/runs/{run_id}"
+          recipe = (
+              f"backend={backend_branch}; export={export_branch}; "
+              f"configurator={configurator_branch}; services={requested_services}; "
+              f"platforms={platforms}; tag={requested_tag}"
+          )
+
+          body = {"values": [[
+              created_at,
+              workflow_name,
+              run_number,
+              run_attempt,
+              run_id,
+              repository,
+              status,
+              backend_branch,
+              export_branch,
+              configurator_branch,
+              requested_services,
+              platforms,
+              requested_tag,
+              recipe,
+              run_url,
+          ]]}
+          service.spreadsheets().values().append(
+              spreadsheetId=sheet_id,
+              range=f"'{resolved_sheet_name}'!A:O",
+              valueInputOption="USER_ENTERED",
+              insertDataOption="INSERT_ROWS",
+              body=body,
+          ).execute()
+          print(f"Appended 1 row to {resolved_sheet_name}.")
+          PY
+
+          python append_to_sheet.py
+        env:
+          WORKFLOW_STATUS: ${{ needs.build_and_push.result != 'success' && needs.build_and_push.result || needs.publish_manifest.result }}
+          BRANCH_BACKEND_REF: ""
+          BRANCH_EXPORT_REF: ${{ github.event.inputs.BRANCH_REF }}
+          BRANCH_CONFIGURATOR_REF: ""
+          REQUESTED_SERVICES: export
+          PLATFORMS: ${{ github.event.inputs.PLATFORMS }}
+          TAG_REF: ${{ github.event.inputs.TAG_REF }}

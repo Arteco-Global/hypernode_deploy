@@ -51,8 +51,22 @@ services:
       - gateway_config:/data/gateway
     restart: unless-stopped
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const http=require('http');const port=process.env.MS_GATEWAY_SERVICE_PORT || 5001;const req=http.get({host:'127.0.0.1',port,path:'/health/ready'},res=>process.exit(res.statusCode===200?0:1));req.on('error',()=>process.exit(1));req.setTimeout(5000,()=>{req.destroy();process.exit(1);});"
+        ]
+      interval: 10s
+      timeout: 6s
+      retries: 30
+      start_period: 60s
 
   camera:
     image: artecoglobalcompany/usee_live_streamer:latest
@@ -60,12 +74,16 @@ services:
     network_mode: host
     restart: unless-stopped
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@10.30.6.89:5672
+      - RABBITMQ_URI=amqp://hypernode:hypernode@192.168.10.89:5672
       - GATEWAY_URI=ws://localhost:8181
-      - DATABASE_URI=mongodb://10.30.6.89:27017/camera-db
+      - DATABASE_URI=mongodb://192.168.10.89:27017/camera-db
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+      gateway:
+        condition: service_healthy
 
   metadata:
     image: artecoglobalcompany/usee_metadata_manager:latest
@@ -73,12 +91,16 @@ services:
     network_mode: host
     restart: unless-stopped
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@10.30.6.89:5672
+      - RABBITMQ_URI=amqp://hypernode:hypernode@192.168.10.89:5672
       - GATEWAY_URI=ws://localhost:8181
-      - DATABASE_URI=mongodb://10.30.6.89:27017/metadata-db
+      - DATABASE_URI=mongodb://192.168.10.89:27017/metadata-db
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+      gateway:
+        condition: service_healthy
 
   coretrust:
     image: artecoglobalcompany/usee_coretrust:latest
@@ -90,7 +112,7 @@ services:
       - DATABASE_URI=mongodb://database:27017/coretrust-db
       - CERT_PATH=/ssl
       - SERIAL_NUMBER=V02260031
-      - SERVER_IP_ADDRESS=10.30.6.89
+      - SERVER_IP_ADDRESS=192.168.10.89
     volumes:
       - hypernode_security_shared_files:/ssl
       - coretrust_config:/data/coretrust
@@ -109,13 +131,17 @@ services:
       - DATABASE_URI=mongodb://database:27017/recording-db
       - GATEWAY_URI=ws://webserver
       - RECORDING_PATH=/recording_files
-      - RECORDING_DISK_SPACE=100000000
+      - RECORDING_DISK_SPACE=3000000000
     volumes:
       - /volume1/arteco/recordings:/recording_files
     restart: unless-stopped
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+      webserver:
+        condition: service_healthy
 
   event:
     image: artecoglobalcompany/usee_event_manager:latest
@@ -153,13 +179,39 @@ services:
       - DATABASE_URI=mongodb://database:27017/snapshot-db
       - GATEWAY_URI=ws://webserver
       - SNAPSHOT_PATH=/snapshot_files
-      - SNAPSHOT_DISK_SPACE=100000000
+      - SNAPSHOT_DISK_SPACE=3000000000
     volumes:
       - /volume1/arteco/snapshots:/snapshot_files
     restart: unless-stopped
     depends_on:
-      - messagebroker
-      - database
+      messagebroker:
+        condition: service_healthy
+      database:
+        condition: service_started
+      webserver:
+        condition: service_healthy
+
+  export:
+    image: artecoglobalcompany/arteco-export-service:latest
+    container_name: export
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    ports:
+      - "5500:5500"
+    environment:
+      - PORT=5500
+      - LOCAL_DB_CONNECTION=mongodb://192.168.10.89:27017/exports
+      - REACT_APP_EXPORTS_TIMEZONE=Europe/Rome
+    volumes:
+      - arteco_exports:/home/node/arteco-export-service/exports
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   webserver:
     image: artecoglobalcompany/usee_web_server:latest
@@ -170,7 +222,18 @@ services:
       - "8181:80"
     restart: unless-stopped
     depends_on:
-      - messagebroker
+      messagebroker:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+      configurator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
 
   configurator:
     image: artecoglobalcompany/usee_configurator:latest
@@ -192,8 +255,10 @@ services:
       - hypernode_security_shared_files:/ssl
     restart: unless-stopped
     depends_on:
-      - messagebroker
-      - webserver
+      messagebroker:
+        condition: service_healthy
+      webserver:
+        condition: service_healthy
 
 volumes:
   rabbitmq_data:
@@ -202,6 +267,7 @@ volumes:
   coretrust_config:
   mongodb_data:
   mongodb_config:
+  arteco_exports:
 
 networks:
   hypernode-net:
