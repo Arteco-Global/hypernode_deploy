@@ -1,6 +1,3 @@
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
-
 param(
     [Alias("c")]
     [string]$Compose = "",
@@ -8,6 +5,10 @@ param(
     [string]$Output = ".\_restored_hypernode-install-env.log",
     [string]$DeployBranch = $(if ([string]::IsNullOrWhiteSpace($env:DEPLOY_BRANCH)) { "main" } else { $env:DEPLOY_BRANCH })
 )
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
 
 $AbsolutePathBase = "https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
 $DefaultComposeUrl = "$AbsolutePathBase/$DeployBranch/installer_docker/composes/server/docker-compose.yaml"
