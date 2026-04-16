@@ -16,7 +16,7 @@ installazione di servizi aggiuntivi.
 ## Uso rapido
 
 ```bash
-sudo installer_docker/recreate_env_file.sh
+sudo ./recreate_env_file.sh
 ```
 
 ### PowerShell (Windows)
@@ -26,15 +26,14 @@ lanciare il porting PowerShell, puoi copiare e incollare:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\installer_docker\recreate_env_file.ps1
+.\recreate_env_file.ps1
 ```
 
-Se vuoi specificare compose e file di output:
+Se vuoi specificare solo il file di output:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\installer_docker\recreate_env_file.ps1 `
-  -Compose .\installer_docker\composes\server\docker-compose.yaml `
+.\recreate_env_file.ps1 `
   -Output .\_restored_hypernode-install-env.log
 ```
 
@@ -47,8 +46,8 @@ Il file viene creato nella directory corrente:
 ## Opzioni
 
 ```bash
-sudo installer_docker/recreate_env_file.sh \
-  --compose installer_docker/composes/server/docker-compose.yaml \
+sudo ./recreate_env_file.sh \
+  --compose /path/to/server-docker-compose.yaml \
   --output /etc/.hypernode/_restored_hypernode-install-env.log
 ```
 
