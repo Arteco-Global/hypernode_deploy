@@ -5,6 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_DIR="$SCRIPT_DIR"
 SYSTEM_ENV_DIR="/etc/.hypernode"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
 
 TOTAL_CHANGES=0
 CHANGED_FILES=()
@@ -33,6 +35,58 @@ detect_deploy_dir() {
     else
         DEPLOY_DIR="$SCRIPT_DIR"
     fi
+}
+
+ensure_primary_env_log_exists() {
+    local env_file="${DEPLOY_DIR}/.hypernode-install-env.log"
+    local recreate_script="${DEPLOY_DIR}/recreate_env_file.sh"
+    local recreate_url="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/installer_docker/recreate_env_file.sh"
+    local restored_file="${DEPLOY_DIR}/_restored_hypernode-install-env.log"
+
+    if [[ -f "$env_file" ]]; then
+        return 0
+    fi
+
+    echo "❌ Env file not found: $env_file"
+    echo "🔄 Provo a ricrearlo con recreate_env_file.sh..."
+
+    if [[ ! -f "$recreate_script" ]]; then
+        echo "⬇️  Download recreate_env_file.sh da: $recreate_url"
+        if command -v wget >/dev/null 2>&1; then
+            wget -q -O "$recreate_script" "$recreate_url" || {
+                echo "❌ Download fallito: $recreate_url"
+                exit 1
+            }
+        elif command -v curl >/dev/null 2>&1; then
+            curl -fsSL "$recreate_url" -o "$recreate_script" || {
+                echo "❌ Download fallito: $recreate_url"
+                exit 1
+            }
+        else
+            echo "❌ Né wget né curl disponibili per scaricare recreate_env_file.sh"
+            exit 1
+        fi
+    else
+        echo "ℹ️  Script già presente: $recreate_script"
+    fi
+
+    echo "🔧 Rendo eseguibile: $recreate_script"
+    chmod +x "$recreate_script" 2>/dev/null || true
+
+    echo "▶️  Eseguo recreate_env_file.sh (sovrascriverà l'output se esiste)"
+    if ! DEPLOY_BRANCH="$DEPLOY_BRANCH" "$recreate_script"; then
+        echo "❌ Ricostruzione env fallita."
+        exit 1
+    fi
+
+    if [[ ! -f "$restored_file" ]]; then
+        echo "❌ File ricostruito non trovato: $restored_file"
+        exit 1
+    fi
+
+    echo "📝 Sovrascrivo env file: $env_file"
+    mv "$restored_file" "$env_file"
+    echo "✅ Env file ricreato: $env_file"
 }
 
 to_rel_path() {
@@ -172,6 +226,9 @@ update_env_log_file() {
     local new_value
     local change_count
     local key
+    local existing_key
+    local found
+    local -a found_keys=()
 
     tmp_file="$(mktemp)"
     report_file="$(mktemp)"
@@ -187,6 +244,17 @@ update_env_log_file() {
 
         for key in "${OVERRIDE_KEYS[@]:-}"; do
             if [[ "$new_value" =~ ^[[:space:]]*$key= ]]; then
+                found=0
+                for existing_key in "${found_keys[@]:-}"; do
+                    if [[ "$existing_key" == "$key" ]]; then
+                        found=1
+                        break
+                    fi
+                done
+                if [[ "$found" -eq 0 ]]; then
+                    found_keys+=("$key")
+                fi
+
                 new_value="$key=$(get_override_value "$key")"
                 break
             fi
@@ -198,6 +266,22 @@ update_env_log_file() {
 
         printf '%s\n' "$new_value" >> "$tmp_file"
     done < "$file"
+
+    for key in "${OVERRIDE_KEYS[@]:-}"; do
+        found=0
+        for existing_key in "${found_keys[@]:-}"; do
+            if [[ "$existing_key" == "$key" ]]; then
+                found=1
+                break
+            fi
+        done
+
+        if [[ "$found" -eq 0 ]]; then
+            new_value="$key=$(get_override_value "$key")"
+            printf '%s\n' "$new_value" >> "$tmp_file"
+            printf 'ADD\t<missing>\t%s\n' "$new_value" >> "$report_file"
+        fi
+    done
 
     if cmp -s "$file" "$tmp_file"; then
         rm -f "$tmp_file" "$report_file"
@@ -213,7 +297,11 @@ update_env_log_file() {
     echo "✅ $rel"
     while IFS=$'\t' read -r line_no old_value new_value; do
         [[ -z "$line_no" ]] && continue
-        echo "   - line $line_no: $old_value -> $new_value"
+        if [[ "$line_no" == "ADD" ]]; then
+            echo "   - added: $new_value"
+        else
+            echo "   - line $line_no: $old_value -> $new_value"
+        fi
     done < "$report_file"
 
     change_count="$(wc -l < "$report_file" | tr -d ' ')"
@@ -230,6 +318,7 @@ fi
 
 parse_overrides "$@"
 detect_deploy_dir
+ensure_primary_env_log_exists
 
 echo ""
 echo "▶️  Aggiornamento env nei log in corso"
