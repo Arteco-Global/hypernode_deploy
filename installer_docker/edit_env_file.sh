@@ -163,6 +163,18 @@ get_override_value() {
     return 1
 }
 
+is_insert_only_key() {
+    local key="$1"
+    case "$key" in
+        DB_USERNAME|DB_PASSWORD|RABBITMQ_DEFAULT_USER|RABBITMQ_DEFAULT_PASS|SERVER_SECRET)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 add_target_file() {
     local file="$1"
     local existing
@@ -253,6 +265,10 @@ update_env_log_file() {
                 done
                 if [[ "$found" -eq 0 ]]; then
                     found_keys+=("$key")
+                fi
+
+                if is_insert_only_key "$key"; then
+                    break
                 fi
 
                 new_value="$key=$(get_override_value "$key")"
