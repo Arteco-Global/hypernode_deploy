@@ -34,7 +34,6 @@ services:
       - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/gateway-db?authSource=admin
       - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
       - SERVER_NAME=${SERVER_NAME:-Hypernode Server}
-      - SERVER_SECRET=${SERVER_SECRET:-HYPERNODE_SERVER_SECRET}
       - MACHINE=${MACHINE}
       - BACKUPS_PATH=/data/gateway/backups
       - LICENSE_PROVIDER_URL=${LICENSE_PROVIDER_URL}

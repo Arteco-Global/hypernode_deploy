@@ -166,7 +166,7 @@ get_override_value() {
 is_insert_only_key() {
     local key="$1"
     case "$key" in
-        DB_USERNAME|DB_PASSWORD|RABBITMQ_DEFAULT_USER|RABBITMQ_DEFAULT_PASS|SERVER_SECRET)
+        DB_USERNAME|DB_PASSWORD|RABBITMQ_DEFAULT_USER|RABBITMQ_DEFAULT_PASS)
             return 0
             ;;
         *)

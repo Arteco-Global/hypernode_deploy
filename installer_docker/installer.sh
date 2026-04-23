@@ -31,7 +31,6 @@ DB_USERNAME="${DB_USERNAME:-hypernode}"
 DB_PASSWORD="${DB_PASSWORD:-hypernode}"
 RABBITMQ_DEFAULT_USER="${RABBITMQ_DEFAULT_USER:-hypernode}"
 RABBITMQ_DEFAULT_PASS="${RABBITMQ_DEFAULT_PASS:-hypernode}"
-SERVER_SECRET="${SERVER_SECRET:-HYPERNODE_SERVER_SECRET}"
 
 PROCESS_NAME="--"
 remote_host="--"   
@@ -171,7 +170,6 @@ ENV_VARS=(
     DATABASE_URI
     RABBITMQ_DEFAULT_USER
     RABBITMQ_DEFAULT_PASS
-    SERVER_SECRET
     RMQ
     GRI
     INSTALL_OPTION
@@ -462,12 +460,7 @@ while [[ "$#" -gt 0 ]]; do
         export RABBITMQ_DEFAULT_PASS
         shift 2
         ;;
-    -ssec|--server-secret)
-        SERVER_SECRET="$2"
-        export SERVER_SECRET
-        shift 2
-        ;;
-
+ 
     -h|--help)
     echo "Usage: installer.sh [options]"
     echo ""
@@ -501,7 +494,6 @@ while [[ "$#" -gt 0 ]]; do
     echo "  -storage-max-disk, --storage-max-disk  Set max disk space for storage in Kbytes (default: 10000000)"
     echo "  -snapshot-path, --snapshot-path        Set the path to save snapshots (default: /snapshot_files)"
     echo "  -snapshot-max-disk, --snapshot-max-disk Set max disk space for snapshots in Kbytes (default: 10000000)"
-    echo "  -ssec, --server-secret                 Set shared server secret for gateway reset/altcha"
     echo ""
     echo "Example:"
     echo "  ./installer.sh --tag latest --force-install --port 443 --mode 1 --host example.com:443 --process-name cam1 --serial-number SN001 --timezone Europe/Rome --internal-name SRV1 --email test@example.com --password 1234 --server-ip 192.168.1.10 --certificate-provider-url https://cert.example.com --dns-provider-url https://dns.example.com --license-provider-url https://lic.example.com --update-provider-url https://upd.example.com --deploy-branch main --recording-path /recording_files --recording-max-disk 10000000 --storage-path /storage_files --storage-max-disk 10000000 --snapshot-path /snapshot_files --snapshot-max-disk 10000000"
@@ -783,9 +775,6 @@ get_config() {
     RABBITMQ_DEFAULT_PASS="${RABBITMQ_DEFAULT_PASS:-hypernode}"
     export RABBITMQ_DEFAULT_USER
     export RABBITMQ_DEFAULT_PASS
-
-    SERVER_SECRET="${SERVER_SECRET:-HYPERNODE_SERVER_SECRET}"
-    export SERVER_SECRET
 
     if [ "$HYPERNODE_ALREADY_INSTALLED" != "true" ]; then
     

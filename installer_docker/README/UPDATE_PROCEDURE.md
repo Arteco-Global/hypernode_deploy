@@ -135,10 +135,6 @@ Generali:
 - `RMQ`
 - `GRI`
 
-Per la suite `server` è inoltre raccomandato mantenere valorizzata:
-
-- `SERVER_SECRET` (usata dal gateway per protezione ALTCHA e endpoint reset)
-
 Volumi obbligatori (se il servizio li usa):
 
 - `RECORDING_PATH` per `recording`

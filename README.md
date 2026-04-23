@@ -23,7 +23,6 @@ This repository contains the deployment tooling for the Arteco Hypernode video m
      - `--mode` to select the installation profile for the node you are deploying.
      - `--serial-number`, `--internal-name`, and `--timezone` to register the device metadata.
      - `--email` and `--password` to seed the administrator credentials.
-     - `--server-secret` to set the shared secret used by gateway endpoints (ALTCHA and reset protection). If omitted, a default value is applied by the installer.
      - `--deploy-branch` to choose which Git branch to load the remote compose bundles from (defaults to `main`).
      - Provider URLs (`--certificate-provider-url`, `--dns-provider-url`, `--license-provider-url`, `--update-provider-url`) when the deployment relies on external Arteco services.
    - Run the script with `--help` to view the full list of options and examples.
