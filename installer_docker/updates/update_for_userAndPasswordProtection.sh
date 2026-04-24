@@ -6,9 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALLER_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEPLOY_DIR="$(cd "${INSTALLER_DIR}/.." && pwd)"
 
-DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-feature/userAndPasswordProtection}"
 ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_deploy/refs/heads"
-NATIVE_UPDATE_URL="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/installer_docker/native_update.sh"
+NATIVE_UPDATE_URL=""
 
 ENV_FILE_DEFAULT="${PWD}/.hypernode-install-env.log"
 if [[ ! -f "$ENV_FILE_DEFAULT" && -f "${DEPLOY_DIR}/.hypernode-install-env.log" ]]; then
@@ -32,6 +32,17 @@ warn() {
 die() {
   printf '❌ %s\n' "$*" >&2
   exit 1
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [options]
+
+Options:
+  --deploy-branch <name>   Branch da usare per scaricare/avviare native_update.sh
+                           (default: feature/userAndPasswordProtection)
+  -h, --help               Mostra questo help
+EOF
 }
 
 generate_password() {
@@ -291,6 +302,24 @@ prompt_and_run_update() {
 }
 
 main() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --deploy-branch)
+        DEPLOY_BRANCH="$2"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        die "Parametro non riconosciuto: $1"
+        ;;
+    esac
+  done
+
+  NATIVE_UPDATE_URL="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/installer_docker/native_update.sh"
+
   [[ -f "$ENV_FILE" ]] || warn "Env file non trovato: $ENV_FILE (verrà creato)"
 
   if ! command -v docker >/dev/null 2>&1; then
