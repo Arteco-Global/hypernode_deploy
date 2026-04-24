@@ -34,9 +34,10 @@ services:
       - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/gateway-db?authSource=admin
       - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
       - SERVER_NAME=${SERVER_NAME:-Hypernode Server}
-      - MACHINE=${MACHINE}
+      - MACHINE=${MACHINE} # used to indentify a specific installation
       - BACKUPS_PATH=/data/gateway/backups
       - LICENSE_PROVIDER_URL=${LICENSE_PROVIDER_URL}
+      - HYPERNODE_SERVER_SECRET=${MACHINE} # used for the capcha generation
     container_name: gateway
     restart: unless-stopped
     depends_on:
