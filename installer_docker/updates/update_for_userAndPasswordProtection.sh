@@ -88,6 +88,27 @@ get_env_raw_value() {
   ' "$ENV_FILE"
 }
 
+init_old_db_credentials_from_env() {
+  local env_db_user=""
+  local env_db_pass=""
+
+  if [[ -n "$OLD_DB_USER" && -n "$OLD_DB_PASS" ]]; then
+    log_db "Credenziali OLD_DB_* fornite via env, uso quelle"
+    return 0
+  fi
+
+  env_db_user="$(strip_quotes "$(get_env_raw_value "DB_USERNAME")")"
+  env_db_pass="$(strip_quotes "$(get_env_raw_value "DB_PASSWORD")")"
+
+  if [[ -n "$env_db_user" && -n "$env_db_pass" ]]; then
+    OLD_DB_USER="$env_db_user"
+    OLD_DB_PASS="$env_db_pass"
+    log_db "Credenziali fallback lette da .env: ${OLD_DB_USER}/********"
+  else
+    log_db "Nessuna credenziale DB trovata in .env: fallback autenticato disabilitato"
+  fi
+}
+
 upsert_env_key() {
   local key="$1"
   local value="$2"
@@ -539,7 +560,10 @@ update_all_databases() {
   log_db "Riepilogo update DB: total=${total}, ok=${ok_count}, fail=${fail_count}"
   if [[ "$fail_count" -gt 0 ]]; then
     warn "Alcuni database non sono stati aggiornati correttamente (${fail_count}/${total})"
+    return 1
   fi
+
+  return 0
 }
 
 remove_messagebroker_and_volumes() {
@@ -635,7 +659,8 @@ main() {
   [[ -n "$NEW_PASSWORD" ]] || die "Impossibile generare password dinamica"
 
   log "▶️  Password dinamica generata"
-  update_all_databases
+  init_old_db_credentials_from_env
+  update_all_databases || die "Update DB fallito: interrompo per evitare disallineamento credenziali tra DB e .env"
   remove_messagebroker_and_volumes
   ensure_env_updates
   download_native_update
