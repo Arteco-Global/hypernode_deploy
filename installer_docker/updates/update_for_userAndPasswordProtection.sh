@@ -24,6 +24,7 @@ NEW_USER="hypernode"
 OLD_DB_USER="${OLD_DB_USER:-}"
 OLD_DB_PASS="${OLD_DB_PASS:-}"
 NATIVE_UPDATE_PATH="${PWD}/native_update.sh"
+DB_COMPOSE_URL=""
 
 log() {
   printf '%s\n' "$*"
@@ -189,6 +190,88 @@ find_mongo_containers() {
   return 1
 }
 
+detect_compose_cmd() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    printf '%s' "docker compose"
+    return 0
+  fi
+  if command -v docker-compose >/dev/null 2>&1; then
+    printf '%s' "docker-compose"
+    return 0
+  fi
+  return 1
+}
+
+db_is_protected() {
+  local container="$1"
+  local shell_bin="${2:-sh}"
+  local out=""
+
+  out="$(
+    docker exec "$container" "$shell_bin" -lc '
+      if command -v mongosh >/dev/null 2>&1; then
+        mongosh --quiet --host 127.0.0.1 --port 27017 --eval "db.getSiblingDB(\"admin\").runCommand({usersInfo:1}); print(\"UNAUTH_OK\")"
+      else
+        mongo --quiet --host 127.0.0.1 --port 27017 --eval "db.getSiblingDB(\"admin\").runCommand({usersInfo:1}); print(\"UNAUTH_OK\")"
+      fi
+    ' 2>&1 || true
+  )"
+
+  if grep -q 'UNAUTH_OK' <<< "$out"; then
+    return 1
+  fi
+
+  if grep -Eqi 'requires authentication|Authentication failed|Unauthorized|not authorized|command .* requires authentication' <<< "$out"; then
+    return 0
+  fi
+
+  return 1
+}
+
+recreate_database_service_for_container() {
+  local container="$1"
+  local compose_cmd=""
+  local project_name=""
+  local tmp_db_compose=""
+
+  compose_cmd="$(detect_compose_cmd)" || {
+    warn "Né docker compose né docker-compose disponibili per il force-recreate DB"
+    return 1
+  }
+
+  if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+  fi
+
+  project_name="$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$container" 2>/dev/null || true)"
+  tmp_db_compose="$(mktemp)"
+  if ! curl -fsSL "$DB_COMPOSE_URL" -o "$tmp_db_compose"; then
+    warn "Impossibile scaricare compose DB: $DB_COMPOSE_URL"
+    rm -f "$tmp_db_compose"
+    return 1
+  fi
+
+  log_db "Force-recreate servizio database per applicare auth"
+  if [[ -n "$project_name" && "$project_name" != "<no value>" ]]; then
+    if ! $compose_cmd --project-name "$project_name" -f "$tmp_db_compose" up -d --force-recreate --remove-orphans; then
+      rm -f "$tmp_db_compose"
+      return 1
+    fi
+  else
+    if ! $compose_cmd -f "$tmp_db_compose" up -d --force-recreate --remove-orphans; then
+      rm -f "$tmp_db_compose"
+      return 1
+    fi
+  fi
+
+  rm -f "$tmp_db_compose"
+  sleep 4
+  return 0
+}
+
 update_credentials_in_db_container() {
   local container="$1"
   local shell_bin=""
@@ -294,7 +377,21 @@ update_credentials_in_db_container() {
       while IFS= read -r line; do
         [[ -n "$line" ]] && log_db "Output $container: $line"
       done <<< "$output"
-      return 0
+      if db_is_protected "$container" "$shell_bin"; then
+        log_db "Protezione DB attiva su $container (accesso anonimo bloccato)"
+        return 0
+      fi
+
+      warn "DB ancora non protetto su $container dopo update utenti"
+      if recreate_database_service_for_container "$container"; then
+        if db_is_protected "$container" "$shell_bin"; then
+          log_db "Protezione DB attivata su $container dopo force-recreate"
+          return 0
+        fi
+      fi
+
+      warn "DB ancora non protetto su $container anche dopo force-recreate"
+      return 1
     else
       warn "Output inatteso dal comando DB su $container"
       while IFS= read -r line; do
@@ -372,7 +469,21 @@ update_credentials_in_db_container() {
         while IFS= read -r line; do
           [[ -n "$line" ]] && log_db "Output $container: $line"
         done <<< "$retry_output"
-        return 0
+        if db_is_protected "$container" "$shell_bin"; then
+          log_db "Protezione DB attiva su $container (accesso anonimo bloccato)"
+          return 0
+        fi
+
+        warn "DB ancora non protetto su $container dopo retry autenticato"
+        if recreate_database_service_for_container "$container"; then
+          if db_is_protected "$container" "$shell_bin"; then
+            log_db "Protezione DB attivata su $container dopo force-recreate"
+            return 0
+          fi
+        fi
+
+        warn "DB ancora non protetto su $container anche dopo force-recreate"
+        return 1
       fi
     fi
 
@@ -510,6 +621,7 @@ main() {
   done
 
   NATIVE_UPDATE_URL="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/installer_docker/native_update.sh"
+  DB_COMPOSE_URL="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/installer_docker/composes/database/docker-compose.yaml"
 
   [[ -f "$ENV_FILE" ]] || warn "Env file non trovato: $ENV_FILE (verrà creato)"
 
