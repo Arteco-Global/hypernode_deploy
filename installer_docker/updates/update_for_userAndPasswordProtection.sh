@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -158,15 +162,31 @@ ensure_env_updates() {
 }
 
 find_mongo_containers() {
-  docker ps --format '{{.Names}} {{.Image}}' | awk '
-    {
-      name=$1
-      image=$2
-      if (tolower(image) ~ /mongo/) {
-        print name
+  local containers=()
+
+  if mapfile -t containers < <(
+    docker ps --format '{{.Names}}|{{.Image}}|{{.Ports}}' | awk -F'|' '
+      {
+        name=tolower($1)
+        image=tolower($2)
+        ports=tolower($3)
+        if (image ~ /mongo/ ||
+            image ~ /database/ ||
+            image ~ /usee_database/ ||
+            name ~ /mongo/ ||
+            name ~ /database/ ||
+            name ~ /uss_database/ ||
+            ports ~ /27017/) {
+          print $1
+        }
       }
-    }
-  '
+    ' | awk 'NF' | sort -u
+  ); then
+    printf '%s\n' "${containers[@]}"
+    return 0
+  fi
+
+  return 1
 }
 
 update_credentials_in_db_container() {
