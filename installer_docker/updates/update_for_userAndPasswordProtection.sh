@@ -241,6 +241,39 @@ update_credentials_in_db_container() {
     else { adminDb.createUser({user:user,pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
     var adminUser=adminDb.getUser(\"admin\"); \
     if (adminUser) { adminDb.updateUser(\"admin\",{pwd:pass}); } \
+    var dbNames=adminDb.getMongo().getDBNames(); \
+    for (var i=0;i<dbNames.length;i++) { \
+      var dbName=dbNames[i]; \
+      if (dbName === \"admin\" || dbName === \"local\" || dbName === \"config\") { continue; } \
+      try { \
+        var targetDb=db.getSiblingDB(dbName); \
+        var colls=targetDb.getCollectionNames(); \
+        if (colls.indexOf(\"microservicesInstanceConfiguration\") === -1) { \
+          print(\"broker_update db=\" + dbName + \" updated=0 (collection_missing)\"); \
+          continue; \
+        } \
+        var coll=targetDb.getCollection(\"microservicesInstanceConfiguration\"); \
+        var cursor=coll.find({ broker: { \\$type: \"string\" } }, { broker: 1 }); \
+        var updated=0; \
+        while (cursor.hasNext()) { \
+          var doc=cursor.next(); \
+          var broker=doc.broker; \
+          var newBroker=broker; \
+          if (/^(amqps?):\\/\\/[^@]+@(.+)$/.test(broker)) { \
+            newBroker=broker.replace(/^(amqps?):\\/\\/[^@]+@(.+)$/, \"$1://\" + user + \":\" + pass + \"@$2\"); \
+          } else if (/^(amqps?):\\/\\/(.+)$/.test(broker)) { \
+            newBroker=broker.replace(/^(amqps?):\\/\\/(.+)$/, \"$1://\" + user + \":\" + pass + \"@$2\"); \
+          } \
+          if (newBroker !== broker) { \
+            coll.updateOne({ _id: doc._id }, { \\$set: { broker: newBroker } }); \
+            updated++; \
+          } \
+        } \
+        print(\"broker_update db=\" + dbName + \" updated=\" + updated); \
+      } catch (e) { \
+        print(\"broker_update db=\" + dbName + \" error=\" + e); \
+      } \
+    } \
     print(\"ok\");"
 
     if command -v mongosh >/dev/null 2>&1; then
@@ -288,6 +321,39 @@ update_credentials_in_db_container() {
       else { adminDb.createUser({user:user,pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
       var adminUser=adminDb.getUser(\"admin\"); \
       if (adminUser) { adminDb.updateUser(\"admin\",{pwd:pass}); } \
+      var dbNames=adminDb.getMongo().getDBNames(); \
+      for (var i=0;i<dbNames.length;i++) { \
+        var dbName=dbNames[i]; \
+        if (dbName === \"admin\" || dbName === \"local\" || dbName === \"config\") { continue; } \
+        try { \
+          var targetDb=db.getSiblingDB(dbName); \
+          var colls=targetDb.getCollectionNames(); \
+          if (colls.indexOf(\"microservicesInstanceConfiguration\") === -1) { \
+            print(\"broker_update db=\" + dbName + \" updated=0 (collection_missing)\"); \
+            continue; \
+          } \
+          var coll=targetDb.getCollection(\"microservicesInstanceConfiguration\"); \
+          var cursor=coll.find({ broker: { \\$type: \"string\" } }, { broker: 1 }); \
+          var updated=0; \
+          while (cursor.hasNext()) { \
+            var doc=cursor.next(); \
+            var broker=doc.broker; \
+            var newBroker=broker; \
+            if (/^(amqps?):\\/\\/[^@]+@(.+)$/.test(broker)) { \
+              newBroker=broker.replace(/^(amqps?):\\/\\/[^@]+@(.+)$/, \"$1://\" + user + \":\" + pass + \"@$2\"); \
+            } else if (/^(amqps?):\\/\\/(.+)$/.test(broker)) { \
+              newBroker=broker.replace(/^(amqps?):\\/\\/(.+)$/, \"$1://\" + user + \":\" + pass + \"@$2\"); \
+            } \
+            if (newBroker !== broker) { \
+              coll.updateOne({ _id: doc._id }, { \\$set: { broker: newBroker } }); \
+              updated++; \
+            } \
+          } \
+          print(\"broker_update db=\" + dbName + \" updated=\" + updated); \
+        } catch (e) { \
+          print(\"broker_update db=\" + dbName + \" error=\" + e); \
+        } \
+      } \
       print(\"ok\");"
 
       if command -v mongosh >/dev/null 2>&1; then
