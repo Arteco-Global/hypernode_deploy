@@ -134,6 +134,7 @@ update_uri_credentials() {
 ensure_env_updates() {
   [[ -f "$ENV_FILE" ]] || touch "$ENV_FILE"
 
+  upsert_env_key "DOCKER_TAG" "userAndPasswordProtection"
   upsert_env_key "RABBITMQ_DEFAULT_USER" "$NEW_USER"
   upsert_env_key "RABBITMQ_DEFAULT_PASS" "$NEW_PASSWORD"
   upsert_env_key "DB_USERNAME" "$NEW_USER"
