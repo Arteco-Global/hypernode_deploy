@@ -21,8 +21,8 @@ fi
 ENV_FILE="${ENV_FILE:-$ENV_FILE_DEFAULT}"
 
 NEW_USER="hypernode"
-OLD_DB_USER="hypernode"
-OLD_DB_PASS="hypernode"
+OLD_DB_USER="${OLD_DB_USER:-}"
+OLD_DB_PASS="${OLD_DB_PASS:-}"
 NATIVE_UPDATE_PATH="${PWD}/native_update.sh"
 
 log() {
@@ -194,6 +194,7 @@ update_credentials_in_db_container() {
   local shell_bin=""
   local db_cli=""
   local output=""
+  local retry_output=""
   local inspect_image=""
   local inspect_status=""
 
@@ -222,7 +223,7 @@ update_credentials_in_db_container() {
   fi
 
   log_db "Client DB rilevato in $container: $db_cli"
-  log_db "Tentativo update utenti su DB admin con credenziali correnti ${OLD_DB_USER}/********"
+  log_db "Tentativo update utenti su DB admin senza autenticazione"
 
   if output="$(
     docker exec \
@@ -243,30 +244,88 @@ update_credentials_in_db_container() {
     print(\"ok\");"
 
     if command -v mongosh >/dev/null 2>&1; then
-      mongosh --quiet --host 127.0.0.1 --port 27017 \
-        -u "$HN_OLD_USER" -p "$HN_OLD_PASS" --authenticationDatabase admin --eval "$js"
+      mongosh --quiet --host 127.0.0.1 --port 27017 --eval "$js"
     else
-      mongo --quiet --host 127.0.0.1 --port 27017 \
-        -u "$HN_OLD_USER" -p "$HN_OLD_PASS" --authenticationDatabase admin --eval "$js"
+      mongo --quiet --host 127.0.0.1 --port 27017 --eval "$js"
     fi
   '
   2>&1
   )"; then
-    log_db "Update credenziali completato su $container"
-    if [[ -n "$output" ]]; then
+    if grep -Eqi 'Authentication failed|MongoServerError|Error:' <<< "$output"; then
+      warn "Il comando DB su $container ha riportato errori nonostante exit code 0"
+      while IFS= read -r line; do
+        [[ -n "$line" ]] && warn "[DB:$container] $line"
+      done <<< "$output"
+    elif grep -Eiq '(^|[[:space:]])ok($|[[:space:]])' <<< "$output"; then
+      log_db "Update credenziali completato su $container"
       while IFS= read -r line; do
         [[ -n "$line" ]] && log_db "Output $container: $line"
       done <<< "$output"
+      return 0
+    else
+      warn "Output inatteso dal comando DB su $container"
+      while IFS= read -r line; do
+        [[ -n "$line" ]] && warn "[DB:$container] $line"
+      done <<< "$output"
     fi
-    return 0
+  fi
+
+  if [[ -n "$OLD_DB_USER" && -n "$OLD_DB_PASS" ]]; then
+    log_db "Retry su $container con autenticazione ${OLD_DB_USER}/********"
+    if retry_output="$(
+      docker exec \
+        -e HN_NEW_USER="$NEW_USER" \
+        -e HN_NEW_PASS="$NEW_PASSWORD" \
+        -e HN_OLD_USER="$OLD_DB_USER" \
+        -e HN_OLD_PASS="$OLD_DB_PASS" \
+        "$container" "$shell_bin" -lc '
+      set -e
+      js="var adminDb=db.getSiblingDB(\"admin\"); \
+      var user=process.env.HN_NEW_USER; \
+      var pass=process.env.HN_NEW_PASS; \
+      var exists=adminDb.getUser(user); \
+      if (exists) { adminDb.updateUser(user,{pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
+      else { adminDb.createUser({user:user,pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
+      var adminUser=adminDb.getUser(\"admin\"); \
+      if (adminUser) { adminDb.updateUser(\"admin\",{pwd:pass}); } \
+      print(\"ok\");"
+
+      if command -v mongosh >/dev/null 2>&1; then
+        mongosh --quiet --host 127.0.0.1 --port 27017 \
+          -u "$HN_OLD_USER" -p "$HN_OLD_PASS" --authenticationDatabase admin --eval "$js"
+      else
+        mongo --quiet --host 127.0.0.1 --port 27017 \
+          -u "$HN_OLD_USER" -p "$HN_OLD_PASS" --authenticationDatabase admin --eval "$js"
+      fi
+    ' 2>&1
+    )"; then
+      if grep -Eqi 'Authentication failed|MongoServerError|Error:' <<< "$retry_output"; then
+        warn "Retry autenticato su $container con output errore"
+      elif grep -Eiq '(^|[[:space:]])ok($|[[:space:]])' <<< "$retry_output"; then
+        log_db "Update credenziali completato su $container (retry autenticato)"
+        while IFS= read -r line; do
+          [[ -n "$line" ]] && log_db "Output $container: $line"
+        done <<< "$retry_output"
+        return 0
+      fi
+    fi
+
+    if [[ -n "$retry_output" ]]; then
+      while IFS= read -r line; do
+        [[ -n "$line" ]] && warn "[DB:$container] $line"
+      done <<< "$retry_output"
+    fi
+  else
+    log_db "Fallback autenticato disabilitato (OLD_DB_USER/OLD_DB_PASS non impostati)"
+  fi
+
+  if [[ -n "$output" ]]; then
+    while IFS= read -r line; do
+      [[ -n "$line" ]] && log_db "Output $container: $line"
+    done <<< "$output"
   fi
 
   warn "Update credenziali fallito su $container"
-  if [[ -n "$output" ]]; then
-    while IFS= read -r line; do
-      [[ -n "$line" ]] && warn "[DB:$container] $line"
-    done <<< "$output"
-  fi
   return 1
 }
 
