@@ -25,6 +25,10 @@ log() {
   printf '%s\n' "$*"
 }
 
+log_db() {
+  printf '[DB] %s\n' "$*"
+}
+
 warn() {
   printf '⚠️  %s\n' "$*"
 }
@@ -169,6 +173,13 @@ update_credentials_in_db_container() {
   local container="$1"
   local shell_bin=""
   local db_cli=""
+  local output=""
+  local inspect_image=""
+  local inspect_status=""
+
+  inspect_image="$(docker inspect -f '{{.Config.Image}}' "$container" 2>/dev/null || true)"
+  inspect_status="$(docker inspect -f '{{.State.Status}}' "$container" 2>/dev/null || true)"
+  log_db "Container: $container | image: ${inspect_image:-unknown} | status: ${inspect_status:-unknown}"
 
   if docker exec "$container" sh -lc 'command -v sh >/dev/null 2>&1'; then
     shell_bin="sh"
@@ -178,6 +189,7 @@ update_credentials_in_db_container() {
     warn "Container $container senza shell supportata: skip"
     return 1
   fi
+  log_db "Shell rilevata in $container: $shell_bin"
 
   if ! db_cli="$(docker exec "$container" "$shell_bin" -lc 'if command -v mongosh >/dev/null 2>&1; then echo mongosh; elif command -v mongo >/dev/null 2>&1; then echo mongo; fi')"; then
     warn "Impossibile rilevare client mongo in $container: skip"
@@ -189,12 +201,16 @@ update_credentials_in_db_container() {
     return 1
   fi
 
-  docker exec \
-    -e HN_NEW_USER="$NEW_USER" \
-    -e HN_NEW_PASS="$NEW_PASSWORD" \
-    -e HN_OLD_USER="$OLD_DB_USER" \
-    -e HN_OLD_PASS="$OLD_DB_PASS" \
-    "$container" "$shell_bin" -lc '
+  log_db "Client DB rilevato in $container: $db_cli"
+  log_db "Tentativo update utenti su DB admin con credenziali correnti ${OLD_DB_USER}/********"
+
+  if output="$(
+    docker exec \
+      -e HN_NEW_USER="$NEW_USER" \
+      -e HN_NEW_PASS="$NEW_PASSWORD" \
+      -e HN_OLD_USER="$OLD_DB_USER" \
+      -e HN_OLD_PASS="$OLD_DB_PASS" \
+      "$container" "$shell_bin" -lc '
     set -e
     js="var adminDb=db.getSiblingDB(\"admin\"); \
     var user=process.env.HN_NEW_USER; \
@@ -214,11 +230,32 @@ update_credentials_in_db_container() {
         -u "$HN_OLD_USER" -p "$HN_OLD_PASS" --authenticationDatabase admin --eval "$js"
     fi
   '
+  2>&1
+  )"; then
+    log_db "Update credenziali completato su $container"
+    if [[ -n "$output" ]]; then
+      while IFS= read -r line; do
+        [[ -n "$line" ]] && log_db "Output $container: $line"
+      done <<< "$output"
+    fi
+    return 0
+  fi
+
+  warn "Update credenziali fallito su $container"
+  if [[ -n "$output" ]]; then
+    while IFS= read -r line; do
+      [[ -n "$line" ]] && warn "[DB:$container] $line"
+    done <<< "$output"
+  fi
+  return 1
 }
 
 update_all_databases() {
   local containers=()
   local c
+  local total=0
+  local ok_count=0
+  local fail_count=0
 
   if ! mapfile -t containers < <(find_mongo_containers); then
     warn "Errore durante la ricerca dei container MongoDB"
@@ -230,13 +267,21 @@ update_all_databases() {
     return 0
   fi
 
-  log "▶️  Aggiornamento credenziali DB su ${#containers[@]} container MongoDB"
+  total="${#containers[@]}"
+  log "▶️  Aggiornamento credenziali DB su ${total} container MongoDB"
   for c in "${containers[@]}"; do
-    log "   - $c"
-    if ! update_credentials_in_db_container "$c"; then
-      warn "Aggiornamento credenziali fallito su $c"
+    log_db "-----"
+    if update_credentials_in_db_container "$c"; then
+      ok_count=$((ok_count + 1))
+    else
+      fail_count=$((fail_count + 1))
     fi
   done
+
+  log_db "Riepilogo update DB: total=${total}, ok=${ok_count}, fail=${fail_count}"
+  if [[ "$fail_count" -gt 0 ]]; then
+    warn "Alcuni database non sono stati aggiornati correttamente (${fail_count}/${total})"
+  fi
 }
 
 remove_messagebroker_and_volumes() {
