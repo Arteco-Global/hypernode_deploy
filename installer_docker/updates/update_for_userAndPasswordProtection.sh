@@ -253,19 +253,19 @@ update_credentials_in_db_container() {
           continue; \
         } \
         var coll=targetDb.getCollection(\"microservicesInstanceConfiguration\"); \
-        var cursor=coll.find({ broker: { \\$type: \"string\" } }, { broker: 1 }); \
+        var cursor=coll.find({ broker: { \$type: \"string\" } }, { broker: 1 }); \
         var updated=0; \
         while (cursor.hasNext()) { \
           var doc=cursor.next(); \
           var broker=doc.broker; \
           var newBroker=broker; \
           if (/^(amqps?):\\/\\/[^@]+@(.+)$/.test(broker)) { \
-            newBroker=broker.replace(/^(amqps?):\\/\\/[^@]+@(.+)$/, \"$1://\" + user + \":\" + pass + \"@$2\"); \
+            newBroker=broker.replace(/^(amqps?):\\/\\/[^@]+@(.+)$/, \"\$1://\" + user + \":\" + pass + \"@\$2\"); \
           } else if (/^(amqps?):\\/\\/(.+)$/.test(broker)) { \
-            newBroker=broker.replace(/^(amqps?):\\/\\/(.+)$/, \"$1://\" + user + \":\" + pass + \"@$2\"); \
+            newBroker=broker.replace(/^(amqps?):\\/\\/(.+)$/, \"\$1://\" + user + \":\" + pass + \"@\$2\"); \
           } \
           if (newBroker !== broker) { \
-            coll.updateOne({ _id: doc._id }, { \\$set: { broker: newBroker } }); \
+            coll.updateOne({ _id: doc._id }, { \$set: { broker: newBroker } }); \
             updated++; \
           } \
         } \
@@ -333,19 +333,19 @@ update_credentials_in_db_container() {
             continue; \
           } \
           var coll=targetDb.getCollection(\"microservicesInstanceConfiguration\"); \
-          var cursor=coll.find({ broker: { \\$type: \"string\" } }, { broker: 1 }); \
+          var cursor=coll.find({ broker: { \$type: \"string\" } }, { broker: 1 }); \
           var updated=0; \
           while (cursor.hasNext()) { \
             var doc=cursor.next(); \
             var broker=doc.broker; \
             var newBroker=broker; \
             if (/^(amqps?):\\/\\/[^@]+@(.+)$/.test(broker)) { \
-              newBroker=broker.replace(/^(amqps?):\\/\\/[^@]+@(.+)$/, \"$1://\" + user + \":\" + pass + \"@$2\"); \
+              newBroker=broker.replace(/^(amqps?):\\/\\/[^@]+@(.+)$/, \"\$1://\" + user + \":\" + pass + \"@\$2\"); \
             } else if (/^(amqps?):\\/\\/(.+)$/.test(broker)) { \
-              newBroker=broker.replace(/^(amqps?):\\/\\/(.+)$/, \"$1://\" + user + \":\" + pass + \"@$2\"); \
+              newBroker=broker.replace(/^(amqps?):\\/\\/(.+)$/, \"\$1://\" + user + \":\" + pass + \"@\$2\"); \
             } \
             if (newBroker !== broker) { \
-              coll.updateOne({ _id: doc._id }, { \\$set: { broker: newBroker } }); \
+              coll.updateOne({ _id: doc._id }, { \$set: { broker: newBroker } }); \
               updated++; \
             } \
           } \
