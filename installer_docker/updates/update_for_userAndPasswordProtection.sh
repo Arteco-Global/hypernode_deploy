@@ -323,7 +323,8 @@ update_credentials_in_db_container() {
     if (exists) { adminDb.updateUser(user,{pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
     else { adminDb.createUser({user:user,pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
     var adminUser=adminDb.getUser(\"admin\"); \
-    if (adminUser) { adminDb.updateUser(\"admin\",{pwd:pass}); } \
+    if (adminUser) { adminDb.updateUser(\"admin\",{pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
+    else { adminDb.createUser({user:\"admin\",pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
     var dbNames=adminDb.getMongo().getDBNames(); \
     for (var i=0;i<dbNames.length;i++) { \
       var dbName=dbNames[i]; \
@@ -417,7 +418,8 @@ update_credentials_in_db_container() {
       if (exists) { adminDb.updateUser(user,{pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
       else { adminDb.createUser({user:user,pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
       var adminUser=adminDb.getUser(\"admin\"); \
-      if (adminUser) { adminDb.updateUser(\"admin\",{pwd:pass}); } \
+      if (adminUser) { adminDb.updateUser(\"admin\",{pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
+      else { adminDb.createUser({user:\"admin\",pwd:pass,roles:[{role:\"root\",db:\"admin\"}]}); } \
       var dbNames=adminDb.getMongo().getDBNames(); \
       for (var i=0;i<dbNames.length;i++) { \
         var dbName=dbNames[i]; \
