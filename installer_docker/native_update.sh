@@ -224,6 +224,72 @@ wait_for_tcp_port() {
     done
 }
 
+extract_required_envs_from_compose() {
+    local compose_file="$1"
+
+    grep -oE '\$\{[^}]+\}' "$compose_file" 2>/dev/null \
+        | sed -E 's/^\$\{([^}]+)\}$/\1/' \
+        | awk '
+            {
+                expr=$0
+                name=expr
+                sub(/^!/, "", name)
+                sub(/:.*/, "", name)
+                sub(/[-+?].*/, "", name)
+
+                is_required=0
+                if (expr ~ /\?/ || expr !~ /[-+:]/) {
+                    is_required=1
+                }
+
+                if (is_required == 1 && name ~ /^[A-Za-z_][A-Za-z0-9_]*$/) {
+                    print name
+                }
+            }
+        ' \
+        | sort -u
+}
+
+validate_required_envs_for_compose() {
+    local env_file="$1"
+    shift
+    local compose_files=("$@")
+    local required_vars=()
+    local missing_vars=()
+    local var=""
+    local compose_file=""
+
+    for compose_file in "${compose_files[@]}"; do
+        if [[ -f "$compose_file" ]]; then
+            while IFS= read -r var; do
+                [[ -n "$var" ]] && required_vars+=("$var")
+            done < <(extract_required_envs_from_compose "$compose_file")
+        fi
+    done
+
+    if [[ "${#required_vars[@]}" -eq 0 ]]; then
+        return 0
+    fi
+
+    mapfile -t required_vars < <(printf '%s\n' "${required_vars[@]}" | sort -u)
+
+    for var in "${required_vars[@]}"; do
+        if ! grep -Eq "^[[:space:]]*(export[[:space:]]+)?${var}=" "$env_file"; then
+            missing_vars+=("$var")
+        fi
+    done
+
+    if [[ "${#missing_vars[@]}" -gt 0 ]]; then
+        echo "❌ Update bloccato: variabili env obbligatorie mancanti nel file $env_file"
+        echo "   Missing: ${missing_vars[*]}"
+        echo "   Compose analizzati:"
+        for compose_file in "${compose_files[@]}"; do
+            echo "   - $compose_file"
+        done
+        exit 1
+    fi
+}
+
 update_server_suite() {
     local core_services=(
         messagebroker
@@ -490,6 +556,8 @@ TMP_SERVICE_COMPOSE=$(mktemp)
 
 curl -fsSL "$DB_COMPOSE_URL" -o "$TMP_DB_COMPOSE"
 curl -fsSL "$SERVICE_COMPOSE_URL" -o "$TMP_SERVICE_COMPOSE"
+
+validate_required_envs_for_compose "$ENV_FILE" "$TMP_DB_COMPOSE" "$TMP_SERVICE_COMPOSE"
 
 detect_compose_project
 
