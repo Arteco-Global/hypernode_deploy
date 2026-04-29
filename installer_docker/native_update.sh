@@ -255,6 +255,7 @@ validate_required_envs_for_compose() {
     shift
     local compose_files=("$@")
     local required_vars=()
+    local received_vars=()
     local missing_vars=()
     local var=""
     local compose_file=""
@@ -272,6 +273,19 @@ validate_required_envs_for_compose() {
     fi
 
     mapfile -t required_vars < <(printf '%s\n' "${required_vars[@]}" | sort -u)
+    mapfile -t received_vars < <(
+        sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' "$env_file" | sort -u
+    )
+
+    echo "ℹ️  Env ricevute da $env_file:"
+    if [[ "${#received_vars[@]}" -gt 0 ]]; then
+        echo "   ${received_vars[*]}"
+    else
+        echo "   (nessuna variabile trovata)"
+    fi
+
+    echo "ℹ️  Env necessarie dai compose:"
+    echo "   ${required_vars[*]}"
 
     for var in "${required_vars[@]}"; do
         if ! grep -Eq "^[[:space:]]*(export[[:space:]]+)?${var}=" "$env_file"; then
