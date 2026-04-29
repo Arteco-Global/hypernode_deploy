@@ -237,12 +237,9 @@ extract_required_envs_from_compose() {
                 sub(/:.*/, "", name)
                 sub(/[-+?].*/, "", name)
 
-                is_required=0
-                if (expr ~ /\?/ || expr !~ /[-+:]/) {
-                    is_required=1
-                }
-
-                if (is_required == 1 && name ~ /^[A-Za-z_][A-Za-z0-9_]*$/) {
+                # Consider every env reference in compose as required,
+                # including expressions with defaults like ${VAR:-value}.
+                if (name ~ /^[A-Za-z_][A-Za-z0-9_]*$/) {
                     print name
                 }
             }
