@@ -10,6 +10,7 @@ SERVICE_NAME="server"
 TMP_DB_COMPOSE=""
 TMP_SERVICE_COMPOSE=""
 COMPOSE_PROJECT_NAME=""
+IGNORE_ENV_VALIDATION="false"
 SYSTEM_ENV_DIR="/etc/.hypernode"
 SYSTEM_ENV_FILE="${SYSTEM_ENV_DIR}/.hypernode-install-env.log"
 SYSTEM_ENV_ORIGINAL="${SYSTEM_ENV_DIR}/.hypernode-install-env.log.original"
@@ -135,6 +136,7 @@ Options:
   --env-file <path>       Path to env file (default: ./.hypernode-install-env.log)
   --deploy-branch <name>  Deploy branch for compose files (default: main)
   --service <name>        Service to update (server|camera|auth|event|storage|snapshot|recording|metadata)
+  --ignoreValidation      Skip env validation against compose variables
   -h, --help              Show this help
 EOF
 }
@@ -291,7 +293,7 @@ validate_required_envs_for_compose() {
     done
 
     if [[ "${#missing_vars[@]}" -gt 0 ]]; then
-        echo "❌ Update bloccato: variabili env obbligatorie mancanti nel file $env_file"
+        echo "❌ Update bloccato: variabili env obbligatorie mancanti nel file $env_file. Probabilmente questo è un tentativo di update da una versione ad un altra."
         echo "   Missing: ${missing_vars[*]}"
         echo "   Compose analizzati:"
         for compose_file in "${compose_files[@]}"; do
@@ -410,6 +412,10 @@ while [[ "$#" -gt 0 ]]; do
         --service)
             SERVICE_NAME="$2"
             shift 2
+            ;;
+        --ignoreValidation)
+            IGNORE_ENV_VALIDATION="true"
+            shift
             ;;
         -h|--help)
             usage
@@ -570,7 +576,11 @@ TMP_SERVICE_COMPOSE=$(mktemp)
 curl -fsSL "$DB_COMPOSE_URL" -o "$TMP_DB_COMPOSE"
 curl -fsSL "$SERVICE_COMPOSE_URL" -o "$TMP_SERVICE_COMPOSE"
 
-validate_required_envs_for_compose "$ENV_FILE" "$TMP_DB_COMPOSE" "$TMP_SERVICE_COMPOSE"
+if [[ "$IGNORE_ENV_VALIDATION" == "true" ]]; then
+    echo "⚠️  Env validation skipped by --ignoreValidation."
+else
+    validate_required_envs_for_compose "$ENV_FILE" "$TMP_DB_COMPOSE" "$TMP_SERVICE_COMPOSE"
+fi
 
 detect_compose_project
 
