@@ -302,6 +302,8 @@ validate_required_envs_for_compose() {
         done
         exit 1
     fi
+
+    echo "✅ Env corrette: tutte le variabili obbligatorie sono presenti. Procedo con l'update."
 }
 
 update_server_suite() {
