@@ -9,6 +9,7 @@ ABSOLUTE_PATH_BASE="https://raw.githubusercontent.com/Arteco-Global/hypernode_de
 COMPOSE_CMD="docker compose"
 SYSTEM_ENV_DIR="/etc/.hypernode"
 DOCKER_CMD="docker"
+IGNORE_ENV_VALIDATION="false"
 MACHINE=""
 MACHINE_JSON_NAME="machine.json"
 MACHINE_FILE_LOCAL="${PWD}/${MACHINE_JSON_NAME}"
@@ -23,6 +24,7 @@ Options:
   --env-file <path>       Path to env file (optional; otherwise uses running containers)
   --deploy-branch <name>  Deploy branch for compose files (default: main)
   --service <name>        Override service (camera|auth|event|storage|snapshot|recording|metadata)
+  --ignoreValidation      Skip env validation against compose variables
   -h, --help              Show this help
 EOF
 }
@@ -105,6 +107,85 @@ wait_for_tcp_port() {
 
         sleep 2
     done
+}
+
+extract_required_envs_from_compose() {
+    local compose_file="$1"
+
+    grep -oE '\$\{[^}]+\}' "$compose_file" 2>/dev/null \
+        | sed -E 's/^\$\{([^}]+)\}$/\1/' \
+        | awk '
+            {
+                expr=$0
+                name=expr
+                sub(/^!/, "", name)
+                sub(/:.*/, "", name)
+                sub(/[-+?].*/, "", name)
+
+                # Consider every env reference in compose as required,
+                # including expressions with defaults like ${VAR:-value}.
+                if (name ~ /^[A-Za-z_][A-Za-z0-9_]*$/) {
+                    print name
+                }
+            }
+        ' \
+        | sort -u
+}
+
+validate_required_envs_for_compose() {
+    local env_file="$1"
+    shift
+    local compose_files=("$@")
+    local required_vars=()
+    local received_vars=()
+    local missing_vars=()
+    local var=""
+    local compose_file=""
+
+    for compose_file in "${compose_files[@]}"; do
+        if [[ -f "$compose_file" ]]; then
+            while IFS= read -r var; do
+                [[ -n "$var" ]] && required_vars+=("$var")
+            done < <(extract_required_envs_from_compose "$compose_file")
+        fi
+    done
+
+    if [[ "${#required_vars[@]}" -eq 0 ]]; then
+        return 0
+    fi
+
+    mapfile -t required_vars < <(printf '%s\n' "${required_vars[@]}" | sort -u)
+    mapfile -t received_vars < <(
+        sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' "$env_file" | sort -u
+    )
+
+    echo "ℹ️  Env ricevute da $env_file:"
+    if [[ "${#received_vars[@]}" -gt 0 ]]; then
+        echo "   ${received_vars[*]}"
+    else
+        echo "   (nessuna variabile trovata)"
+    fi
+
+    echo "ℹ️  Env necessarie dai compose:"
+    echo "   ${required_vars[*]}"
+
+    for var in "${required_vars[@]}"; do
+        if ! grep -Eq "^[[:space:]]*(export[[:space:]]+)?${var}=" "$env_file"; then
+            missing_vars+=("$var")
+        fi
+    done
+
+    if [[ "${#missing_vars[@]}" -gt 0 ]]; then
+        echo "❌ Update bloccato: variabili env obbligatorie mancanti nel file $env_file. Probabilmente questo è un tentativo di update da una versione ad un altra."
+        echo "   Missing: ${missing_vars[*]}"
+        echo "   Compose analizzati:"
+        for compose_file in "${compose_files[@]}"; do
+            echo "   - $compose_file"
+        done
+        exit 1
+    fi
+
+    echo "✅ Env corrette: tutte le variabili obbligatorie sono presenti. Procedo con l'update."
 }
 
 generate_machine_id() {
@@ -503,6 +584,12 @@ update_with_env_file() {
         curl -fsSL "$db_compose_url" -o "$tmp_db_compose"
         curl -fsSL "$service_compose_url" -o "$tmp_service_compose"
 
+        if [[ "$IGNORE_ENV_VALIDATION" == "true" ]]; then
+            echo "⚠️  Env validation skipped (--ignoreValidation)."
+        else
+            validate_required_envs_for_compose "$env_file" "$tmp_db_compose" "$tmp_service_compose"
+        fi
+
         pull_images_from_compose "database" -f "$tmp_db_compose"
         pull_images_from_compose "$service_name" -f "$tmp_service_compose"
 
@@ -530,6 +617,10 @@ while [[ "$#" -gt 0 ]]; do
         --service)
             SERVICE_OVERRIDE="$2"
             shift 2
+            ;;
+        --ignoreValidation)
+            IGNORE_ENV_VALIDATION="true"
+            shift
             ;;
         -h|--help)
             usage
