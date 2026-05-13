@@ -261,6 +261,32 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  watchdog:
+    image: artecoglobalcompany/usee_watchdog:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
+      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/watchdog-db
+      - GATEWAY_URI=ws://webserver
+      - MACHINE=${MACHINE}
+    container_name: watchdog
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+      webserver:
+        condition: service_healthy
+    volumes:
+      - ${WATCHDOG_PATH}:/watchdog_files
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   export:
     image: artecoglobalcompany/arteco-export-service:${DOCKER_TAG:-latest}
     container_name: export
