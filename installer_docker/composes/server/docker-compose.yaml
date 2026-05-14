@@ -277,8 +277,6 @@ services:
         condition: service_healthy
       webserver:
         condition: service_healthy
-    volumes:
-      - ${WATCHDOG_PATH}:/watchdog_files
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
