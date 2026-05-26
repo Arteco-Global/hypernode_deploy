@@ -40,8 +40,8 @@ services:
     container_name: gateway
     restart: unless-stopped
     depends_on:
-      messagebroker:
-        condition: service_healthy
+      watchdog:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -75,9 +75,7 @@ services:
     restart: unless-stopped
     network_mode: "host"
     depends_on:
-      messagebroker:
-        condition: service_healthy
-      gateway:
+      webserver:
         condition: service_healthy
     logging:
       driver: "json-file"
@@ -96,9 +94,7 @@ services:
       restart: unless-stopped
       network_mode: "host"
       depends_on:
-        messagebroker:
-          condition: service_healthy
-        gateway:
+        webserver:
           condition: service_healthy
       logging:
         driver: "json-file"
@@ -126,7 +122,7 @@ services:
     container_name: coretrust
     restart: unless-stopped
     depends_on:
-      messagebroker:
+      webserver:
         condition: service_healthy
     volumes:
       - hypernode_security_shared_files:/ssl
@@ -177,8 +173,6 @@ services:
     container_name: recording
     restart: unless-stopped
     depends_on:
-      messagebroker:
-        condition: service_healthy
       webserver:
         condition: service_healthy
     volumes:
@@ -202,7 +196,7 @@ services:
     container_name: event
     restart: unless-stopped
     depends_on:
-      messagebroker:
+      webserver:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -223,7 +217,7 @@ services:
     container_name: auth
     restart: unless-stopped
     depends_on:
-      messagebroker:
+      webserver:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -247,8 +241,6 @@ services:
     container_name: snapshot
     restart: unless-stopped
     depends_on:
-      messagebroker:
-        condition: service_healthy
       webserver:
         condition: service_healthy
     volumes:
@@ -274,8 +266,6 @@ services:
     restart: unless-stopped
     depends_on:
       messagebroker:
-        condition: service_healthy
-      webserver:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -314,12 +304,6 @@ services:
       - hypernode-net
     restart: unless-stopped
     depends_on:
-      messagebroker:
-        condition: service_healthy
-      gateway:
-        condition: service_healthy
-      configurator:
-        condition: service_started
       export:
         condition: service_started
     ports:
@@ -343,7 +327,7 @@ services:
       - hypernode-net
     restart: unless-stopped
     depends_on:
-      messagebroker:
+      gateway:
         condition: service_healthy
     logging:
       driver: "json-file"
@@ -358,10 +342,11 @@ services:
       - "${SSL_PORT:-443}:443"
     networks:
       - hypernode-net
-    restart: unless-stopped
+    restart: always
     depends_on:
       messagebroker:
         condition: service_healthy
+        restart: true
       webserver:
         condition: service_healthy
     volumes:
