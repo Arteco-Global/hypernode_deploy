@@ -281,6 +281,9 @@ services:
     networks:
       - hypernode-net
     restart: unless-stopped
+    depends_on:
+      configurator:
+        condition: service_started
     ports:
       - "5500:5500"
     environment:
