@@ -6,7 +6,7 @@ services:
     image: artecoglobalcompany/usee_id_verifier:${DOCKER_TAG:-latest}
     environment:
       - RABBITMQ_URI=${RMQ}
-      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/auth_${PROCESS_NAME}
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT}/auth_${PROCESS_NAME}?authSource=admin
       - SRV_INST_NAME=auth_${PROCESS_NAME}
       - MACHINE=${MACHINE}
     container_name: auth_${PROCESS_NAME}

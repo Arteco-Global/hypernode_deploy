@@ -5,8 +5,8 @@ services:
     networks:
       - hypernode-net
     environment:
-      RABBITMQ_DEFAULT_USER: hypernode
-      RABBITMQ_DEFAULT_PASS: hypernode
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-hypernode}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-hypernode}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     ports:
@@ -30,13 +30,14 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/gateway-db
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/gateway-db?authSource=admin
       - SERVER_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
       - SERVER_NAME=${SERVER_NAME:-Hypernode Server}
-      - MACHINE=${MACHINE}
+      - MACHINE=${MACHINE} # used to indentify a specific installation
       - BACKUPS_PATH=/data/gateway/backups
       - LICENSE_PROVIDER_URL=${LICENSE_PROVIDER_URL}
+      - HYPERNODE_SERVER_SECRET=${MACHINE} # used for the capcha generation
     container_name: gateway
     restart: unless-stopped
     depends_on:
@@ -67,9 +68,9 @@ services:
   camera:
     image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@127.0.0.1:5672
       - GATEWAY_URI=ws://127.0.0.1:8181
-      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/camera-db
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT:-27017}/camera-db?authSource=admin
       - MACHINE=${MACHINE}
     container_name: camera
     restart: unless-stopped
@@ -88,9 +89,9 @@ services:
   metadata:
       image: artecoglobalcompany/usee_metadata_manager:${DOCKER_TAG:-latest}
       environment:
-        - RABBITMQ_URI=amqp://hypernode:hypernode@127.0.0.1:5672
+        - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@127.0.0.1:5672
         - GATEWAY_URI=ws://127.0.0.1:8181
-        - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/metadata-db
+        - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT:-27017}/metadata-db?authSource=admin
         - MACHINE=${MACHINE}
       container_name: metadata
       restart: unless-stopped
@@ -111,8 +112,8 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/coretrust-db
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/coretrust-db?authSource=admin
       - CERT_PATH=/ssl
       - SERIAL_NUMBER=${SERIAL_NUMBER}
       - ARTECO_GLOBAL_EMAIL=${ARTECO_GLOBAL_EMAIL}
@@ -144,8 +145,8 @@ services:
   #   networks:
   #     - hypernode-net
   #   environment:
-  #     - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-  #     - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/storage-db
+  #     - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+  #     - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/storage-db?authSource=admin
   #     - STORAGE_PATH=/storage_files
   #     - STORAGE_DISK_SPACE=${STORAGE_DISK_SPACE:-10000000}
   #   container_name: storage
@@ -168,8 +169,8 @@ services:
     networks:
        - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/recording-db
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/recording-db?authSource=admin
       - GATEWAY_URI=ws://webserver
       - RECORDING_PATH=/recording_files
       - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
@@ -196,8 +197,8 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/event-db
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/event-db?authSource=admin
       - MACHINE=${MACHINE}
     container_name: event
     restart: unless-stopped
@@ -217,8 +218,8 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/auth-db
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/auth-db?authSource=admin
       - MACHINE=${MACHINE}
     container_name: auth
     restart: unless-stopped
@@ -238,8 +239,8 @@ services:
     networks:
       - hypernode-net
     environment:
-      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/snapshot-db
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/snapshot-db?authSource=admin
       - GATEWAY_URI=ws://webserver
       - SNAPSHOT_PATH=/snapshot_files
       - SNAPSHOT_DISK_SPACE=${SNAPSHOT_DISK_SPACE:-10000000}
@@ -271,8 +272,9 @@ services:
       - "5500:5500"
     environment:
       - PORT=5500
-      - LOCAL_DB_CONNECTION=mongodb://host.docker.internal:${DB_PORT:-27017}/exports
       - REACT_APP_EXPORTS_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
+      - LOCAL_DB_CONNECTION=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/exports?authSource=admin
+
     volumes:
       - arteco_exports:/home/node/arteco-export-service/exports
     extra_hosts:
