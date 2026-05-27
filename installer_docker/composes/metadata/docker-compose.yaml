@@ -7,7 +7,7 @@ services:
     environment:
       - RABBITMQ_URI=${RMQ}
       - GATEWAY_URI=${GRI}
-      - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT}/metadata_${PROCESS_NAME}
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT}/metadata_${PROCESS_NAME}?authSource=admin
       - SRV_INST_NAME=metadata_${PROCESS_NAME}
       - MACHINE=${MACHINE}
     container_name: metadata_${PROCESS_NAME}
