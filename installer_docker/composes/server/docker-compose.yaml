@@ -30,7 +30,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT:-27017}/watchdog-db?authSource=admin
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/watchdog-db?authSource=admin
       - GATEWAY_URI=ws://webserver
       - MACHINE=${MACHINE}
     container_name: watchdog
