@@ -30,7 +30,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/watchdog-db
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT:-27017}/watchdog-db?authSource=admin
       - GATEWAY_URI=ws://webserver
       - MACHINE=${MACHINE}
     container_name: watchdog
@@ -174,7 +174,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/auth-db
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/auth-db?authSource=admin
       - MACHINE=${MACHINE}
     container_name: auth
     restart: unless-stopped
@@ -195,7 +195,7 @@ services:
        - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/recording-db
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/recording-db?authSource=admin
       - GATEWAY_URI=ws://webserver
       - RECORDING_PATH=/recording_files
       - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
@@ -221,7 +221,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/snapshot-db
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/snapshot-db?authSource=admin
       - GATEWAY_URI=ws://webserver
       - SNAPSHOT_PATH=/snapshot_files
       - SNAPSHOT_DISK_SPACE=${SNAPSHOT_DISK_SPACE:-10000000}
@@ -247,7 +247,7 @@ services:
       - hypernode-net
     environment:
       - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://host.docker.internal:${DB_PORT:-27017}/event-db
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/event-db?authSource=admin
       - MACHINE=${MACHINE}
     container_name: event
     restart: unless-stopped
@@ -324,7 +324,7 @@ services:
       environment:
         - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@127.0.0.1:5672
         - GATEWAY_URI=ws://127.0.0.1:8181
-        - DATABASE_URI=mongodb://127.0.0.1:${DB_PORT:-27017}/metadata-db
+        - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT:-27017}/metadata-db?authSource=admin
         - MACHINE=${MACHINE}
       container_name: metadata
       restart: unless-stopped
