@@ -218,7 +218,7 @@ services:
     networks:
       - hypernode-net
     ports:
-      - "8181:80"
+      - "8181:8080"
     restart: unless-stopped
     depends_on:
       messagebroker:
@@ -228,7 +228,7 @@ services:
       configurator:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/health > /dev/null"]
       interval: 10s
       timeout: 5s
       retries: 30
