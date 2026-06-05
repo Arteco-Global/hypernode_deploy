@@ -370,6 +370,8 @@ jobs:
               --build-arg BUILD_LABEL="${BUILD_LABEL}" \
               --cache-from=type=registry,ref="${CACHE_REF}" \
               --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
+              --provenance=mode=max \
+              --sbom=true \
               -f "${DOCKERFILE}" \
               -t "${TARGET_TAG}" \
               --push "${BUILD_CONTEXT}"
@@ -382,6 +384,8 @@ jobs:
                 --build-arg BUILD_LABEL="${BUILD_LABEL}" \
                 --cache-from=type=registry,ref="${CACHE_REF}" \
                 --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
+                --provenance=mode=max \
+                --sbom=true \
                 -f "${DOCKERFILE}" \
                 -t "${AVX_TARGET_TAG}" \
                 --push "${BUILD_CONTEXT}"
@@ -397,6 +401,8 @@ jobs:
             --label org.opencontainers.image.version="${IMAGE_VERSION}" \
             --cache-from=type=registry,ref="${CACHE_REF}" \
             --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
+            --provenance=mode=max \
+            --sbom=true \
             -f "${DOCKERFILE}" \
             -t "${TARGET_TAG}" \
             --push "${BUILD_CONTEXT}"
