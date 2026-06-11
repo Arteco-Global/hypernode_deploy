@@ -1,5 +1,4 @@
 services:
-
   messagebroker:
     image: artecoglobalcompany/usee_message_broker:${DOCKER_TAG:-latest}
     networks:
@@ -25,6 +24,28 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  watchdog:
+    image: artecoglobalcompany/usee_watchdog:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/watchdog-db?authSource=admin
+      - GATEWAY_URI=ws://webserver
+      - MACHINE=${MACHINE}
+    container_name: watchdog
+    restart: unless-stopped
+    depends_on:
+      messagebroker:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   gateway:
     image: artecoglobalcompany/usee_suite_manager:${DOCKER_TAG:-latest}
     networks:
@@ -41,8 +62,8 @@ services:
     container_name: gateway
     restart: unless-stopped
     depends_on:
-      messagebroker:
-        condition: service_healthy
+      watchdog:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -65,6 +86,69 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  configurator:
+    image: artecoglobalcompany/usee_configurator:${DOCKER_TAG:-latest}
+    container_name: configurator
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      gateway:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  export:
+    image: artecoglobalcompany/arteco-export-service:${DOCKER_TAG:-latest}
+    container_name: export
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      configurator:
+        condition: service_started
+    ports:
+      - "5500:5500"
+    environment:
+      - PORT=5500
+      - LOCAL_DB_CONNECTION=mongodb://host.docker.internal:${DB_PORT:-27017}/exports
+      - REACT_APP_EXPORTS_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
+    volumes:
+      - arteco_exports:/home/node/arteco-export-service/exports
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  webserver:
+    image: artecoglobalcompany/usee_web_server:${DOCKER_TAG:-latest}
+    container_name: webserver
+    networks:
+      - hypernode-net
+    restart: unless-stopped
+    depends_on:
+      export:
+        condition: service_started
+    ports:
+      - "8181:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   camera:
     image: artecoglobalcompany/usee_live_streamer:${DOCKER_TAG:-latest}
     environment:
@@ -76,9 +160,7 @@ services:
     restart: unless-stopped
     network_mode: "host"
     depends_on:
-      messagebroker:
-        condition: service_healthy
-      gateway:
+      webserver:
         condition: service_healthy
     logging:
       driver: "json-file"
@@ -86,26 +168,99 @@ services:
         max-size: "10m"
         max-file: "5"
 
-  metadata:
-      image: artecoglobalcompany/usee_metadata_manager:${DOCKER_TAG:-latest}
-      environment:
-        - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@127.0.0.1:5672
-        - GATEWAY_URI=ws://127.0.0.1:8181
-        - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT:-27017}/metadata-db?authSource=admin
-        - MACHINE=${MACHINE}
-      container_name: metadata
-      restart: unless-stopped
-      network_mode: "host"
-      depends_on:
-        messagebroker:
-          condition: service_healthy
-        gateway:
-          condition: service_healthy
-      logging:
-        driver: "json-file"
-        options:
-          max-size: "10m"
-          max-file: "5"
+  auth:
+    image: artecoglobalcompany/usee_id_verifier:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/auth-db?authSource=admin
+      - MACHINE=${MACHINE}
+    container_name: auth
+    restart: unless-stopped
+    depends_on:
+      webserver:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  recording:
+    image: artecoglobalcompany/usee_media_recorder:${DOCKER_TAG:-latest}
+    networks:
+       - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/recording-db?authSource=admin
+      - GATEWAY_URI=ws://webserver
+      - RECORDING_PATH=/recording_files
+      - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
+      - MACHINE=${MACHINE}
+    container_name: recording
+    restart: unless-stopped
+    depends_on:
+      webserver:
+        condition: service_healthy
+    volumes:
+      - ${RECORDING_PATH}:/recording_files
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  snapshot:
+    image: artecoglobalcompany/usee_snapshot_recorder:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/snapshot-db?authSource=admin
+      - GATEWAY_URI=ws://webserver
+      - SNAPSHOT_PATH=/snapshot_files
+      - SNAPSHOT_DISK_SPACE=${SNAPSHOT_DISK_SPACE:-10000000}
+      - MACHINE=${MACHINE}
+    container_name: snapshot
+    restart: unless-stopped
+    depends_on:
+      webserver:
+        condition: service_healthy
+    volumes:
+      - ${SNAPSHOT_PATH}:/snapshot_files
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  event:
+    image: artecoglobalcompany/usee_event_manager:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/event-db?authSource=admin
+      - MACHINE=${MACHINE}
+    container_name: event
+    restart: unless-stopped
+    depends_on:
+      webserver:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   coretrust:
     image: artecoglobalcompany/usee_coretrust:${DOCKER_TAG:-latest}
@@ -127,7 +282,7 @@ services:
     container_name: coretrust
     restart: unless-stopped
     depends_on:
-      messagebroker:
+      webserver:
         condition: service_healthy
     volumes:
       - hypernode_security_shared_files:/ssl
@@ -164,170 +319,24 @@ services:
   #       max-size: "10m"
   #       max-file: "5"
 
-  recording:
-    image: artecoglobalcompany/usee_media_recorder:${DOCKER_TAG:-latest}
-    networks:
-       - hypernode-net
-    environment:
-      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/recording-db?authSource=admin
-      - GATEWAY_URI=ws://webserver
-      - RECORDING_PATH=/recording_files
-      - RECORDING_DISK_SPACE=${RECORDING_DISK_SPACE:-10000000}
-      - MACHINE=${MACHINE}
-    container_name: recording
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-      webserver:
-        condition: service_healthy
-    volumes:
-      - ${RECORDING_PATH}:/recording_files
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-
-  event:
-    image: artecoglobalcompany/usee_event_manager:${DOCKER_TAG:-latest}
-    networks:
-      - hypernode-net
-    environment:
-      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/event-db?authSource=admin
-      - MACHINE=${MACHINE}
-    container_name: event
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-
-  auth:
-    image: artecoglobalcompany/usee_id_verifier:${DOCKER_TAG:-latest}
-    networks:
-      - hypernode-net
-    environment:
-      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/auth-db?authSource=admin
-      - MACHINE=${MACHINE}
-    container_name: auth
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-
-  snapshot:
-    image: artecoglobalcompany/usee_snapshot_recorder:${DOCKER_TAG:-latest}
-    networks:
-      - hypernode-net
-    environment:
-      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
-      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/snapshot-db?authSource=admin
-      - GATEWAY_URI=ws://webserver
-      - SNAPSHOT_PATH=/snapshot_files
-      - SNAPSHOT_DISK_SPACE=${SNAPSHOT_DISK_SPACE:-10000000}
-      - MACHINE=${MACHINE}
-    container_name: snapshot
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-      webserver:
-        condition: service_healthy
-    volumes:
-      - ${SNAPSHOT_PATH}:/snapshot_files
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-
-  export:
-    image: artecoglobalcompany/arteco-export-service:${DOCKER_TAG:-latest}
-    container_name: export
-    networks:
-      - hypernode-net
-    restart: unless-stopped
-    ports:
-      - "5500:5500"
-    environment:
-      - PORT=5500
-      - REACT_APP_EXPORTS_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
-      - LOCAL_DB_CONNECTION=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/exports?authSource=admin
-
-    volumes:
-      - arteco_exports:/home/node/arteco-export-service/exports
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-
-  webserver:
-    image: artecoglobalcompany/usee_web_server:${DOCKER_TAG:-latest}
-    container_name: webserver
-    networks:
-      - hypernode-net
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-      gateway:
-        condition: service_healthy
-      configurator:
-        condition: service_started
-      export:
-        condition: service_started
-    ports:
-      - "8181:80"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-
-  configurator:
-    image: artecoglobalcompany/usee_configurator:${DOCKER_TAG:-latest}
-    container_name: configurator
-    networks:
-      - hypernode-net
-    restart: unless-stopped
-    depends_on:
-      messagebroker:
-        condition: service_healthy
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
+  metadata:
+      image: artecoglobalcompany/usee_metadata_manager:${DOCKER_TAG:-latest}
+      environment:
+        - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@127.0.0.1:5672
+        - GATEWAY_URI=ws://127.0.0.1:8181
+        - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@127.0.0.1:${DB_PORT:-27017}/metadata-db?authSource=admin
+        - MACHINE=${MACHINE}
+      container_name: metadata
+      restart: unless-stopped
+      network_mode: "host"
+      depends_on:
+        webserver:
+          condition: service_healthy
+      logging:
+        driver: "json-file"
+        options:
+          max-size: "10m"
+          max-file: "5"
 
   portbroker:
     image: artecoglobalcompany/usee_port_broker:${DOCKER_TAG:-latest}
@@ -336,10 +345,11 @@ services:
       - "${SSL_PORT:-443}:443"
     networks:
       - hypernode-net
-    restart: unless-stopped
+    restart: always
     depends_on:
       messagebroker:
         condition: service_healthy
+        restart: true
       webserver:
         condition: service_healthy
     volumes:

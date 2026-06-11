@@ -318,6 +318,7 @@ update_server_suite() {
         webserver
         configurator
         portbroker
+        watchdog
     )
     local media_services=()
     local skipped_services=()
