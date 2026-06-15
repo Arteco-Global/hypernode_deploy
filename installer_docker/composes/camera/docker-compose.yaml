@@ -13,8 +13,6 @@ services:
     container_name: camera_${PROCESS_NAME}
     restart: unless-stopped    
     network_mode: "host"
-    cap_add:
-      - NET_RAW
     logging:
       driver: "json-file"
       options:
