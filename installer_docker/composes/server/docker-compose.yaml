@@ -114,7 +114,7 @@ services:
       - "5500:5500"
     environment:
       - PORT=5500
-      - LOCAL_DB_CONNECTION=mongodb://host.docker.internal:${DB_PORT:-27017}/exports
+      - LOCAL_DB_CONNECTION=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/exports?authSource=admin
       - REACT_APP_EXPORTS_TIMEZONE=${SERVER_TIMEZONE:-Europe/Rome}
     volumes:
       - arteco_exports:/home/node/arteco-export-service/exports
