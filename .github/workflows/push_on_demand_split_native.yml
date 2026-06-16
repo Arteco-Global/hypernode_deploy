@@ -154,7 +154,7 @@ jobs:
 
     steps:
       - name: Checkout deploy repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           path: deploy
 
@@ -291,7 +291,7 @@ jobs:
           esac
 
       - name: Checkout backend
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           repository: Arteco-Global/hypernode-server
           ref: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
@@ -299,7 +299,7 @@ jobs:
           token: ${{ secrets.GIT_PAT }}
 
       - name: Checkout frontend
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           repository: Arteco-Global/hypernode_server_gui
           ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
@@ -307,7 +307,7 @@ jobs:
           token: ${{ secrets.GIT_PAT }}
 
       - name: Checkout export service
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           repository: Arteco-Global/arteco-export-service
           ref: ${{ github.event.inputs.BRANCH_EXPORT_REF }}
@@ -353,7 +353,7 @@ jobs:
             | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and Push ${{ matrix.service }} (${{ matrix.platform }})
         shell: bash
@@ -368,6 +368,8 @@ jobs:
               --platform="${PLATFORM}" \
               --build-arg MONGO_VERSION=latest \
               --build-arg BUILD_LABEL="${BUILD_LABEL}" \
+              --provenance=mode=max \
+              --sbom=true \
               --cache-from=type=registry,ref="${CACHE_REF}" \
               --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
               -f "${DOCKERFILE}" \
@@ -380,6 +382,8 @@ jobs:
                 --platform="${PLATFORM}" \
                 --build-arg MONGO_VERSION=4.4.18 \
                 --build-arg BUILD_LABEL="${BUILD_LABEL}" \
+                --provenance=mode=max \
+                --sbom=true \
                 --cache-from=type=registry,ref="${CACHE_REF}" \
                 --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
                 -f "${DOCKERFILE}" \
@@ -394,6 +398,8 @@ jobs:
             --platform="${PLATFORM}" \
             --build-arg IMAGE_VERSION="${IMAGE_VERSION}" \
             --build-arg BUILD_LABEL="${BUILD_LABEL}" \
+            --provenance=mode=max \
+            --sbom=true \
             --label org.opencontainers.image.version="${IMAGE_VERSION}" \
             --cache-from=type=registry,ref="${CACHE_REF}" \
             --cache-to=type=registry,ref="${CACHE_REF}",mode=max \
@@ -519,7 +525,7 @@ jobs:
             | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v4
 
       - name: Publish manifest ${{ matrix.service }}
         shell: bash
