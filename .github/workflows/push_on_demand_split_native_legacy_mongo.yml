@@ -16,9 +16,9 @@ on:
         required: true
         default: 'main'
       TAG_REF:
-        description: 'Tag Docker (es. latest, v1.2.3)'
+        description: 'Tag Docker'
         required: true
-        default: 'ATTENTION: usare "latest" solo per prod!'
+        default: 'ATTENTION: usare "legacy" solo per prod!'
       SERVICES:
         description: 'Seleziona il servizio da buildare (o "all" per tutti)'
         required: true
