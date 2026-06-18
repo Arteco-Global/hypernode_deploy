@@ -19,7 +19,7 @@ jobs:
     env:
       DOCKERHUB_NAMESPACE: artecoglobalcompany
       DEFAULT_REPOSITORIES: usee_live_streamer,usee_id_verifier,usee_event_manager,usee_metadata_manager,usee_suite_manager,usee_media_recorder,usee_snapshot_recorder,usee_web_server,usee_port_broker,usee_message_broker,usee_database,usee_coretrust,usee_configurator,arteco-export-service
-      PROTECTED_TAGS: latest,staging,production,pre-release,pre-release-linux-amd64,pre-release-linux-arm64,milesight_nvr-linux-amd64,milesight_nvr-linux-arm64
+      PROTECTED_TAGS: latest,staging,production,legacy,pre-release,pre-release-linux-amd64,pre-release-linux-arm64,milesight_nvr-linux-amd64,milesight_nvr-linux-arm64
       INPUT_TAG: ${{ github.event.inputs.tag }}
       INPUT_REPOSITORIES: ${{ github.event.inputs.repositories }}
       DOCKER_TAG_CLEANUP_USERNAME: ${{ secrets.DOCKER_TAG_CLEANUP_USERNAME }}
