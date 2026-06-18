@@ -565,7 +565,7 @@ jobs:
     env:
       GOOGLE_SHEET_ID: ${{ vars.USS_DEPLOYMENTS_SHEET_ID }}
       GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-      SHEET_NAME: USS deployments
+      SHEET_NAME: USS Legacy
     steps:
       - name: Append workflow row to Google Sheet
         shell: bash
