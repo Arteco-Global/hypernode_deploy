@@ -1,4 +1,4 @@
-name: Push USee Images
+name: Push USee Images Legacy Mongo
 
 on:
   workflow_dispatch:
@@ -366,7 +366,7 @@ jobs:
           if [ "${IS_DATABASE:-false}" = "true" ]; then
             docker buildx build \
               --platform="${PLATFORM}" \
-              --build-arg MONGO_VERSION=latest \
+              --build-arg MONGO_VERSION=4.4.18 \
               --build-arg BUILD_LABEL="${BUILD_LABEL}" \
               --provenance=mode=max \
               --sbom=true \
