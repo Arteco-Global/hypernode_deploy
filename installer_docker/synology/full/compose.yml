@@ -2,7 +2,7 @@ name: hypernode_stack
 
 services:
   database:
-    image: artecoglobalcompany/usee_database:latest
+    image: artecoglobalcompany/usee_database:legacy
     container_name: database
     networks:
       - hypernode-net
@@ -22,7 +22,7 @@ services:
         max-file: "5"
 
   messagebroker:
-    image: artecoglobalcompany/usee_message_broker:latest
+    image: artecoglobalcompany/usee_message_broker:legacy
     container_name: messagebroker
     networks:
       - hypernode-net
@@ -47,7 +47,7 @@ services:
         max-file: "5"
 
   watchdog:
-    image: artecoglobalcompany/usee_watchdog:latest
+    image: artecoglobalcompany/usee_watchdog:legacy
     container_name: watchdog
     networks:
       - hypernode-net
@@ -69,7 +69,7 @@ services:
         max-file: "5"
 
   gateway:
-    image: artecoglobalcompany/usee_suite_manager:latest
+    image: artecoglobalcompany/usee_suite_manager:legacy
     container_name: gateway
     networks:
       - hypernode-net
@@ -109,7 +109,7 @@ services:
         max-file: "5"
 
   configurator:
-    image: artecoglobalcompany/usee_configurator:latest
+    image: artecoglobalcompany/usee_configurator:legacy
     container_name: configurator
     networks:
       - hypernode-net
@@ -124,7 +124,7 @@ services:
         max-file: "5"
 
   export:
-    image: artecoglobalcompany/arteco-export-service:latest
+    image: artecoglobalcompany/arteco-export-service:legacy
     container_name: export
     networks:
       - hypernode-net
@@ -149,7 +149,7 @@ services:
         max-file: "5"
 
   webserver:
-    image: artecoglobalcompany/usee_web_server:latest
+    image: artecoglobalcompany/usee_web_server:legacy
     container_name: webserver
     networks:
       - hypernode-net
@@ -172,7 +172,7 @@ services:
         max-file: "5"
 
   camera:
-    image: artecoglobalcompany/usee_live_streamer:latest
+    image: artecoglobalcompany/usee_live_streamer:legacy
     container_name: camera
     network_mode: "host"
     restart: unless-stopped
@@ -191,7 +191,7 @@ services:
         max-file: "5"
 
   metadata:
-    image: artecoglobalcompany/usee_metadata_manager:latest
+    image: artecoglobalcompany/usee_metadata_manager:legacy
     container_name: metadata
     network_mode: "host"
     restart: unless-stopped
@@ -210,7 +210,7 @@ services:
         max-file: "5"
 
   auth:
-    image: artecoglobalcompany/usee_id_verifier:latest
+    image: artecoglobalcompany/usee_id_verifier:legacy
     container_name: auth
     networks:
       - hypernode-net
@@ -231,7 +231,7 @@ services:
         max-file: "5"
 
   recording:
-    image: artecoglobalcompany/usee_media_recorder:latest
+    image: artecoglobalcompany/usee_media_recorder:legacy
     container_name: recording
     networks:
       - hypernode-net
@@ -260,7 +260,7 @@ services:
         max-file: "5"
 
   event:
-    image: artecoglobalcompany/usee_event_manager:latest
+    image: artecoglobalcompany/usee_event_manager:legacy
     container_name: event
     networks:
       - hypernode-net
@@ -281,7 +281,7 @@ services:
         max-file: "5"
 
   snapshot:
-    image: artecoglobalcompany/usee_snapshot_recorder:latest
+    image: artecoglobalcompany/usee_snapshot_recorder:legacy
     container_name: snapshot
     networks:
       - hypernode-net
@@ -308,7 +308,7 @@ services:
         max-file: "5"
 
   coretrust:
-    image: artecoglobalcompany/usee_coretrust:latest
+    image: artecoglobalcompany/usee_coretrust:legacy
     container_name: coretrust
     networks:
       - hypernode-net
@@ -348,7 +348,7 @@ services:
         max-file: "5"
 
   portbroker:
-    image: artecoglobalcompany/usee_port_broker:latest
+    image: artecoglobalcompany/usee_port_broker:legacy
     container_name: portbroker
     networks:
       - hypernode-net
