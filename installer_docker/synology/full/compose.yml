@@ -243,6 +243,9 @@ services:
       - RECORDING_DISK_SPACE=3000000000
       - MACHINE=synology
     volumes:
+
+      # ADD MACHINE DATA HERE !! Mapping right path
+
       - /volume1/arteco/recordings:/recording_files
     restart: unless-stopped
     depends_on:
@@ -290,6 +293,8 @@ services:
       - SNAPSHOT_DISK_SPACE=3000000000
       - MACHINE=synology
     volumes:
+          # ADD MACHINE DATA HERE !! Mapping right path
+
       - /volume1/arteco/snapshots:/snapshot_files
     restart: unless-stopped
     depends_on:
@@ -312,15 +317,22 @@ services:
       - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
       - DATABASE_URI=mongodb://hypernode_synology:HypernodeSynology2026!@host.docker.internal:27017/coretrust-db?authSource=admin
       - CERT_PATH=/ssl
+
+      # ADD MACHINE DATA HERE !!
+
       - SERIAL_NUMBER=V02260031
       - ARTECO_GLOBAL_EMAIL=
       - ARTECO_GLOBAL_PASSWORD=
       - SERVER_IP_ADDRESS=192.168.10.89
-      - CERTIFICATE_PROVIDER_URL=
-      - DNS_PROVIDER_URL=
-      - LICENSE_PROVIDER_URL=https://www.arteco-global.com/en/wp-json/sso-provider/login
       - MACHINE=synology
+
+      # END MACHINE DATA !!
+
       - CORETRUST_CONFIG_PATH=/data/coretrust/config.json
+      - CERTIFICATE_PROVIDER_URL=https://xs9punpjw2.execute-api.eu-central-1.amazonaws.com/Cert/renew_hypernode
+      - DNS_PROVIDER_URL=https://zqhck0x3yi.execute-api.eu-central-1.amazonaws.com/dyndns/update_hypernode
+      - LICENSE_PROVIDER_URL=https://www.arteco-global.com/en/wp-json/sso-provider/login
+
     volumes:
       - hypernode_security_shared_files:/ssl
       - coretrust_config:/data/coretrust
