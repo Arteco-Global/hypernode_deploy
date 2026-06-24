@@ -240,13 +240,13 @@ services:
       - DATABASE_URI=mongodb://hypernode_synology:HypernodeSynology2026!@host.docker.internal:27017/recording-db?authSource=admin
       - GATEWAY_URI=ws://webserver
       - RECORDING_PATH=/recording_files
-      - RECORDING_DISK_SPACE=3000000000
+      - RECORDING_DISK_SPACE=500000000
       - MACHINE=synology
     volumes:
 
       # ADD MACHINE DATA HERE !! Mapping right path
 
-      - /volume1/arteco/recordings:/recording_files
+      - /share/recordings:/recording_files
     restart: unless-stopped
     depends_on:
       webserver:
@@ -290,12 +290,11 @@ services:
       - DATABASE_URI=mongodb://hypernode_synology:HypernodeSynology2026!@host.docker.internal:27017/snapshot-db?authSource=admin
       - GATEWAY_URI=ws://webserver
       - SNAPSHOT_PATH=/snapshot_files
-      - SNAPSHOT_DISK_SPACE=3000000000
+      - SNAPSHOT_DISK_SPACE=500000000
       - MACHINE=synology
     volumes:
           # ADD MACHINE DATA HERE !! Mapping right path
-
-      - /volume1/arteco/snapshots:/snapshot_files
+      - /share/snapshots:/snapshot_files
     restart: unless-stopped
     depends_on:
       webserver:
@@ -320,10 +319,10 @@ services:
 
       # ADD MACHINE DATA HERE !!
 
-      - SERIAL_NUMBER=V02260031
-      - ARTECO_GLOBAL_EMAIL=
-      - ARTECO_GLOBAL_PASSWORD=
-      - SERVER_IP_ADDRESS=192.168.10.89
+      - SERIAL_NUMBER=V06260126
+      - ARTECO_GLOBAL_EMAIL=g.corelli@zerotecnica.it
+      - ARTECO_GLOBAL_PASSWORD=polipopo.2011
+      - SERVER_IP_ADDRESS=172.16.195.254
       - MACHINE=synology
 
       # END MACHINE DATA !!
