@@ -1,0 +1,41 @@
+# Intervallo, in secondi, tra un ciclo di monitoraggio e il successivo.
+poll_interval_seconds: 15
+
+discovery:
+  # Lista di prefissi immagine Docker da monitorare.
+  # Tutti i container la cui immagine inizia con uno di questi valori verranno inclusi.
+  image_prefixes:
+    # Esempio: monitora tutte le immagini pubblicate sotto il namespace Docker Hub artecoglobalcompany.
+    - artecoglobalcompany/
+  # Se false, monitora solo i container attualmente in esecuzione.
+  # Se true, include anche container fermi o terminati nella fase di discovery.
+  include_non_running: false
+
+memory:
+  # Soglia percentuale globale di utilizzo RAM del container oltre la quale il servizio
+  # viene considerato in anomalia e candidato al restart.
+  max_percent: 85
+  # Numero di cicli consecutivi in cui la RAM deve restare sopra soglia
+  # prima che scatti la richiesta di restart.
+  breach_cycles: 1
+
+restart:
+  # Tempo minimo, in secondi, da attendere tra due restart dello stesso container.
+  cooldown_seconds: 300
+  # Numero massimo di restart consentiti per lo stesso container nella finestra temporale sotto.
+  max_restarts: 3
+  # Durata, in secondi, della finestra usata per limitare il numero massimo di restart.
+  window_seconds: 3600
+  # Numero di cicli consecutivi in cui il recupero delle metriche Docker puo' fallire
+  # per un singolo container prima di tentare automaticamente il restart.
+  metrics_failure_cycles: 3
+
+service_overrides:
+  # Chiave override: "recording" matcha sia il container "recording"
+  # sia eventuali container aggiuntivi come "recording_additional-*".
+  recording:
+    memory:
+      # Soglia RAM specifica per questo servizio, usata al posto del default globale.
+      max_percent: 50
+      # Numero di cicli consecutivi sopra soglia richiesti per questo servizio specifico.
+      breach_cycles: 1
