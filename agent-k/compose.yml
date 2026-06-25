@@ -1,0 +1,9 @@
+services:
+  agent-k:
+    image: ${AGENT_K_IMAGE:-artecoglobalcompany/agent-k:latest}
+    container_name: agent-k
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config.yml:/app/config.yml:ro
+    command: ["--config", "/app/config.yml"]
