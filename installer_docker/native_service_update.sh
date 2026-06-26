@@ -2,6 +2,7 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE=""
 SERVICE_OVERRIDE=""
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
@@ -15,6 +16,7 @@ MACHINE_JSON_NAME="machine.json"
 MACHINE_FILE_LOCAL="${PWD}/${MACHINE_JSON_NAME}"
 MACHINE_FILE_SYSTEM="${SYSTEM_ENV_DIR}/${MACHINE_JSON_NAME}"
 MACHINE_FILE=""
+AGENT_K_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/agent-k"
 
 usage() {
     cat <<'EOF'
@@ -426,6 +428,33 @@ pull_images_from_compose() {
     done
 }
 
+deploy_agent_k() {
+    local agent_k_base_url="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/agent-k"
+    local agent_k_compose_url="${agent_k_base_url}/compose.yml"
+    local agent_k_config_example_url="${agent_k_base_url}/config.example.yml"
+    local compose_file="${AGENT_K_DIR}/compose.yml"
+    local config_file="${AGENT_K_DIR}/config.yml"
+    local data_dir="${AGENT_K_DIR}/data"
+
+    echo "▶️  Update agent-k"
+
+    mkdir -p "$AGENT_K_DIR" "$data_dir"
+
+    curl -fsSL "$agent_k_compose_url" -o "$compose_file"
+
+    if [[ ! -f "$config_file" ]]; then
+        curl -fsSL "$agent_k_config_example_url" -o "$config_file"
+        echo "ℹ️  Created agent-k config from sample: $config_file"
+    else
+        echo "ℹ️  Keeping existing agent-k config: $config_file"
+    fi
+
+    $COMPOSE_CMD --project-directory "$AGENT_K_DIR" -f "$compose_file" pull
+    $COMPOSE_CMD --project-directory "$AGENT_K_DIR" -f "$compose_file" up -d --force-recreate
+
+    echo "✅ agent-k updated in $AGENT_K_DIR"
+}
+
 get_running_container_names() {
     $DOCKER_CMD ps --format '{{.Names}}'
 }
@@ -599,6 +628,8 @@ update_with_env_file() {
 
         echo "▶️  Recreate $service_name"
         $COMPOSE_CMD -f "$tmp_service_compose" up -d --force-recreate --remove-orphans
+
+        deploy_agent_k
 
         echo "✅ Update completed for $service_name."
     )

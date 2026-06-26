@@ -199,6 +199,35 @@ validate_directory_mount_path() {
     return 0
 }
 
+deploy_agent_k() {
+    local agent_k_dir
+    agent_k_dir="$(cd "$(dirname "$ENV_FILE")" && pwd)/agent-k"
+    local agent_k_base_url="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/agent-k"
+    local agent_k_compose_url="${agent_k_base_url}/compose.yml"
+    local agent_k_config_example_url="${agent_k_base_url}/config.example.yml"
+    local compose_file="${agent_k_dir}/compose.yml"
+    local config_file="${agent_k_dir}/config.yml"
+    local data_dir="${agent_k_dir}/data"
+
+    echo "▶️  Update agent-k"
+
+    mkdir -p "$agent_k_dir" "$data_dir"
+
+    curl -fsSL "$agent_k_compose_url" -o "$compose_file"
+
+    if [[ ! -f "$config_file" ]]; then
+        curl -fsSL "$agent_k_config_example_url" -o "$config_file"
+        echo "ℹ️  Created agent-k config from sample: $config_file"
+    else
+        echo "ℹ️  Keeping existing agent-k config: $config_file"
+    fi
+
+    $COMPOSE_CMD --project-directory "$agent_k_dir" -f "$compose_file" pull
+    $COMPOSE_CMD --project-directory "$agent_k_dir" -f "$compose_file" up -d --force-recreate
+
+    echo "✅ agent-k updated in $agent_k_dir"
+}
+
 wait_for_tcp_port() {
     local label="$1"
     local host="$2"
@@ -636,5 +665,7 @@ else
     esac
     $COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate --remove-orphans
 fi
+
+deploy_agent_k
 
 echo "✅ Update completed for $SERVICE_NAME."

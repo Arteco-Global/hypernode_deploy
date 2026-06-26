@@ -229,6 +229,45 @@ log_install_env() {
     fi
 }
 
+deployAgentK() {
+    local agent_k_dir="${PWD}/agent-k"
+    local agent_k_base_url="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/agent-k"
+    local agent_k_compose_url="${agent_k_base_url}/compose.yml"
+    local agent_k_config_example_url="${agent_k_base_url}/config.example.yml"
+    local compose_file="${agent_k_dir}/compose.yml"
+    local config_file="${agent_k_dir}/config.yml"
+    local data_dir="${agent_k_dir}/data"
+
+    printf "\nUpdating agent-k"
+
+    mkdir -p "$agent_k_dir" "$data_dir" || return 1
+
+    if ! curl -fsSL "$agent_k_compose_url" -o "$compose_file"; then
+        printf "\n❌ Failed to download agent-k compose from %s\n" "$agent_k_compose_url"
+        return 1
+    fi
+
+    if [[ ! -f "$config_file" ]]; then
+        if ! curl -fsSL "$agent_k_config_example_url" -o "$config_file"; then
+            printf "\n❌ Failed to download agent-k config sample from %s\n" "$agent_k_config_example_url"
+            return 1
+        fi
+        printf "\nCreated agent-k config from sample at %s\n" "$config_file"
+    else
+        printf "\nKeeping existing agent-k config at %s\n" "$config_file"
+    fi
+
+    execute_command "$COMPOSE_CMD --project-directory \"$agent_k_dir\" -f \"$compose_file\" pull" \
+        "Pulling latest images for agent-k" || return 1
+
+    execute_command "$COMPOSE_CMD --project-directory \"$agent_k_dir\" -f \"$compose_file\" up -d --force-recreate" \
+        "Installing/updating agent-k" || return 1
+
+    printf "\n✅ agent-k updated in %s\n" "$agent_k_dir"
+
+    return 0
+}
+
 log_env_before_compose() {
     local command=$1
     if [[ "$command" == *"docker compose"* || "$command" == *"docker-compose"* ]]; then
@@ -602,6 +641,8 @@ additionalServiceInstall() {
 
     execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans --pull always" \
         "Installing/updating service: $SERVICE_NAME" || return 1
+
+    deployAgentK || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
 
