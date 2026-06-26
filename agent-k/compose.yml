@@ -6,4 +6,5 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config.yml:/app/config.yml:ro
+      - ./data:/app/data
     command: ["--config", "/app/config.yml"]

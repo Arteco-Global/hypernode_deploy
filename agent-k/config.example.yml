@@ -1,6 +1,15 @@
 # Intervallo, in secondi, tra un ciclo di monitoraggio e il successivo.
 poll_interval_seconds: 15
 
+storage:
+  # Percorso del database SQLite usato per salvare sample storici e restart event.
+  # Se il percorso e' relativo, viene risolto rispetto alla cartella del file di config.
+  path: ./data/agent-k.sqlite3
+  # Numero di giorni per cui mantenere i sample storici prima di eliminarli automaticamente.
+  sample_retention_days: 30
+  # Numero di giorni per cui mantenere gli eventi di restart prima di eliminarli automaticamente.
+  restart_retention_days: 180
+
 discovery:
   # Lista di prefissi immagine Docker da monitorare.
   # Tutti i container la cui immagine inizia con uno di questi valori verranno inclusi.
@@ -39,3 +48,12 @@ service_overrides:
       max_percent: 50
       # Numero di cicli consecutivi sopra soglia richiesti per questo servizio specifico.
       breach_cycles: 1
+    restart:
+      # Cooldown specifico per questo servizio, usato al posto del default globale.
+      cooldown_seconds: 300
+      # Numero massimo di restart consentiti per questo servizio nella finestra temporale sotto.
+      max_restarts: 3
+      # Finestra temporale, in secondi, usata per limitare i restart di questo servizio.
+      window_seconds: 3600
+      # Numero di failure metriche consecutive che fa scattare il restart per questo servizio.
+      metrics_failure_cycles: 3
