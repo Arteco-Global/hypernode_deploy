@@ -23,7 +23,7 @@ discovery:
 memory:
   # Soglia percentuale globale di utilizzo RAM del container oltre la quale il servizio
   # viene considerato in anomalia e candidato al restart.
-  max_percent: 85
+  max_percent: 10
   # Numero di cicli consecutivi in cui la RAM deve restare sopra soglia
   # prima che scatti la richiesta di restart.
   breach_cycles: 1
@@ -45,7 +45,22 @@ service_overrides:
   recording:
     memory:
       # Soglia RAM specifica per questo servizio, usata al posto del default globale.
-      max_percent: 50
+      max_percent: 65
+      # Numero di cicli consecutivi sopra soglia richiesti per questo servizio specifico.
+      breach_cycles: 1
+    restart:
+      # Cooldown specifico per questo servizio, usato al posto del default globale.
+      cooldown_seconds: 300
+      # Numero massimo di restart consentiti per questo servizio nella finestra temporale sotto.
+      max_restarts: 3
+      # Finestra temporale, in secondi, usata per limitare i restart di questo servizio.
+      window_seconds: 3600
+      # Numero di failure metriche consecutive che fa scattare il restart per questo servizio.
+      metrics_failure_cycles: 3
+  snapshot:
+    memory:
+      # Soglia RAM specifica per questo servizio, usata al posto del default globale.
+      max_percent: 30
       # Numero di cicli consecutivi sopra soglia richiesti per questo servizio specifico.
       breach_cycles: 1
     restart:
