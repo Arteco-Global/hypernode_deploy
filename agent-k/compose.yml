@@ -5,6 +5,5 @@ services:
     restart: unless-stopped
     volumes:
       - ${AGENT_K_DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock
-      - ${AGENT_K_CONFIG_PATH:-./config.yml}:/app/config.yml:ro
-      - ${AGENT_K_DATA_PATH:-./data}:/app/data
-    command: ["--config", "/app/config.yml"]
+      - ${AGENT_K_HOME_PATH:-.}:/agent-k-home
+    command: ["--config", "/agent-k-home/config.yml"]
