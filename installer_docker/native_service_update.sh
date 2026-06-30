@@ -435,24 +435,189 @@ deploy_agent_k() {
     local compose_file="${AGENT_K_DIR}/compose.yml"
     local config_file="${AGENT_K_DIR}/config.yml"
     local data_dir="${AGENT_K_DIR}/data"
+    local sample_file="${AGENT_K_DIR}/config.example.yml.download"
+    local merged_file="${AGENT_K_DIR}/config.yml.merged"
+    local backup_file="${AGENT_K_DIR}/config.yml.bak"
 
     echo "▶️  Update agent-k"
 
     mkdir -p "$AGENT_K_DIR" "$data_dir"
 
     curl -fsSL "$agent_k_compose_url" -o "$compose_file"
+    curl -fsSL "$agent_k_config_example_url" -o "$sample_file"
 
     if [[ ! -f "$config_file" ]]; then
-        curl -fsSL "$agent_k_config_example_url" -o "$config_file"
+        mv "$sample_file" "$config_file"
         echo "ℹ️  Created agent-k config from sample: $config_file"
     else
-        echo "ℹ️  Keeping existing agent-k config: $config_file"
+        cp "$config_file" "$backup_file"
+        merge_agent_k_config "$config_file" "$sample_file" "$merged_file"
+        mv "$merged_file" "$config_file"
+        rm -f "$sample_file"
+        echo "ℹ️  Merged existing agent-k config with latest sample: $config_file"
+        echo "ℹ️  Backup saved to: $backup_file"
+        echo "ℹ️  Preserved existing custom values and added any new default parameters"
     fi
 
     $COMPOSE_CMD --project-directory "$AGENT_K_DIR" -f "$compose_file" pull
     $COMPOSE_CMD --project-directory "$AGENT_K_DIR" -f "$compose_file" up -d --force-recreate
 
     echo "✅ agent-k updated in $AGENT_K_DIR"
+}
+
+merge_agent_k_config() {
+    local current_config="$1"
+    local sample_config="$2"
+    local merged_config="$3"
+
+    python3 - "$current_config" "$sample_config" "$merged_config" <<'PY'
+from __future__ import annotations
+
+import ast
+import copy
+import sys
+from pathlib import Path
+
+
+def parse_scalar(value: str):
+    lowered = value.lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    if lowered in {"null", "~"}:
+        return None
+    try:
+        if any(ch in value for ch in ".eE"):
+            return float(value)
+        return int(value)
+    except ValueError:
+        pass
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        return ast.literal_eval(value)
+    return value
+
+
+def parse_simple_yaml(path: Path):
+    root = {}
+    stack = [(-1, root)]
+
+    lines = path.read_text().splitlines()
+    for index, raw_line in enumerate(lines):
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+
+        indent = len(raw_line) - len(raw_line.lstrip(" "))
+        line = raw_line.strip()
+
+        while stack and indent <= stack[-1][0]:
+            stack.pop()
+
+        parent = stack[-1][1]
+
+        if line.startswith("- "):
+            if not isinstance(parent, list):
+                raise ValueError(f"Unexpected list item in {path}: {raw_line}")
+            parent.append(parse_scalar(line[2:].strip()))
+            continue
+
+        if ":" not in line:
+            raise ValueError(f"Invalid line in {path}: {raw_line}")
+
+        key, remainder = line.split(":", 1)
+        key = key.strip()
+        remainder = remainder.strip()
+
+        if remainder:
+            parent[key] = parse_scalar(remainder)
+            continue
+
+        next_significant = None
+        for candidate in lines[index + 1:]:
+            stripped = candidate.strip()
+            if not stripped or candidate.lstrip().startswith("#"):
+                continue
+            next_significant = candidate
+            break
+
+        if next_significant is None:
+            parent[key] = {}
+            stack.append((indent, parent[key]))
+            continue
+
+        next_indent = len(next_significant) - len(next_significant.lstrip(" "))
+        if next_indent <= indent:
+            parent[key] = {}
+            stack.append((indent, parent[key]))
+            continue
+
+        if next_significant.strip().startswith("- "):
+            parent[key] = []
+        else:
+            parent[key] = {}
+
+        stack.append((indent, parent[key]))
+
+    return root
+
+
+def merge(defaults, existing):
+    if isinstance(defaults, dict) and isinstance(existing, dict):
+        merged = copy.deepcopy(defaults)
+        for key, existing_value in existing.items():
+            if key in merged:
+                merged[key] = merge(merged[key], existing_value)
+            else:
+                merged[key] = copy.deepcopy(existing_value)
+        return merged
+    return copy.deepcopy(existing)
+
+
+def format_scalar(value):
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        if value == "" or any(ch in value for ch in ":#[]{}-,&*!?|>@`\"'"):
+            return repr(value)
+        return value
+    raise TypeError(f"Unsupported scalar value: {value!r}")
+
+
+def dump_yaml(value, indent=0):
+    lines = []
+    prefix = " " * indent
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(item, dict):
+                lines.append(f"{prefix}{key}:")
+                lines.extend(dump_yaml(item, indent + 2))
+            elif isinstance(item, list):
+                lines.append(f"{prefix}{key}:")
+                for entry in item:
+                    if isinstance(entry, (dict, list)):
+                        raise TypeError("Nested complex lists are not supported")
+                    lines.append(f"{prefix}  - {format_scalar(entry)}")
+            else:
+                lines.append(f"{prefix}{key}: {format_scalar(item)}")
+        return lines
+    raise TypeError("Top-level YAML document must be a mapping")
+
+
+current_path = Path(sys.argv[1])
+sample_path = Path(sys.argv[2])
+merged_path = Path(sys.argv[3])
+
+existing = parse_simple_yaml(current_path)
+defaults = parse_simple_yaml(sample_path)
+merged = merge(defaults, existing)
+merged_path.write_text("\n".join(dump_yaml(merged)) + "\n")
+PY
 }
 
 get_running_container_names() {
