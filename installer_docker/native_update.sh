@@ -274,8 +274,8 @@ def parse_scalar(value: str):
 def parse_simple_yaml(path: Path):
     root = {}
     stack = [(-1, root)]
-
-    for raw_line in path.read_text().splitlines():
+    lines = path.read_text().splitlines()
+    for index, raw_line in enumerate(lines):
         if not raw_line.strip() or raw_line.lstrip().startswith("#"):
             continue
 
@@ -299,53 +299,8 @@ def parse_simple_yaml(path: Path):
         key, remainder = line.split(":", 1)
         key = key.strip()
         remainder = remainder.strip()
-
-        next_container = None
         if remainder:
-            value = parse_scalar(remainder)
-        else:
-            value = {}
-            next_container = value
-
-        if isinstance(parent, list):
-            item = {key: value}
-            parent.append(item)
-            if next_container is not None:
-                stack.append((indent, next_container))
-            continue
-
-        parent[key] = value
-
-        if next_container is not None:
-            stack.append((indent, next_container))
-            continue
-
-        if value == []:
-            stack.append((indent, value))
-
-        next_line_container = None
-
-    lines = path.read_text().splitlines()
-    stack = [(-1, root)]
-    for index, raw_line in enumerate(lines):
-        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
-            continue
-
-        indent = len(raw_line) - len(raw_line.lstrip(" "))
-        line = raw_line.strip()
-
-        while stack and indent <= stack[-1][0]:
-            stack.pop()
-
-        parent = stack[-1][1]
-
-        if line.startswith("- "):
-            continue
-
-        key, remainder = line.split(":", 1)
-        key = key.strip()
-        remainder = remainder.strip()
-        if remainder:
+            parent[key] = parse_scalar(remainder)
             continue
 
         next_significant = None
@@ -357,18 +312,22 @@ def parse_simple_yaml(path: Path):
             break
 
         if next_significant is None:
+            parent[key] = {}
+            stack.append((indent, parent[key]))
             continue
 
         next_indent = len(next_significant) - len(next_significant.lstrip(" "))
         if next_indent <= indent:
+            parent[key] = {}
+            stack.append((indent, parent[key]))
             continue
 
-        target = parent[key]
         if next_significant.strip().startswith("- "):
             parent[key] = []
-            stack.append((indent, parent[key]))
         else:
-            stack.append((indent, target))
+            parent[key] = {}
+
+        stack.append((indent, parent[key]))
 
     return root
 
