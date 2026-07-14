@@ -1,0 +1,67 @@
+name: Build Release Ledger
+
+on:
+  workflow_dispatch:
+    inputs:
+      RUN_ID_OR_URL:
+        description: "GitHub Actions run id o URL completa della run da analizzare"
+        required: true
+      TAG_FILTER:
+        description: "Logga solo run con questo tag"
+        required: true
+        default: "latest"
+      RESOLUTION_MODE:
+        description: "strict fallisce se non riesce a ricostruire la run"
+        required: true
+        type: choice
+        options:
+          - strict
+          - best-effort
+        default: strict
+      GENERATE_MARKDOWN:
+        description: "Genera anche una vista markdown del ledger"
+        required: true
+        type: choice
+        options:
+          - "true"
+          - "false"
+        default: "true"
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  build_release_ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Generate ledger entry
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+          RUN_ID_OR_URL: ${{ github.event.inputs.RUN_ID_OR_URL }}
+          TAG_FILTER: ${{ github.event.inputs.TAG_FILTER }}
+          RESOLUTION_MODE: ${{ github.event.inputs.RESOLUTION_MODE }}
+          GENERATE_MARKDOWN: ${{ github.event.inputs.GENERATE_MARKDOWN }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release_ledger/build_release_ledger.py
+
+      - name: Upload generated ledger artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ledger
+          path: |
+            release_ledger.json
+            release_ledger.md
+          if-no-files-found: error

@@ -1,0 +1,145 @@
+{
+  "entries": [
+    {
+      "run_id": 27331823860,
+      "run_number": 211,
+      "run_attempt": 1,
+      "run_url": "https://github.com/Arteco-Global/hypernode_deploy/actions/runs/27331823860",
+      "workflow_name": "Push USee Images (split native amd64-arm64)",
+      "workflow_path": ".github/workflows/push_on_demand_split_native.yml",
+      "created_at": "2026-06-11T07:43:58Z",
+      "updated_at": "2026-06-11T07:48:07Z",
+      "conclusion": "success",
+      "tag": "latest",
+      "requested_services": [
+        "all"
+      ],
+      "resolution_mode": "best-effort",
+      "resolution_status": "partial",
+      "baseline_run_number": null,
+      "backend": {
+        "repository": "Arteco-Global/hypernode-server",
+        "branch": "main",
+        "sha": "1632029",
+        "previous_sha": null,
+        "tracked_in_run": true,
+        "comparison_status": "missing_previous_sha",
+        "prs": []
+      },
+      "configurator": {
+        "repository": "Arteco-Global/hypernode_server_gui",
+        "branch": "main",
+        "sha": "69c36b5",
+        "previous_sha": null,
+        "tracked_in_run": true,
+        "comparison_status": "missing_previous_sha",
+        "prs": []
+      },
+      "export": {
+        "repository": "Arteco-Global/arteco-export-service",
+        "branch": "main",
+        "sha": "ccb4708",
+        "previous_sha": null,
+        "tracked_in_run": true,
+        "comparison_status": "missing_previous_sha",
+        "prs": []
+      }
+    },
+    {
+      "run_id": 29009769622,
+      "run_number": 260,
+      "run_attempt": 1,
+      "run_url": "https://github.com/Arteco-Global/hypernode_deploy/actions/runs/29009769622",
+      "workflow_name": "Push USee Images",
+      "workflow_path": ".github/workflows/push_on_demand_split_native.yml",
+      "created_at": "2026-07-09T09:53:49Z",
+      "updated_at": "2026-07-09T10:09:33Z",
+      "conclusion": "success",
+      "tag": "latest",
+      "requested_services": [
+        "all"
+      ],
+      "resolution_mode": "best-effort",
+      "resolution_status": "exact",
+      "baseline_run_number": 211,
+      "backend": {
+        "repository": "Arteco-Global/hypernode-server",
+        "branch": "main",
+        "sha": "e5bb6b4",
+        "previous_sha": "1632029",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 196,
+            "title": "Ast 6986 fix recordings",
+            "branch": "AST-6986_Fix_Recordings",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/196",
+            "merged_at": "2026-06-12T07:24:18Z"
+          },
+          {
+            "number": 198,
+            "title": "Fix per Gate Hotel",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/198",
+            "merged_at": "2026-06-22T07:10:50Z"
+          },
+          {
+            "number": 199,
+            "title": "Ast 7005 fix restart rec",
+            "branch": "AST-7005_Fix_Restart_Rec",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/199",
+            "merged_at": "2026-07-01T14:41:15Z"
+          },
+          {
+            "number": 200,
+            "title": "Ast 6977 portbroker",
+            "branch": "AST-6977_portbroker",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/200",
+            "merged_at": "2026-07-08T12:29:46Z"
+          },
+          {
+            "number": 201,
+            "title": "PR di rc dentro main",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/201",
+            "merged_at": "2026-07-08T14:35:04Z"
+          }
+        ]
+      },
+      "configurator": {
+        "repository": "Arteco-Global/hypernode_server_gui",
+        "branch": "main",
+        "sha": "19c837f",
+        "previous_sha": "69c36b5",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 233,
+            "title": "Audit scout",
+            "branch": "audit_scout",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/233",
+            "merged_at": "2026-07-01T15:05:45Z"
+          },
+          {
+            "number": 236,
+            "title": "RC -> Main",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/236",
+            "merged_at": "2026-07-08T14:33:39Z"
+          }
+        ]
+      },
+      "export": {
+        "repository": "Arteco-Global/arteco-export-service",
+        "branch": "main",
+        "sha": "ccb4708",
+        "previous_sha": "ccb4708",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": []
+      }
+    }
+  ]
+}
