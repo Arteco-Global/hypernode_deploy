@@ -59,7 +59,6 @@ class Config:
     run_id_or_url: str
     tag_filter: str
     resolution_mode: str
-    generate_markdown: bool
     ledger_json_path: Path
     ledger_md_path: Path
 
@@ -81,15 +80,12 @@ def load_config() -> Config:
     if resolution_mode not in {"strict", "best-effort"}:
         raise LedgerError("RESOLUTION_MODE must be 'strict' or 'best-effort'.")
 
-    generate_markdown = os.environ.get("GENERATE_MARKDOWN", "true").strip().lower() == "true"
-
     return Config(
         token=token,
         target_repository=target_repository,
         run_id_or_url=run_id_or_url,
         tag_filter=os.environ.get("TAG_FILTER", "latest").strip(),
         resolution_mode=resolution_mode,
-        generate_markdown=generate_markdown,
         ledger_json_path=Path("release_ledger.json"),
         ledger_md_path=Path("release_ledger.md"),
     )
@@ -469,8 +465,7 @@ def main() -> int:
         )
 
         updated_ledger = load_ledger(config.ledger_json_path)
-        if config.generate_markdown:
-            write_markdown(config.ledger_md_path, updated_ledger)
+        write_markdown(config.ledger_md_path, updated_ledger)
 
         write_summary(entry, previous_entry)
         print(
@@ -478,7 +473,7 @@ def main() -> int:
                 f"""\
                 Generated release ledger for run {entry['run_number']}.
                 Output JSON: {config.ledger_json_path}
-                Output Markdown: {config.ledger_md_path if config.generate_markdown else 'disabled'}
+                Output Markdown: {config.ledger_md_path}
                 """
             ).strip()
         )

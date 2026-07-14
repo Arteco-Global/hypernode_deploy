@@ -18,19 +18,28 @@ on:
           - strict
           - best-effort
         default: strict
-      GENERATE_MARKDOWN:
-        description: "Genera anche una vista markdown del ledger"
+  workflow_call:
+    inputs:
+      RUN_ID_OR_URL:
         required: true
-        type: choice
-        options:
-          - "true"
-          - "false"
-        default: "true"
+        type: string
+      TAG_FILTER:
+        required: false
+        type: string
+        default: "latest"
+      RESOLUTION_MODE:
+        required: false
+        type: string
+        default: "strict"
 
 permissions:
   actions: read
-  contents: read
+  contents: write
   pull-requests: read
+
+concurrency:
+  group: release-ledger-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
   build_release_ledger:
@@ -38,6 +47,10 @@ jobs:
     steps:
       - name: Checkout deploy repo
         uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GIT_PAT }}
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -47,12 +60,11 @@ jobs:
       - name: Generate ledger entry
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PAT }}
           TARGET_REPOSITORY: ${{ github.repository }}
-          RUN_ID_OR_URL: ${{ github.event.inputs.RUN_ID_OR_URL }}
-          TAG_FILTER: ${{ github.event.inputs.TAG_FILTER }}
-          RESOLUTION_MODE: ${{ github.event.inputs.RESOLUTION_MODE }}
-          GENERATE_MARKDOWN: ${{ github.event.inputs.GENERATE_MARKDOWN }}
+          RUN_ID_OR_URL: ${{ inputs.RUN_ID_OR_URL }}
+          TAG_FILTER: ${{ inputs.TAG_FILTER }}
+          RESOLUTION_MODE: ${{ inputs.RESOLUTION_MODE }}
         run: |
           set -euo pipefail
           python3 scripts/release_ledger/build_release_ledger.py
@@ -65,3 +77,22 @@ jobs:
             release_ledger.json
             release_ledger.md
           if-no-files-found: error
+
+      - name: Commit and push ledger updates
+        shell: bash
+        env:
+          RUN_ID_OR_URL: ${{ inputs.RUN_ID_OR_URL }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- release_ledger.json release_ledger.md; then
+            echo "No ledger changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add release_ledger.json release_ledger.md
+          git commit -m "chore: update release ledger for run ${RUN_ID_OR_URL}"
+          git push origin HEAD:${GITHUB_REF_NAME}
