@@ -49,3 +49,41 @@ Una volta completata la propagazione del DNS, il server tornerà ad essere raggi
 ```
 https://VXXXXX.my.lan.omniaweb.cloud
 ```
+
+---
+
+## Cosa succede alla licenza se un server va offline?
+
+Se un server **uSS** perde la connessione a Internet:
+
+- Il servizio che verifica la validità della licenza rileva l'assenza di connettività e **posticipa automaticamente il controllo della licenza**.
+- Di conseguenza, **la licenza non viene invalidata** e il server continua a funzionare regolarmente.
+
+Tuttavia, durante il periodo di assenza della connessione Internet, **la raggiungibilità del server tramite il nome DNS potrebbe non essere garantita**.
+
+Questo può accadere se, mentre il server è offline, cambia uno dei seguenti indirizzi:
+
+- l'indirizzo **IP locale** del server;
+- l'indirizzo **IP pubblico** della rete;
+- oppure entrambi.
+
+In questi casi, il record DNS:
+
+```
+https://VXXXXX.my.lan.omniaweb.cloud
+```
+
+potrebbe non essere più allineato con gli indirizzi correnti del server.
+
+Una volta ripristinata la connessione a Internet:
+
+- il server aggiornerà automaticamente il proprio record DNS;
+- dopo alcuni minuti sarà nuovamente raggiungibile tramite il relativo URL.
+
+> **Nota**
+>
+> Anche nel caso in cui il record DNS non sia temporaneamente aggiornato, il server rimane sempre raggiungibile dalla rete locale tramite il suo indirizzo IP:
+>
+> ```
+> https://INDIRIZZO_IP_LAN
+> ```
