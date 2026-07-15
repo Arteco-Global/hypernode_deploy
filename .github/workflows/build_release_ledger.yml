@@ -31,6 +31,30 @@ on:
         required: false
         type: string
         default: "strict"
+      DIRECT_TAG:
+        required: false
+        type: string
+      DIRECT_SERVICES:
+        required: false
+        type: string
+      DIRECT_BACKEND_BRANCH:
+        required: false
+        type: string
+      DIRECT_BACKEND_SHA:
+        required: false
+        type: string
+      DIRECT_CONFIGURATOR_BRANCH:
+        required: false
+        type: string
+      DIRECT_CONFIGURATOR_SHA:
+        required: false
+        type: string
+      DIRECT_EXPORT_BRANCH:
+        required: false
+        type: string
+      DIRECT_EXPORT_SHA:
+        required: false
+        type: string
 
 permissions:
   actions: read
@@ -65,6 +89,14 @@ jobs:
           RUN_ID_OR_URL: ${{ inputs.RUN_ID_OR_URL }}
           TAG_FILTER: ${{ inputs.TAG_FILTER }}
           RESOLUTION_MODE: ${{ inputs.RESOLUTION_MODE }}
+          DIRECT_TAG: ${{ inputs.DIRECT_TAG }}
+          DIRECT_SERVICES: ${{ inputs.DIRECT_SERVICES }}
+          DIRECT_BACKEND_BRANCH: ${{ inputs.DIRECT_BACKEND_BRANCH }}
+          DIRECT_BACKEND_SHA: ${{ inputs.DIRECT_BACKEND_SHA }}
+          DIRECT_CONFIGURATOR_BRANCH: ${{ inputs.DIRECT_CONFIGURATOR_BRANCH }}
+          DIRECT_CONFIGURATOR_SHA: ${{ inputs.DIRECT_CONFIGURATOR_SHA }}
+          DIRECT_EXPORT_BRANCH: ${{ inputs.DIRECT_EXPORT_BRANCH }}
+          DIRECT_EXPORT_SHA: ${{ inputs.DIRECT_EXPORT_SHA }}
         run: |
           set -euo pipefail
           python3 scripts/release_ledger/build_release_ledger.py

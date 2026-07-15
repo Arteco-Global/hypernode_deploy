@@ -138,6 +138,46 @@ jobs:
           echo "Selected services: ${SERVICES_JSON}"
           echo "Selected build matrix: ${BUILD_MATRIX}"
 
+  resolve_release_revisions:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_sha: ${{ steps.resolve.outputs.backend_sha }}
+      configurator_sha: ${{ steps.resolve.outputs.configurator_sha }}
+      export_sha: ${{ steps.resolve.outputs.export_sha }}
+    steps:
+      - name: Checkout backend
+        uses: actions/checkout@v5
+        with:
+          repository: Arteco-Global/hypernode-server
+          ref: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
+          path: hypernode-server
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Checkout frontend
+        uses: actions/checkout@v5
+        with:
+          repository: Arteco-Global/hypernode_server_gui
+          ref: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
+          path: hypernode_server_gui
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Checkout export service
+        uses: actions/checkout@v5
+        with:
+          repository: Arteco-Global/arteco-export-service
+          ref: ${{ github.event.inputs.BRANCH_EXPORT_REF }}
+          path: arteco-export-service
+          token: ${{ secrets.GIT_PAT }}
+
+      - name: Resolve component SHAs
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "backend_sha=$(git -C hypernode-server rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "configurator_sha=$(git -C hypernode_server_gui rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "export_sha=$(git -C arteco-export-service rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
   build_and_push:
     needs: prepare_matrix
     runs-on: ${{ matrix.runner }}
@@ -708,10 +748,19 @@ jobs:
   update_release_ledger:
     needs:
       - append_to_google_sheet
+      - resolve_release_revisions
     if: ${{ needs.append_to_google_sheet.result == 'success' && github.event.inputs.TAG_REF == 'latest' }}
     uses: ./.github/workflows/build_release_ledger.yml
     with:
       RUN_ID_OR_URL: ${{ github.run_id }}
       TAG_FILTER: latest
       RESOLUTION_MODE: strict
+      DIRECT_TAG: ${{ github.event.inputs.TAG_REF }}
+      DIRECT_SERVICES: ${{ github.event.inputs.SERVICES }}
+      DIRECT_BACKEND_BRANCH: ${{ github.event.inputs.BRANCH_BACKEND_REF }}
+      DIRECT_BACKEND_SHA: ${{ needs.resolve_release_revisions.outputs.backend_sha }}
+      DIRECT_CONFIGURATOR_BRANCH: ${{ github.event.inputs.BRANCH_CONFIGURATOR_REF }}
+      DIRECT_CONFIGURATOR_SHA: ${{ needs.resolve_release_revisions.outputs.configurator_sha }}
+      DIRECT_EXPORT_BRANCH: ${{ github.event.inputs.BRANCH_EXPORT_REF }}
+      DIRECT_EXPORT_SHA: ${{ needs.resolve_release_revisions.outputs.export_sha }}
     secrets: inherit

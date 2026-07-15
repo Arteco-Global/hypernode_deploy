@@ -169,6 +169,30 @@ def find_build_label(log_zip: zipfile.ZipFile) -> Dict[str, str]:
     return next(iter(unique_labels.values()))
 
 
+def direct_build_label_from_env() -> Optional[Dict[str, str]]:
+    fields = {
+        "tag": os.environ.get("DIRECT_TAG", "").strip(),
+        "services": os.environ.get("DIRECT_SERVICES", "").strip(),
+        "backend_branch": os.environ.get("DIRECT_BACKEND_BRANCH", "").strip(),
+        "backend_sha": os.environ.get("DIRECT_BACKEND_SHA", "").strip(),
+        "configurator_branch": os.environ.get("DIRECT_CONFIGURATOR_BRANCH", "").strip(),
+        "configurator_sha": os.environ.get("DIRECT_CONFIGURATOR_SHA", "").strip(),
+        "export_branch": os.environ.get("DIRECT_EXPORT_BRANCH", "").strip(),
+        "export_sha": os.environ.get("DIRECT_EXPORT_SHA", "").strip(),
+    }
+
+    if not any(fields.values()):
+        return None
+
+    missing = [name for name, value in fields.items() if not value]
+    if missing:
+        raise LedgerError(
+            "Direct release metadata is incomplete. Missing: " + ", ".join(sorted(missing))
+        )
+
+    return fields
+
+
 def normalize_services(raw: str) -> List[str]:
     services = [part.strip() for part in raw.split(",") if part.strip()]
     if raw.strip() == "all":
@@ -448,8 +472,16 @@ def main() -> int:
             config,
             f"https://api.github.com/repos/{config.target_repository}/actions/runs/{run_id}",
         )
-        logs = download_logs(config, run["logs_url"])
-        label = find_build_label(logs)
+        direct_label = direct_build_label_from_env()
+        if direct_label is not None:
+            label = {
+                **direct_label,
+                "run_number": str(run["run_number"]),
+                "built_at": run.get("updated_at", run.get("created_at", "")),
+            }
+        else:
+            logs = download_logs(config, run["logs_url"])
+            label = find_build_label(logs)
         ledger = load_ledger(config.ledger_json_path)
         entry, previous_entry = build_entry(config, run, label, ledger)
 
