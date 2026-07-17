@@ -39,6 +39,28 @@ restart:
   # per un singolo container prima di tentare automaticamente il restart.
   metrics_failure_cycles: 3
 
+global_memory_intervention:
+  # Se true, abilita una modalita' di intervento globale quando la RAM host resta alta troppo a lungo.
+  enabled: false
+  # Soglia percentuale di RAM host oltre la quale parte il timer che puo' attivare l'intervention mode.
+  enter_percent: 90
+  # Numero di secondi consecutivi sopra enter_percent richiesti prima di entrare in intervention mode.
+  enter_duration_seconds: 60
+  # Numero di minuti iniziali usati per apprendere quale sia la RAM host "normale" dell'installazione.
+  baseline_learning_minutes: 15
+  # Margine di sicurezza aggiunto alla baseline appresa per determinare la soglia di uscita dall'intervention mode.
+  recovery_margin_percent: 8
+  # Soglia minima assoluta sotto la quale considerare di nuovo sana la RAM host dopo un leak.
+  min_exit_percent: 60
+  # Soglia massima assoluta di uscita, utile per evitare che la baseline renda l'uscita troppo permissiva.
+  max_exit_percent: 80
+  # Tempo di attesa, in secondi, tra un restart globale e la valutazione del servizio successivo.
+  step_duration_seconds: 60
+  # Delta minimo tra memoria attuale e memoria media storica di un servizio per considerarlo anomalo in intervention mode.
+  allowed_delta_percent: 15
+  # Finestra storica, in ore, usata per calcolare la memoria media storica del servizio.
+  historical_window_hours: 24
+
 service_overrides:
   # Chiave override: "recording" matcha sia il container "recording"
   # sia eventuali container aggiuntivi come "recording_additional-*".
