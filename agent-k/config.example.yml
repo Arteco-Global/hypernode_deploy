@@ -1,81 +1,82 @@
-# Intervallo, in secondi, tra un ciclo di monitoraggio e il successivo.
+# Interval, in seconds, between one monitoring cycle and the next.
 poll_interval_seconds: 15
 
 storage:
-  # Percorso del database SQLite usato per salvare sample storici e restart event.
-  # Se il percorso e' relativo, viene risolto rispetto alla cartella del file di config.
+  # Path to the SQLite database used to store historical samples and restart events.
+  # If the path is relative, it is resolved from the config file directory.
   path: ./data/agent-k.sqlite3
-  # Numero di giorni per cui mantenere i sample storici prima di eliminarli automaticamente.
+  # Number of days to retain historical samples before automatic cleanup.
   sample_retention_days: 30
-  # Numero di giorni per cui mantenere gli eventi di restart prima di eliminarli automaticamente.
+  # Number of days to retain restart events before automatic cleanup.
   restart_retention_days: 180
 
 discovery:
-  # Lista di prefissi immagine Docker da monitorare.
-  # Tutti i container la cui immagine inizia con uno di questi valori verranno inclusi.
+  # List of Docker image prefixes to monitor.
+  # Any container whose image starts with one of these values will be included.
   image_prefixes:
-    # Esempio: monitora tutte le immagini pubblicate sotto il namespace Docker Hub artecoglobalcompany.
+    # Example: monitor all images published under the artecoglobalcompany Docker Hub namespace.
     - artecoglobalcompany/
-  # Se false, monitora solo i container attualmente in esecuzione.
-  # Se true, include anche container fermi o terminati nella fase di discovery.
+  # If false, monitor only containers that are currently running.
+  # If true, also include stopped or exited containers during discovery.
   include_non_running: false
 
 memory:
-  # Soglia percentuale globale di utilizzo RAM del container oltre la quale il servizio
-  # viene considerato in anomalia e candidato al restart.
+  # Global container RAM usage threshold, as a percentage, above which the service
+  # is considered unhealthy and becomes a restart candidate.
   max_percent: 85
-  # Numero di cicli consecutivi in cui la RAM deve restare sopra soglia
-  # prima che scatti la richiesta di restart.
+  # Number of consecutive cycles the RAM usage must stay above the threshold
+  # before a restart is requested.
   breach_cycles: 1
 
 restart:
-  # Tempo minimo, in secondi, da attendere tra due restart dello stesso container.
+  # Minimum time, in seconds, to wait between two restarts of the same container.
   cooldown_seconds: 300
-  # Numero massimo di restart consentiti per lo stesso container nella finestra temporale sotto.
+  # Maximum number of restarts allowed for the same container within the time window below.
   max_restarts: 3
-  # Durata, in secondi, della finestra usata per limitare il numero massimo di restart.
+  # Duration, in seconds, of the time window used to limit the maximum number of restarts.
   window_seconds: 3600
-  # Numero di cicli consecutivi in cui il recupero delle metriche Docker puo' fallire
-  # per un singolo container prima di tentare automaticamente il restart.
+  # Number of consecutive cycles in which Docker metrics collection may fail
+  # for a single container before an automatic restart is attempted.
   metrics_failure_cycles: 3
 
 global_memory_intervention:
-  # Se true, abilita una modalita' di intervento globale quando la RAM host resta alta troppo a lungo.
+  # If true, enables a global intervention mode when host RAM stays too high for too long.
   enabled: false
-  # Soglia percentuale di RAM host oltre la quale parte il timer che puo' attivare l'intervention mode.
+  # Host RAM percentage threshold above which the timer for intervention mode starts.
   enter_percent: 90
-  # Numero di secondi consecutivi sopra enter_percent richiesti prima di entrare in intervention mode.
+  # Number of consecutive seconds above enter_percent required before entering intervention mode.
   enter_duration_seconds: 60
-  # Numero di minuti iniziali usati per apprendere quale sia la RAM host "normale" dell'installazione.
+  # Number of initial minutes used to learn what the "normal" host RAM usage is for this installation.
   baseline_learning_minutes: 15
-  # Margine di sicurezza aggiunto alla baseline appresa per determinare la soglia di uscita dall'intervention mode.
+  # Safety margin added to the learned baseline to determine the exit threshold for intervention mode.
   recovery_margin_percent: 8
-  # Soglia minima assoluta sotto la quale considerare di nuovo sana la RAM host dopo un leak.
+  # Absolute minimum threshold below which host RAM is considered healthy again after a leak.
   min_exit_percent: 60
-  # Soglia massima assoluta di uscita, utile per evitare che la baseline renda l'uscita troppo permissiva.
+  # Absolute maximum exit threshold, useful to avoid making recovery too permissive because of the learned baseline.
   max_exit_percent: 80
-  # Tempo di attesa, in secondi, tra un restart globale e la valutazione del servizio successivo.
+  # Waiting time, in seconds, between one global restart and the evaluation of the next service.
   step_duration_seconds: 60
-  # Delta minimo tra memoria attuale e memoria media storica di un servizio per considerarlo anomalo in intervention mode.
+  # Minimum delta between a service's current memory usage and its historical average memory usage
+  # for it to be considered anomalous during intervention mode.
   allowed_delta_percent: 15
-  # Finestra storica, in ore, usata per calcolare la memoria media storica del servizio.
+  # Historical window, in hours, used to calculate the service's average memory usage.
   historical_window_hours: 24
 
 service_overrides:
-  # Chiave override: "recording" matcha sia il container "recording"
-  # sia eventuali container aggiuntivi come "recording_additional-*".
+  # Override key: "recording" matches both the "recording" container
+  # and any additional containers such as "recording_additional-*".
   recording:
     memory:
-      # Soglia RAM specifica per questo servizio, usata al posto del default globale.
+      # Service-specific RAM threshold used instead of the global default.
       max_percent: 50
-      # Numero di cicli consecutivi sopra soglia richiesti per questo servizio specifico.
+      # Number of consecutive cycles above threshold required for this specific service.
       breach_cycles: 1
     restart:
-      # Cooldown specifico per questo servizio, usato al posto del default globale.
+      # Service-specific cooldown used instead of the global default.
       cooldown_seconds: 300
-      # Numero massimo di restart consentiti per questo servizio nella finestra temporale sotto.
+      # Maximum number of restarts allowed for this service within the time window below.
       max_restarts: 3
-      # Finestra temporale, in secondi, usata per limitare i restart di questo servizio.
+      # Time window, in seconds, used to limit restarts for this service.
       window_seconds: 3600
-      # Numero di failure metriche consecutive che fa scattare il restart per questo servizio.
+      # Number of consecutive metrics collection failures that triggers a restart for this service.
       metrics_failure_cycles: 3
