@@ -39,3 +39,13 @@ Script: `installer_docker/uss_healthcheck.sh`
 - Servono: Docker installato e in esecuzione; `wget` (o `curl`), `sudo`; strumenti DNS (`getent`/`dig`/`nslookup`/`host`) opzionali ma utili.
 - Lo script cancella i compose temporanei che scarica in `/tmp`.
 - Se Docker non è attivo o l'utente non ha permessi sul socket, verrà mostrato un errore subito.
+
+## Quando usarlo
+- Dopo una prima installazione o un aggiornamento tag per verificare che il nodo sia coerente con i compose effettivamente distribuiti.
+- Dopo un cambio IP, DNS o certificato, per distinguere rapidamente un problema di networking da un problema applicativo.
+- Prima di aprire un ticket, così da raccogliere in un solo output stato container, reachability e risultato dei controlli licensing.
+
+## Limiti noti
+- Se il server non espone la WAN per scelta progettuale, il check WAN può risultare non raggiungibile senza indicare un guasto.
+- In ambienti con DNS non ancora propagato, il controllo certificato può fallire anche se i container sono correttamente avviati.
+- Se `.hypernode-install-env.log` non è presente, alcuni controlli vengono eseguiti in fallback e potrebbero restituire meno dettaglio sul setup originario.
