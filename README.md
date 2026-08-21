@@ -15,6 +15,8 @@ This repository contains the deployment tooling for the Arteco Hypernode video m
    - Use a Linux server (Ubuntu is tested) with sudo privileges.
    - Ensure the system clock and DNS are correctly configured.
    - Install Docker by running `installer_docker/install-docker-ubuntu.sh` or by following the official Docker documentation.
+   - Confirm that ports `80` and `443` are reachable if the node must expose public HTTPS endpoints.
+   - Keep the serial number, timezone, and provider URLs ready before starting the installer so the first run can complete without manual rework.
 
 2. **Run the Hypernode installer**
    - Execute `installer_docker/installer.sh` with the options that match your environment. Key flags include:
@@ -29,6 +31,10 @@ This repository contains the deployment tooling for the Arteco Hypernode video m
 
 3. **Review compose bundles**
    - Each folder inside `installer_docker/composes/` contains a dedicated `docker-compose.yaml` that can be used independently for advanced deployments. Services are grouped by domain—such as `server`, `database`, `storage`, `recording`, and `camera`—so you can mix and match the components required for your installation.
+
+4. **Run a post-install validation**
+   - From the deployed machine, run `installer_docker/uss_healthcheck.sh` to verify container health, DNS resolution, HTTPS reachability, and the resolved database port.
+   - When troubleshooting a node that was reinstalled or moved to a different network, validate both the LAN URL (`<serial>.lan.omniaweb.cloud`) and the WAN URL (`<serial>.my.omniaweb.cloud`) before handing the system over.
 
 ## Maintenance tips
 
