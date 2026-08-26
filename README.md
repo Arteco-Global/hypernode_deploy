@@ -41,6 +41,7 @@ This repository contains the deployment tooling for the Arteco Hypernode video m
 - Re-run `installer.sh` with `--force-install` to refresh an existing node or to apply updated container images.
 - Monitor containers with `docker compose ps` or `docker compose logs` from the relevant compose directory.
 - When distributing the platform without the Arteco server package, consult `ffmpeg/ffmpeg.md` to obtain compatible ffmpeg binaries.
+- For storage-related incidents where `recording` or `snapshot` start writing to the root filesystem, use the recovery playbook in `installer_docker/README/ROOT_FULL_RECORDING_SNAPSHOT_PLAYBOOK.md`.
 
 ## Support
 
