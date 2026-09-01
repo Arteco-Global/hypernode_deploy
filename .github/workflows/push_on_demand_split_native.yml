@@ -406,7 +406,7 @@ jobs:
           if [ "${IS_DATABASE:-false}" = "true" ]; then
             docker buildx build \
               --platform="${PLATFORM}" \
-              --build-arg MONGO_VERSION=latest \
+              --build-arg MONGO_VERSION=8.2.12 \
               --build-arg BUILD_LABEL="${BUILD_LABEL}" \
               --provenance=mode=max \
               --sbom=true \
