@@ -23,7 +23,7 @@ discovery:
 memory:
   # Global container RAM usage threshold, as a percentage, above which the service
   # is considered unhealthy and becomes a restart candidate.
-  max_percent: 85
+  max_percent: 10
   # Number of consecutive cycles the RAM usage must stay above the threshold
   # before a restart is requested.
   breach_cycles: 1
@@ -41,7 +41,7 @@ restart:
 
 global_memory_intervention:
   # If true, enables a global intervention mode when host RAM stays too high for too long.
-  enabled: false
+  enabled: true
   # Host RAM percentage threshold above which the timer for intervention mode starts.
   enter_percent: 90
   # Number of consecutive seconds above enter_percent required before entering intervention mode.
@@ -68,7 +68,52 @@ service_overrides:
   recording:
     memory:
       # Service-specific RAM threshold used instead of the global default.
-      max_percent: 50
+      max_percent: 60
+      # Number of consecutive cycles above threshold required for this specific service.
+      breach_cycles: 1
+    restart:
+      # Service-specific cooldown used instead of the global default.
+      cooldown_seconds: 300
+      # Maximum number of restarts allowed for this service within the time window below.
+      max_restarts: 3
+      # Time window, in seconds, used to limit restarts for this service.
+      window_seconds: 3600
+      # Number of consecutive metrics collection failures that triggers a restart for this service.
+      metrics_failure_cycles: 3
+  uss_database:
+    memory:
+      # Service-specific RAM threshold used instead of the global default.
+      max_percent: 25
+      # Number of consecutive cycles above threshold required for this specific service.
+      breach_cycles: 1
+    restart:
+      # Service-specific cooldown used instead of the global default.
+      cooldown_seconds: 300
+      # Maximum number of restarts allowed for this service within the time window below.
+      max_restarts: 3
+      # Time window, in seconds, used to limit restarts for this service.
+      window_seconds: 3600
+      # Number of consecutive metrics collection failures that triggers a restart for this service.
+      metrics_failure_cycles: 3
+  snapshot:
+    memory:
+      # Service-specific RAM threshold used instead of the global default.
+      max_percent: 30
+      # Number of consecutive cycles above threshold required for this specific service.
+      breach_cycles: 1
+    restart:
+      # Service-specific cooldown used instead of the global default.
+      cooldown_seconds: 300
+      # Maximum number of restarts allowed for this service within the time window below.
+      max_restarts: 3
+      # Time window, in seconds, used to limit restarts for this service.
+      window_seconds: 3600
+      # Number of consecutive metrics collection failures that triggers a restart for this service.
+      metrics_failure_cycles: 3
+  camera:
+    memory:
+      # Service-specific RAM threshold used instead of the global default.
+      max_percent: 20
       # Number of consecutive cycles above threshold required for this specific service.
       breach_cycles: 1
     restart:
