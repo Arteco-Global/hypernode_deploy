@@ -95,6 +95,10 @@ Sono accettate finestre come `30m`, `12h`, `7d`.
 
 `relearn` salva una richiesta nello state file condiviso di `agent-k`: il processo gia' in esecuzione la recepisce al ciclo successivo e riparte da zero con la fase di learning della baseline globale.
 
+In un override `memory`, `restart_if_delta_percent_over` e' opzionale: riavvia il servizio quando `CURRENT MEM - EXPECTED MEM` supera il valore configurato, anche se non ha superato la soglia RAM assoluta e la global intervention mode e' disabilitata. La baseline viene appresa nei primi `baseline_learning_minutes` o dopo `relearn`; fino al completamento del learning non viene eseguito alcun restart. Il restart usa cooldown, rate limit e cascata delle dipendenze standard, e nello storico ha kind `expected memory delta`.
+
+`candidate-report` mostra sia `EXPECTED MEM`, la baseline iniziale usata per decidere il restart globale, sia `AVG MEM`, la media mobile diagnostica. La colonna `CANDIDATE` dipende esclusivamente da `CURRENT MEM - EXPECTED MEM`; `EXPECTED DELTA` usa `🟢` fino a `+5%`, `🟡` oltre `+5%`, `🟠` oltre `+7.5%` e `🔴` oltre `+10%`.
+
 `log-flush <container>` ferma il container, svuota il suo file di log Docker `json-file`, lo riavvia e applica la normale cascata delle dipendenze. Lo storico registra il servizio root con reason `log flush`; gli eventuali dipendenti mantengono la reason standard `dependency restart: ...`. Il comando supporta esclusivamente il driver Docker `json-file`; con driver diversi termina senza svuotare nulla.
 
 Nei report e nello storico restart vengono distinti:
@@ -244,6 +248,10 @@ docker compose exec agent-k agent-k log-flush camera
 Windows such as `30m`, `12h`, and `7d` are supported.
 
 `relearn` writes a request into the shared runtime state file: the already-running `agent-k` process consumes it on the next cycle and restarts the global baseline learning phase from scratch.
+
+Within an override's `memory` block, `restart_if_delta_percent_over` is optional: it restarts the service when `CURRENT MEM - EXPECTED MEM` exceeds the configured value, even when neither its absolute RAM threshold nor global intervention mode is active. The baseline is learned during the first `baseline_learning_minutes` or after `relearn`; no restart is performed until learning completes. The restart uses the standard cooldown, rate limit, and dependency cascade, and is stored with the `expected memory delta` kind.
+
+`candidate-report` shows both `EXPECTED MEM`, the initial baseline used to decide global restarts, and `AVG MEM`, the diagnostic moving average. The `CANDIDATE` column depends only on `CURRENT MEM - EXPECTED MEM`; `EXPECTED DELTA` uses `🟢` up to `+5%`, `🟡` above `+5%`, `🟠` above `+7.5%`, and `🔴` above `+10%`.
 
 `log-flush <container>` stops the container, clears its Docker `json-file` log, restarts it, and applies the normal dependency cascade. History records the root service with the `log flush` reason; any dependent services retain the standard `dependency restart: ...` reason. The command supports only Docker's `json-file` driver; it exits without clearing anything for other drivers.
 
