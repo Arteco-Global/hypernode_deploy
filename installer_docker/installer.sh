@@ -1148,6 +1148,47 @@ cleanup_service_data_paths_from_env_logs() {
 }
 
 
+remove_legacy_update_cron() {
+    if ! command -v crontab >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local cron_command=(env LC_ALL=C crontab -u root)
+    local tmp_dir
+    if [[ "$EUID" -ne 0 ]]; then
+        cron_command=(sudo env LC_ALL=C crontab -u root)
+    fi
+    tmp_dir=$(mktemp -d) || return 1
+
+    if ! "${cron_command[@]}" -l > "$tmp_dir/current" 2> "$tmp_dir/error"; then
+        if grep -qx 'no crontab for root' "$tmp_dir/error"; then
+            rm -rf -- "$tmp_dir"
+            return 0
+        fi
+        echo "❌ Unable to read root crontab; no changes made." >&2
+        cat "$tmp_dir/error" >&2
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+
+    # Match only active entries for the legacy script with its exact marker.
+    if ! awk '!($0 !~ /^[[:space:]]*#/ && /run-hypernode-update-check[.]sh/ && /#[[:space:]]*hypernode-update-check[[:space:]]*$/)' "$tmp_dir/current" > "$tmp_dir/updated"; then
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+    if cmp -s "$tmp_dir/current" "$tmp_dir/updated"; then
+        rm -rf -- "$tmp_dir"
+        return 0
+    fi
+    if ! "${cron_command[@]}" "$tmp_dir/updated"; then
+        echo "❌ Unable to remove legacy Hypernode update cron job." >&2
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+    rm -rf -- "$tmp_dir"
+    echo "✅ Removed legacy Hypernode update cron job from root crontab."
+}
+
 dockerNuke() {
     local skip_confirmation=${1:-false}
     local confirmation
@@ -1160,6 +1201,8 @@ dockerNuke() {
     fi
 
     if [[ "$confirmation" == "y" || "$confirmation" == "Y" ]]; then
+        remove_legacy_update_cron || echo "⚠️ Legacy cron cleanup failed; continuing uninstall." >&2
+
         printf "\nStopping and removing all containers, images, networks, and volumes...\n"
 
         # Stop containers
