@@ -128,3 +128,19 @@ service_overrides:
       window_seconds: 3600
       # Number of consecutive metrics collection failures that triggers a restart for this service.
       metrics_failure_cycles: 3
+  export:
+    memory:
+      # Service-specific RAM threshold used instead of the global default.
+      max_percent: 99
+      # Number of consecutive cycles above threshold required for this specific service.
+      breach_cycles: 1
+    restart:
+      # Service-specific cooldown used instead of the global default.
+      cooldown_seconds: 300
+      # Maximum number of restarts allowed for this service within the time window below.
+      max_restarts: 3
+      # Time window, in seconds, used to limit restarts for this service.
+      window_seconds: 3600
+      # Number of consecutive metrics collection failures that triggers a restart for this service.
+      metrics_failure_cycles: 3
+      
