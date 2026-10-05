@@ -185,6 +185,306 @@
         "comparison_status": "ok",
         "prs": []
       }
+    },
+    {
+      "run_id": 37293353509,
+      "run_number": 344,
+      "run_attempt": 1,
+      "run_url": "https://github.com/Arteco-Global/hypernode_deploy/actions/runs/37293353509",
+      "workflow_name": "Push USee Images",
+      "workflow_path": ".github/workflows/push_on_demand_split_native.yml",
+      "created_at": "2026-10-05T09:56:45Z",
+      "updated_at": "2026-10-05T10:01:23Z",
+      "conclusion": null,
+      "tag": "latest",
+      "requested_services": [
+        "all"
+      ],
+      "resolution_mode": "strict",
+      "resolution_status": "exact",
+      "baseline_run_number": 267,
+      "backend": {
+        "repository": "Arteco-Global/hypernode-server",
+        "branch": "main",
+        "sha": "e660dd5",
+        "previous_sha": "e5bb6b4",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 202,
+            "title": "commit fix audit",
+            "branch": "audi_fix_dalprato_luglio",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/202",
+            "merged_at": "2026-07-27T08:48:23Z"
+          },
+          {
+            "number": 203,
+            "title": "Nginx logs",
+            "branch": "nginxLogs",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/203",
+            "merged_at": "2026-08-05T08:45:52Z"
+          },
+          {
+            "number": 204,
+            "title": "fix audit",
+            "branch": "audit_7_agosto_backend",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/204",
+            "merged_at": "2026-08-07T08:01:27Z"
+          },
+          {
+            "number": 205,
+            "title": "fix audit",
+            "branch": "audit_fix_17_agosto_server",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/205",
+            "merged_at": "2026-08-17T07:57:31Z"
+          },
+          {
+            "number": 206,
+            "title": "corretto memory leak dovuto alla persistenza in memoria di tutte l es\u2026",
+            "branch": "AST-7047_Fix_Snap_Rec_Memory_Leak",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/206",
+            "merged_at": "2026-08-31T10:15:54Z"
+          },
+          {
+            "number": 207,
+            "title": "update dependencies in package-lock.json",
+            "branch": "AST-7070",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/207",
+            "merged_at": "2026-09-07T14:40:48Z"
+          },
+          {
+            "number": 208,
+            "title": "Ast 7079",
+            "branch": "AST-7079",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/208",
+            "merged_at": "2026-09-15T09:22:46Z"
+          },
+          {
+            "number": 209,
+            "title": "better cleanup proposal",
+            "branch": "camera_listeners_fix",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/209",
+            "merged_at": "2026-09-16T10:33:03Z"
+          },
+          {
+            "number": 212,
+            "title": "Amsterdam",
+            "branch": "amsterdam",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/212",
+            "merged_at": "2026-09-28T13:22:34Z"
+          },
+          {
+            "number": 214,
+            "title": "audit fix",
+            "branch": "AST-7123",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/214",
+            "merged_at": "2026-09-29T08:32:19Z"
+          },
+          {
+            "number": 215,
+            "title": "Ast 7104 export bug",
+            "branch": "AST-7104_export_bug",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/215",
+            "merged_at": "2026-09-29T10:08:50Z"
+          },
+          {
+            "number": 216,
+            "title": "Amsterdam",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/216",
+            "merged_at": "2026-09-29T12:11:20Z"
+          },
+          {
+            "number": 218,
+            "title": "Ast 7126",
+            "branch": "AST-7126",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/218",
+            "merged_at": "2026-09-30T09:34:38Z"
+          },
+          {
+            "number": 219,
+            "title": "Amsterdam - CVE 3009",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/219",
+            "merged_at": "2026-09-30T09:37:21Z"
+          },
+          {
+            "number": 224,
+            "title": "Autit fix",
+            "branch": "Main_AST-7130",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/224",
+            "merged_at": "2026-10-05T07:15:50Z"
+          }
+        ]
+      },
+      "configurator": {
+        "repository": "Arteco-Global/hypernode_server_gui",
+        "branch": "main",
+        "sha": "c1c08d7",
+        "previous_sha": "19c837f",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 246,
+            "title": "Audit fix 27 07",
+            "branch": "audit_fix_27-07",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/246",
+            "merged_at": "2026-07-27T08:45:07Z"
+          },
+          {
+            "number": 250,
+            "title": "update react scrollbars 2 -> 4",
+            "branch": "scrollbars",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/250",
+            "merged_at": "2026-07-27T12:47:37Z"
+          },
+          {
+            "number": 253,
+            "title": "fix audit",
+            "branch": "nginxLogs",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/253",
+            "merged_at": "2026-08-05T12:38:41Z"
+          },
+          {
+            "number": 255,
+            "title": "fix",
+            "branch": "audit_7_agosto",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/255",
+            "merged_at": "2026-08-07T08:01:22Z"
+          },
+          {
+            "number": 257,
+            "title": "audit fix fatto al ritorno dalle ferie",
+            "branch": "audit_fix_17_agosto",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/257",
+            "merged_at": "2026-08-17T07:36:08Z"
+          },
+          {
+            "number": 262,
+            "title": "audit fix",
+            "branch": "AST-7073",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/262",
+            "merged_at": "2026-09-08T07:40:14Z"
+          },
+          {
+            "number": 267,
+            "title": "cve fixies",
+            "branch": "AST-7080-cve",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/267",
+            "merged_at": "2026-09-15T09:27:45Z"
+          },
+          {
+            "number": 269,
+            "title": "Ast 7034 legacy detector",
+            "branch": "AST-7034_legacy_detector",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/269",
+            "merged_at": "2026-09-17T12:26:49Z"
+          },
+          {
+            "number": 271,
+            "title": "Ast 7030 service on same machine",
+            "branch": "AST-7030_service_on_same_machine",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/271",
+            "merged_at": "2026-09-17T12:38:59Z"
+          },
+          {
+            "number": 272,
+            "title": "Agent k",
+            "branch": "agent-k",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/272",
+            "merged_at": "2026-09-17T13:01:41Z"
+          },
+          {
+            "number": 273,
+            "title": "7034 7030 agenk instaler sept 26",
+            "branch": "7034_7030_agenk_instaler_sept_26",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/273",
+            "merged_at": "2026-09-29T10:22:38Z"
+          },
+          {
+            "number": 276,
+            "title": "Amsterdam",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/276",
+            "merged_at": "2026-09-29T12:10:58Z"
+          },
+          {
+            "number": 277,
+            "title": "audit fix",
+            "branch": "AST-7125",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/277",
+            "merged_at": "2026-09-29T12:32:19Z"
+          },
+          {
+            "number": 278,
+            "title": "Amsterdam + CVE",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/278",
+            "merged_at": "2026-09-29T12:34:39Z"
+          },
+          {
+            "number": 280,
+            "title": "CVE  30 09",
+            "branch": "AST-7127",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/280",
+            "merged_at": "2026-09-30T09:35:13Z"
+          },
+          {
+            "number": 281,
+            "title": "Amsterdam - CVE 3009",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/281",
+            "merged_at": "2026-09-30T09:37:39Z"
+          },
+          {
+            "number": 283,
+            "title": "AST-7130",
+            "branch": "AST-7130",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/283",
+            "merged_at": "2026-10-05T07:17:18Z"
+          },
+          {
+            "number": 284,
+            "title": "RC -> Main (Amsterdam + CVE AST-7130)",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/284",
+            "merged_at": "2026-10-05T07:59:28Z"
+          }
+        ]
+      },
+      "export": {
+        "repository": "Arteco-Global/arteco-export-service",
+        "branch": "main",
+        "sha": "330be3a",
+        "previous_sha": "ccb4708",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 15,
+            "title": "Uss edge audit",
+            "branch": "uss-edge-audit",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/15",
+            "merged_at": "2026-09-24T08:50:26Z"
+          },
+          {
+            "number": 16,
+            "title": "Uss edge audit",
+            "branch": "uss-edge-audit",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/16",
+            "merged_at": "2026-09-24T15:07:50Z"
+          },
+          {
+            "number": 17,
+            "title": "Uss edge temp file",
+            "branch": "uss-edge-temp-file",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/17",
+            "merged_at": "2026-09-30T14:28:59Z"
+          }
+        ]
+      }
     }
   ]
 }

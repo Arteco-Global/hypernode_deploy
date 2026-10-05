@@ -143,4 +143,3 @@ service_overrides:
       window_seconds: 3600
       # Number of consecutive metrics collection failures that triggers a restart for this service.
       metrics_failure_cycles: 3
-      
