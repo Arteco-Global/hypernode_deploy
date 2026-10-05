@@ -59,6 +59,7 @@ docker compose exec agent-k agent-k candidate-report --since 24h
 docker compose exec agent-k agent-k restarts --since 24h
 docker compose exec agent-k agent-k plot recording --since 24h
 docker compose exec agent-k agent-k relearn
+docker compose exec agent-k agent-k log-flush camera
 ```
 
 Per fermarlo:
@@ -87,11 +88,18 @@ docker compose exec agent-k agent-k plot recording --since 24h
 docker compose exec agent-k agent-k plot recording --show mem --since 24h
 docker compose exec agent-k agent-k plot recording --show cpu --since 24h
 docker compose exec agent-k agent-k relearn
+docker compose exec agent-k agent-k log-flush camera
 ```
 
 Sono accettate finestre come `30m`, `12h`, `7d`.
 
 `relearn` salva una richiesta nello state file condiviso di `agent-k`: il processo gia' in esecuzione la recepisce al ciclo successivo e riparte da zero con la fase di learning della baseline globale.
+
+In un override `memory`, `restart_if_delta_percent_over` e' opzionale: riavvia il servizio quando `CURRENT MEM - EXPECTED MEM` supera il valore configurato, anche se non ha superato la soglia RAM assoluta e la global intervention mode e' disabilitata. La baseline viene appresa nei primi `baseline_learning_minutes` o dopo `relearn`; fino al completamento del learning non viene eseguito alcun restart. Il restart usa cooldown, rate limit e cascata delle dipendenze standard, e nello storico ha kind `expected memory delta`.
+
+`candidate-report` mostra sia `EXPECTED MEM`, la baseline iniziale usata per decidere il restart globale, sia `AVG MEM`, la media mobile diagnostica. La colonna `CANDIDATE` dipende esclusivamente da `CURRENT MEM - EXPECTED MEM`; `EXPECTED DELTA` usa `🟢` fino a `+5%`, `🟡` oltre `+5%`, `🟠` oltre `+7.5%` e `🔴` oltre `+10%`.
+
+`log-flush <container>` ferma il container, svuota il suo file di log Docker `json-file`, lo riavvia e applica la normale cascata delle dipendenze. Lo storico registra il servizio root con reason `log flush`; gli eventuali dipendenti mantengono la reason standard `dependency restart: ...`. Il comando supporta esclusivamente il driver Docker `json-file`; con driver diversi termina senza svuotare nulla.
 
 Nei report e nello storico restart vengono distinti:
 
@@ -110,7 +118,7 @@ La sezione `global_memory_intervention` e' facoltativa. Quando e' attiva:
 - su Docker Desktop, se `/proc/meminfo` non e' disponibile sull'host locale del processo, prova a leggerlo dentro uno dei container in esecuzione, quindi usa la RAM della VM Docker;
 - nei primi minuti costruisce una baseline "normale" della macchina;
 - se la RAM host resta sopra `enter_percent` per `enter_duration_seconds`, entra in intervention mode;
-- durante l'intervention mode cerca i servizi il cui `current_memory_percent - average_memory_percent` supera `allowed_delta_percent`;
+- durante l'intervention mode cerca i servizi il cui `current_memory_percent - expected_memory_percent` supera `allowed_delta_percent`, usando la baseline appresa durante il learning o dopo `relearn`;
 - riavvia un solo servizio per step, aspetta `step_duration_seconds` e poi rivaluta la situazione;
 - esce quando la RAM host torna sotto una soglia di recovery derivata dalla baseline e dal margine di sicurezza configurato.
 
@@ -205,6 +213,7 @@ docker compose exec agent-k agent-k candidate-report --since 24h
 docker compose exec agent-k agent-k restarts --since 24h
 docker compose exec agent-k agent-k plot recording --since 24h
 docker compose exec agent-k agent-k relearn
+docker compose exec agent-k agent-k log-flush camera
 ```
 
 To stop it:
@@ -233,11 +242,18 @@ docker compose exec agent-k agent-k plot recording --since 24h
 docker compose exec agent-k agent-k plot recording --show mem --since 24h
 docker compose exec agent-k agent-k plot recording --show cpu --since 24h
 docker compose exec agent-k agent-k relearn
+docker compose exec agent-k agent-k log-flush camera
 ```
 
 Windows such as `30m`, `12h`, and `7d` are supported.
 
 `relearn` writes a request into the shared runtime state file: the already-running `agent-k` process consumes it on the next cycle and restarts the global baseline learning phase from scratch.
+
+Within an override's `memory` block, `restart_if_delta_percent_over` is optional: it restarts the service when `CURRENT MEM - EXPECTED MEM` exceeds the configured value, even when neither its absolute RAM threshold nor global intervention mode is active. The baseline is learned during the first `baseline_learning_minutes` or after `relearn`; no restart is performed until learning completes. The restart uses the standard cooldown, rate limit, and dependency cascade, and is stored with the `expected memory delta` kind.
+
+`candidate-report` shows both `EXPECTED MEM`, the initial baseline used to decide global restarts, and `AVG MEM`, the diagnostic moving average. The `CANDIDATE` column depends only on `CURRENT MEM - EXPECTED MEM`; `EXPECTED DELTA` uses `🟢` up to `+5%`, `🟡` above `+5%`, `🟠` above `+7.5%`, and `🔴` above `+10%`.
+
+`log-flush <container>` stops the container, clears its Docker `json-file` log, restarts it, and applies the normal dependency cascade. History records the root service with the `log flush` reason; any dependent services retain the standard `dependency restart: ...` reason. The command supports only Docker's `json-file` driver; it exits without clearing anything for other drivers.
 
 Reports and restart history distinguish:
 
@@ -256,7 +272,7 @@ The `global_memory_intervention` section is optional. When enabled:
 - on Docker Desktop, if `/proc/meminfo` is not available on the local host seen by the process, it tries to read it from one of the running containers and therefore uses the Docker VM memory;
 - it learns a "normal" machine baseline during the first few minutes;
 - if host RAM stays above `enter_percent` for `enter_duration_seconds`, it enters intervention mode;
-- during intervention mode it looks for services whose `current_memory_percent - average_memory_percent` exceeds `allowed_delta_percent`;
+- during intervention mode it looks for services whose `current_memory_percent - expected_memory_percent` exceeds `allowed_delta_percent`, using the baseline learned during initial learning or after `relearn`;
 - it restarts one service per step, waits `step_duration_seconds`, then reevaluates;
 - it exits when host RAM falls below a recovery threshold derived from the learned baseline and configured safety margin.
 

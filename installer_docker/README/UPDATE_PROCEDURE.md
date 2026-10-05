@@ -14,6 +14,13 @@ Ci sono due scenari principali:
 
 ## File env e log: dove sono e come si chiamano
 
+`native_update.sh` e la disinstallazione completa tramite `installer.sh` (opzioni
+`99` e `666`) rimuovono dal crontab di root le voci attive del vecchio
+`run-hypernode-update-check.sh` con marker finale `# hypernode-update-check`,
+anche se lo script non è più presente. Le altre voci restano invariate.
+Se il crontab non è presente non viene modificato nulla; un errore nella cleanup
+viene segnalato senza interrompere l'aggiornamento o la disinstallazione.
+
 Durante install/update vengono salvate le variabili in un file `.log`:
 
 - **Suite**: `.hypernode-install-env.log`

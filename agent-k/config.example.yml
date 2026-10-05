@@ -71,6 +71,9 @@ service_overrides:
       max_percent: 60
       # Number of consecutive cycles above threshold required for this specific service.
       breach_cycles: 1
+      # Optional: restart this service when current RAM exceeds its learned baseline by more than this percentage.
+      # The baseline is learned during the first baseline_learning_minutes after startup or after the relearn command.
+      # restart_if_delta_percent_over: 15
     restart:
       # Service-specific cooldown used instead of the global default.
       cooldown_seconds: 300

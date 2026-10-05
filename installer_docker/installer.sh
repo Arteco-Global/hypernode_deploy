@@ -229,6 +229,45 @@ log_install_env() {
     fi
 }
 
+deployAgentK() {
+    local agent_k_dir="${PWD}/agent-k"
+    local agent_k_base_url="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/agent-k"
+    local agent_k_compose_url="${agent_k_base_url}/compose.yml"
+    local agent_k_config_example_url="${agent_k_base_url}/config.example.yml"
+    local compose_file="${agent_k_dir}/compose.yml"
+    local config_file="${agent_k_dir}/config.yml"
+    local data_dir="${agent_k_dir}/data"
+
+    printf "\nUpdating agent-k"
+
+    mkdir -p "$agent_k_dir" "$data_dir" || return 1
+
+    if ! curl -fsSL "$agent_k_compose_url" -o "$compose_file"; then
+        printf "\n❌ Failed to download agent-k compose from %s\n" "$agent_k_compose_url"
+        return 1
+    fi
+
+    if [[ ! -f "$config_file" ]]; then
+        if ! curl -fsSL "$agent_k_config_example_url" -o "$config_file"; then
+            printf "\n❌ Failed to download agent-k config sample from %s\n" "$agent_k_config_example_url"
+            return 1
+        fi
+        printf "\nCreated agent-k config from sample at %s\n" "$config_file"
+    else
+        printf "\nKeeping existing agent-k config at %s\n" "$config_file"
+    fi
+
+    execute_command "$COMPOSE_CMD --project-directory \"$agent_k_dir\" -f \"$compose_file\" pull" \
+        "Pulling latest images for agent-k" || return 1
+
+    execute_command "$COMPOSE_CMD --project-directory \"$agent_k_dir\" -f \"$compose_file\" up -d --force-recreate" \
+        "Installing/updating agent-k" || return 1
+
+    printf "\n✅ agent-k updated in %s\n" "$agent_k_dir"
+
+    return 0
+}
+
 log_env_before_compose() {
     local command=$1
     if [[ "$command" == *"docker compose"* || "$command" == *"docker-compose"* ]]; then
@@ -602,6 +641,8 @@ additionalServiceInstall() {
 
     execute_command "$COMPOSE_CMD -f <(curl -sSL "$COMPOSE_FILE") up -d --build --remove-orphans --pull always" \
         "Installing/updating service: $SERVICE_NAME" || return 1
+
+    deployAgentK || return 1
 
     printf "\nInstallation/Update completed for $SERVICE_NAME."
 
@@ -1107,6 +1148,47 @@ cleanup_service_data_paths_from_env_logs() {
 }
 
 
+remove_legacy_update_cron() {
+    if ! command -v crontab >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local cron_command=(env LC_ALL=C crontab -u root)
+    local tmp_dir
+    if [[ "$EUID" -ne 0 ]]; then
+        cron_command=(sudo env LC_ALL=C crontab -u root)
+    fi
+    tmp_dir=$(mktemp -d) || return 1
+
+    if ! "${cron_command[@]}" -l > "$tmp_dir/current" 2> "$tmp_dir/error"; then
+        if grep -qx 'no crontab for root' "$tmp_dir/error"; then
+            rm -rf -- "$tmp_dir"
+            return 0
+        fi
+        echo "❌ Unable to read root crontab; no changes made." >&2
+        cat "$tmp_dir/error" >&2
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+
+    # Match only active entries for the legacy script with its exact marker.
+    if ! awk '!($0 !~ /^[[:space:]]*#/ && /run-hypernode-update-check[.]sh/ && /#[[:space:]]*hypernode-update-check[[:space:]]*$/)' "$tmp_dir/current" > "$tmp_dir/updated"; then
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+    if cmp -s "$tmp_dir/current" "$tmp_dir/updated"; then
+        rm -rf -- "$tmp_dir"
+        return 0
+    fi
+    if ! "${cron_command[@]}" "$tmp_dir/updated"; then
+        echo "❌ Unable to remove legacy Hypernode update cron job." >&2
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+    rm -rf -- "$tmp_dir"
+    echo "✅ Removed legacy Hypernode update cron job from root crontab."
+}
+
 dockerNuke() {
     local skip_confirmation=${1:-false}
     local confirmation
@@ -1119,6 +1201,8 @@ dockerNuke() {
     fi
 
     if [[ "$confirmation" == "y" || "$confirmation" == "Y" ]]; then
+        remove_legacy_update_cron || echo "⚠️ Legacy cron cleanup failed; continuing uninstall." >&2
+
         printf "\nStopping and removing all containers, images, networks, and volumes...\n"
 
         # Stop containers

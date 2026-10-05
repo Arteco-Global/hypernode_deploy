@@ -199,6 +199,198 @@ validate_directory_mount_path() {
     return 0
 }
 
+deploy_agent_k() {
+    local agent_k_dir
+    agent_k_dir="$(cd "$(dirname "$ENV_FILE")" && pwd)/agent-k"
+    local agent_k_base_url="${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/agent-k"
+    local agent_k_compose_url="${agent_k_base_url}/compose.yml"
+    local agent_k_config_example_url="${agent_k_base_url}/config.example.yml"
+    local compose_file="${agent_k_dir}/compose.yml"
+    local config_file="${agent_k_dir}/config.yml"
+    local data_dir="${agent_k_dir}/data"
+    local sample_file="${agent_k_dir}/config.example.yml.download"
+    local merged_file="${agent_k_dir}/config.yml.merged"
+    local backup_file="${agent_k_dir}/config.yml.bak"
+
+    echo "▶️  Update agent-k"
+
+    mkdir -p "$agent_k_dir" "$data_dir"
+
+    curl -fsSL "$agent_k_compose_url" -o "$compose_file"
+    curl -fsSL "$agent_k_config_example_url" -o "$sample_file"
+
+    if [[ ! -f "$config_file" ]]; then
+        mv "$sample_file" "$config_file"
+        echo "ℹ️  Created agent-k config from sample: $config_file"
+    else
+        cp "$config_file" "$backup_file"
+        merge_agent_k_config "$config_file" "$sample_file" "$merged_file"
+        mv "$merged_file" "$config_file"
+        rm -f "$sample_file"
+        echo "ℹ️  Merged existing agent-k config with latest sample: $config_file"
+        echo "ℹ️  Backup saved to: $backup_file"
+        echo "ℹ️  Preserved existing custom values and added any new default parameters"
+    fi
+
+    $COMPOSE_CMD --project-directory "$agent_k_dir" -f "$compose_file" pull
+    $COMPOSE_CMD --project-directory "$agent_k_dir" -f "$compose_file" up -d --force-recreate
+
+    echo "✅ agent-k updated in $agent_k_dir"
+}
+
+merge_agent_k_config() {
+    local current_config="$1"
+    local sample_config="$2"
+    local merged_config="$3"
+
+    python3 - "$current_config" "$sample_config" "$merged_config" <<'PY'
+from __future__ import annotations
+
+import ast
+import copy
+import sys
+from pathlib import Path
+
+
+def parse_scalar(value: str):
+    lowered = value.lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    if lowered in {"null", "~"}:
+        return None
+    try:
+        if any(ch in value for ch in ".eE"):
+            return float(value)
+        return int(value)
+    except ValueError:
+        pass
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        return ast.literal_eval(value)
+    return value
+
+
+def parse_simple_yaml(path: Path):
+    root = {}
+    stack = [(-1, root)]
+    lines = path.read_text().splitlines()
+    for index, raw_line in enumerate(lines):
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+
+        indent = len(raw_line) - len(raw_line.lstrip(" "))
+        line = raw_line.strip()
+
+        while stack and indent <= stack[-1][0]:
+            stack.pop()
+
+        parent = stack[-1][1]
+
+        if line.startswith("- "):
+            if not isinstance(parent, list):
+                raise ValueError(f"Unexpected list item in {path}: {raw_line}")
+            parent.append(parse_scalar(line[2:].strip()))
+            continue
+
+        if ":" not in line:
+            raise ValueError(f"Invalid line in {path}: {raw_line}")
+
+        key, remainder = line.split(":", 1)
+        key = key.strip()
+        remainder = remainder.strip()
+        if remainder:
+            parent[key] = parse_scalar(remainder)
+            continue
+
+        next_significant = None
+        for candidate in lines[index + 1:]:
+            stripped = candidate.strip()
+            if not stripped or candidate.lstrip().startswith("#"):
+                continue
+            next_significant = candidate
+            break
+
+        if next_significant is None:
+            parent[key] = {}
+            stack.append((indent, parent[key]))
+            continue
+
+        next_indent = len(next_significant) - len(next_significant.lstrip(" "))
+        if next_indent <= indent:
+            parent[key] = {}
+            stack.append((indent, parent[key]))
+            continue
+
+        if next_significant.strip().startswith("- "):
+            parent[key] = []
+        else:
+            parent[key] = {}
+
+        stack.append((indent, parent[key]))
+
+    return root
+
+
+def merge(defaults, existing):
+    if isinstance(defaults, dict) and isinstance(existing, dict):
+        merged = copy.deepcopy(defaults)
+        for key, existing_value in existing.items():
+            if key in merged:
+                merged[key] = merge(merged[key], existing_value)
+            else:
+                merged[key] = copy.deepcopy(existing_value)
+        return merged
+    return copy.deepcopy(existing)
+
+
+def format_scalar(value):
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        if value == "" or any(ch in value for ch in ":#[]{}-,&*!?|>@`\"'"):
+            return repr(value)
+        return value
+    raise TypeError(f"Unsupported scalar value: {value!r}")
+
+
+def dump_yaml(value, indent=0):
+    lines = []
+    prefix = " " * indent
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(item, dict):
+                lines.append(f"{prefix}{key}:")
+                lines.extend(dump_yaml(item, indent + 2))
+            elif isinstance(item, list):
+                lines.append(f"{prefix}{key}:")
+                for entry in item:
+                    if isinstance(entry, (dict, list)):
+                        raise TypeError("Nested complex lists are not supported")
+                    lines.append(f"{prefix}  - {format_scalar(entry)}")
+            else:
+                lines.append(f"{prefix}{key}: {format_scalar(item)}")
+        return lines
+    raise TypeError("Top-level YAML document must be a mapping")
+
+
+current_path = Path(sys.argv[1])
+sample_path = Path(sys.argv[2])
+merged_path = Path(sys.argv[3])
+
+existing = parse_simple_yaml(current_path)
+defaults = parse_simple_yaml(sample_path)
+merged = merge(defaults, existing)
+merged_path.write_text("\n".join(dump_yaml(merged)) + "\n")
+PY
+}
+
 wait_for_tcp_port() {
     local label="$1"
     local host="$2"
@@ -612,6 +804,49 @@ pull_images_from_compose() {
     done
 }
 
+remove_legacy_update_cron() {
+    if ! command -v crontab >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local cron_command=(env LC_ALL=C crontab -u root)
+    local tmp_dir
+    if [[ "$EUID" -ne 0 ]]; then
+        cron_command=(sudo env LC_ALL=C crontab -u root)
+    fi
+    tmp_dir=$(mktemp -d) || return 1
+
+    if ! "${cron_command[@]}" -l > "$tmp_dir/current" 2> "$tmp_dir/error"; then
+        if grep -qx 'no crontab for root' "$tmp_dir/error"; then
+            rm -rf -- "$tmp_dir"
+            return 0
+        fi
+        echo "❌ Unable to read root crontab; no changes made." >&2
+        cat "$tmp_dir/error" >&2
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+
+    # Match only active entries for the legacy script with its exact marker.
+    if ! awk '!($0 !~ /^[[:space:]]*#/ && /run-hypernode-update-check[.]sh/ && /#[[:space:]]*hypernode-update-check[[:space:]]*$/)' "$tmp_dir/current" > "$tmp_dir/updated"; then
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+    if cmp -s "$tmp_dir/current" "$tmp_dir/updated"; then
+        rm -rf -- "$tmp_dir"
+        return 0
+    fi
+    if ! "${cron_command[@]}" "$tmp_dir/updated"; then
+        echo "❌ Unable to remove legacy Hypernode update cron job." >&2
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+    rm -rf -- "$tmp_dir"
+    echo "✅ Removed legacy Hypernode update cron job from root crontab."
+}
+
+remove_legacy_update_cron || echo "⚠️ Legacy cron cleanup failed; continuing update." >&2
+
 pull_images_from_compose "database" -f "$TMP_DB_COMPOSE"
 pull_images_from_compose "$SERVICE_NAME" "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE"
 
@@ -636,5 +871,7 @@ else
     esac
     $COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate --remove-orphans
 fi
+
+deploy_agent_k
 
 echo "✅ Update completed for $SERVICE_NAME."
