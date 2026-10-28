@@ -485,6 +485,229 @@
           }
         ]
       }
+    },
+    {
+      "run_id": 40701940818,
+      "run_number": 379,
+      "run_attempt": 3,
+      "run_url": "https://github.com/Arteco-Global/hypernode_deploy/actions/runs/40701940818",
+      "workflow_name": "Push USee Images",
+      "workflow_path": ".github/workflows/push_on_demand_split_native.yml",
+      "created_at": "2026-10-28T14:01:48Z",
+      "updated_at": "2026-10-28T14:17:28Z",
+      "conclusion": null,
+      "tag": "latest",
+      "requested_services": [
+        "all"
+      ],
+      "resolution_mode": "strict",
+      "resolution_status": "exact",
+      "baseline_run_number": 344,
+      "backend": {
+        "repository": "Arteco-Global/hypernode-server",
+        "branch": "main",
+        "sha": "3abe0a3",
+        "previous_sha": "e660dd5",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 220,
+            "title": "Edge replay service",
+            "branch": "edge_replay_service",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/220",
+            "merged_at": "2026-09-30T14:31:15Z"
+          },
+          {
+            "number": 225,
+            "title": "Main",
+            "branch": "main",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/225",
+            "merged_at": "2026-10-05T07:17:15Z"
+          },
+          {
+            "number": 226,
+            "title": "Ast 7132 fixes for recording service",
+            "branch": "AST-7132_fixes-for-recording-service",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/226",
+            "merged_at": "2026-10-05T12:36:04Z"
+          },
+          {
+            "number": 227,
+            "title": "Audit fix",
+            "branch": "AST-7134_RC",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/227",
+            "merged_at": "2026-10-06T07:00:09Z"
+          },
+          {
+            "number": 228,
+            "title": "Fix: enable serialization for snapshot service stream initialization",
+            "branch": "snapshot_service_start_fix",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/228",
+            "merged_at": "2026-10-06T13:30:48Z"
+          },
+          {
+            "number": 229,
+            "title": "aggiunto audit-gate",
+            "branch": "AST-7137",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/229",
+            "merged_at": "2026-10-07T09:40:31Z"
+          },
+          {
+            "number": 230,
+            "title": "aggiunto override per shell-quote e comando audit su package.json",
+            "branch": "AST-7137",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/230",
+            "merged_at": "2026-10-07T10:13:21Z"
+          },
+          {
+            "number": 231,
+            "title": "Audit fix",
+            "branch": "AST-7163",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/231",
+            "merged_at": "2026-10-09T07:06:53Z"
+          },
+          {
+            "number": 232,
+            "title": "Camera timestamp fixes",
+            "branch": "camera_timestamp_fixes",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/232",
+            "merged_at": "2026-10-14T08:52:10Z"
+          },
+          {
+            "number": 233,
+            "title": "Other recording service fixes",
+            "branch": "other_recording_service_fixes",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/233",
+            "merged_at": "2026-10-16T07:40:33Z"
+          },
+          {
+            "number": 234,
+            "title": "Ast 7007 handshake scheduling fix",
+            "branch": "AST_7007_handshake_scheduling_fix",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/234",
+            "merged_at": "2026-10-19T08:15:32Z"
+          },
+          {
+            "number": 235,
+            "title": "Ast 7131 unprotected edge routes",
+            "branch": "AST-7131-Unprotected-EDGE-routes",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/235",
+            "merged_at": "2026-10-28T08:05:18Z"
+          },
+          {
+            "number": 236,
+            "title": "Bangkok release",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/236",
+            "merged_at": "2026-10-28T13:51:34Z"
+          }
+        ]
+      },
+      "configurator": {
+        "repository": "Arteco-Global/hypernode_server_gui",
+        "branch": "main",
+        "sha": "017346a",
+        "previous_sha": "c1c08d7",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 286,
+            "title": "Ast 7135",
+            "branch": "AST-7135",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/286",
+            "merged_at": "2026-10-06T08:26:54Z"
+          },
+          {
+            "number": 289,
+            "title": "CVE 07/10 AST-7138",
+            "branch": "AST-7138",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/289",
+            "merged_at": "2026-10-07T10:14:07Z"
+          },
+          {
+            "number": 291,
+            "title": "Ast 7108",
+            "branch": "AST-7108",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/291",
+            "merged_at": "2026-10-19T08:18:37Z"
+          },
+          {
+            "number": 292,
+            "title": "Ast 7182",
+            "branch": "AST-7182",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/292",
+            "merged_at": "2026-10-21T12:17:00Z"
+          },
+          {
+            "number": 293,
+            "title": "AST-7191",
+            "branch": "CVE2610",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/293",
+            "merged_at": "2026-10-26T09:30:02Z"
+          },
+          {
+            "number": 294,
+            "title": "Bangkok release",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/294",
+            "merged_at": "2026-10-28T13:46:27Z"
+          }
+        ]
+      },
+      "export": {
+        "repository": "Arteco-Global/arteco-export-service",
+        "branch": "main",
+        "sha": "a266d10",
+        "previous_sha": "330be3a",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 20,
+            "title": "Ast 6014 u see export native player and digitally signed exports",
+            "branch": "AST-6014-u-see-export-native-player-and-digitally-signed-exports",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/20",
+            "merged_at": "2026-10-06T08:02:16Z"
+          },
+          {
+            "number": 21,
+            "title": "AST-1739",
+            "branch": "AST-7139",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/21",
+            "merged_at": "2026-10-07T10:24:42Z"
+          },
+          {
+            "number": 22,
+            "title": "Release candidate",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/22",
+            "merged_at": "2026-10-12T14:01:42Z"
+          },
+          {
+            "number": 23,
+            "title": "AST-7198 - access token hypernode edge",
+            "branch": "AST-7198",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/23",
+            "merged_at": "2026-10-28T07:57:53Z"
+          },
+          {
+            "number": 24,
+            "title": "Main -> RC",
+            "branch": "main",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/24",
+            "merged_at": "2026-10-28T08:02:15Z"
+          },
+          {
+            "number": 25,
+            "title": "Bangkok release",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/25",
+            "merged_at": "2026-10-28T13:45:56Z"
+          }
+        ]
+      }
     }
   ]
 }
