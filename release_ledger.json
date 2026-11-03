@@ -708,6 +708,96 @@
           }
         ]
       }
+    },
+    {
+      "run_id": 41641882668,
+      "run_number": 388,
+      "run_attempt": 1,
+      "run_url": "https://github.com/Arteco-Global/hypernode_deploy/actions/runs/41641882668",
+      "workflow_name": "Push USee Images",
+      "workflow_path": ".github/workflows/push_on_demand_split_native.yml",
+      "created_at": "2026-11-03T13:09:50Z",
+      "updated_at": "2026-11-03T13:14:22Z",
+      "conclusion": null,
+      "tag": "latest",
+      "requested_services": [
+        "all"
+      ],
+      "resolution_mode": "strict",
+      "resolution_status": "exact",
+      "baseline_run_number": 379,
+      "backend": {
+        "repository": "Arteco-Global/hypernode-server",
+        "branch": "main",
+        "sha": "b980bab",
+        "previous_sha": "3abe0a3",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 237,
+            "title": "Ast 7200 CVE 30 10 2026",
+            "branch": "AST-7200_cve_30_10_2026",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/237",
+            "merged_at": "2026-11-03T11:40:01Z"
+          },
+          {
+            "number": 238,
+            "title": "Node2shell update",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/238",
+            "merged_at": "2026-11-03T11:45:05Z"
+          }
+        ]
+      },
+      "configurator": {
+        "repository": "Arteco-Global/hypernode_server_gui",
+        "branch": "main",
+        "sha": "48c7941",
+        "previous_sha": "017346a",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 295,
+            "title": "Ast 7208",
+            "branch": "AST-7208",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/295",
+            "merged_at": "2026-11-02T10:28:28Z"
+          },
+          {
+            "number": 296,
+            "title": "Node2shell update",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/296",
+            "merged_at": "2026-11-03T11:44:50Z"
+          }
+        ]
+      },
+      "export": {
+        "repository": "Arteco-Global/arteco-export-service",
+        "branch": "main",
+        "sha": "a4b500e",
+        "previous_sha": "a266d10",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 26,
+            "title": "Ast 7201 CVE 30 10 2026",
+            "branch": "AST-7201_cve_30_10_2026",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/26",
+            "merged_at": "2026-11-03T11:40:34Z"
+          },
+          {
+            "number": 27,
+            "title": "Node2shell update",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/27",
+            "merged_at": "2026-11-03T11:46:57Z"
+          }
+        ]
+      }
     }
   ]
 }
