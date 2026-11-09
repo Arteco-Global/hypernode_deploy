@@ -39,6 +39,8 @@ BACKEND_SERVICES = {
     "database",
     "coretrust",
     "watchdog",
+    "integration",
+    "automation",
 }
 
 COMPONENT_REPOS = {

@@ -25,7 +25,7 @@ Usage: native_service_update.sh [options]
 Options:
   --env-file <path>       Path to env file (optional; otherwise uses running containers)
   --deploy-branch <name>  Deploy branch for compose files (default: main)
-  --service <name>        Override service (camera|auth|event|storage|snapshot|recording|metadata)
+  --service <name>        Override service (camera|auth|event|storage|snapshot|recording|metadata|integration|automation)
   --ignoreValidation      Skip env validation against compose variables
   -h, --help              Show this help
 EOF
@@ -394,6 +394,8 @@ resolve_service_from_install_option() {
         6|13) echo "snapshot" ;;
         7) echo "recording" ;;
         15|16) echo "metadata" ;;
+        17|18) echo "integration" ;;
+        19|20) echo "automation" ;;
         1|8) echo "server" ;;
         *) echo "" ;;
     esac
@@ -401,7 +403,7 @@ resolve_service_from_install_option() {
 
 is_valid_service() {
     case "$1" in
-        camera|auth|event|storage|snapshot|recording|metadata) return 0 ;;
+        camera|auth|event|storage|snapshot|recording|metadata|integration|automation) return 0 ;;
         *) return 1 ;;
     esac
 }

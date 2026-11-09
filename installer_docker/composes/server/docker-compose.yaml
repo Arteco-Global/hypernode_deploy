@@ -262,6 +262,48 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  automation:
+    image: artecoglobalcompany/usee_automation_service:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/automation-db?authSource=admin
+      - MACHINE=${MACHINE}
+    container_name: automation
+    restart: unless-stopped
+    depends_on:
+      webserver:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  integration:
+    image: artecoglobalcompany/usee_integration_manager:${DOCKER_TAG:-latest}
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://${RABBITMQ_DEFAULT_USER:-hypernode}:${RABBITMQ_DEFAULT_PASS:-hypernode}@messagebroker:5672
+      - DATABASE_URI=mongodb://${DB_USERNAME:-hypernode}:${DB_PASSWORD:-hypernode}@host.docker.internal:${DB_PORT:-27017}/integration-db?authSource=admin
+      - MACHINE=${MACHINE}
+    container_name: integration
+    restart: unless-stopped
+    depends_on:
+      webserver:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   coretrust:
     image: artecoglobalcompany/usee_coretrust:${DOCKER_TAG:-latest}
     networks:

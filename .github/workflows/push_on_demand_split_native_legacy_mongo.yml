@@ -39,6 +39,8 @@ on:
           - configurator
           - export
           - coretrust
+          - integration
+          - automation
           - watchdog
         default: 'all'
       PLATFORMS:
@@ -66,7 +68,7 @@ jobs:
 
           INPUT_SERVICE="${{ github.event.inputs.SERVICES }}"
           if [[ "${INPUT_SERVICE}" == "all" ]]; then
-            SERVICES_JSON='["live_streamer","id_verifier","event_manager","metadata","suite_manager","media_recorder","snapshot_recorder","web_server","port_broker","message_broker","database","configurator","export","coretrust","watchdog"]'
+            SERVICES_JSON='["live_streamer","id_verifier","event_manager","metadata","suite_manager","media_recorder","snapshot_recorder","web_server","port_broker","message_broker","database","configurator","export","coretrust","watchdog","integration","automation"]'
             SERVICES=(
               live_streamer
               id_verifier
@@ -83,10 +85,12 @@ jobs:
               export
               coretrust
               watchdog
+              integration
+              automation
             )
           else
             case "${INPUT_SERVICE}" in
-              live_streamer|id_verifier|event_manager|metadata|suite_manager|media_recorder|snapshot_recorder|web_server|port_broker|message_broker|database|configurator|export|coretrust|watchdog)
+              live_streamer|id_verifier|event_manager|metadata|suite_manager|media_recorder|snapshot_recorder|web_server|port_broker|message_broker|database|configurator|export|coretrust|watchdog|integration|automation)
                 SERVICES_JSON="[\"${INPUT_SERVICE}\"]"
                 SERVICES=("${INPUT_SERVICE}")
                 ;;
@@ -255,6 +259,22 @@ jobs:
             coretrust)
               echo "DOCKERFILE=hypernode-server/docker/coretrust.Dockerfile" >> "$GITHUB_ENV"
               echo "IMAGE_NAME=artecoglobalcompany/usee_coretrust" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_EXPORT=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            integration)
+              echo "DOCKERFILE=hypernode-server/docker/integration.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_integration_manager" >> "$GITHUB_ENV"
+              echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
+              echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
+              echo "IS_EXPORT=false" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            automation)
+              echo "DOCKERFILE=hypernode-server/docker/automation.Dockerfile" >> "$GITHUB_ENV"
+              echo "IMAGE_NAME=artecoglobalcompany/usee_automation_service" >> "$GITHUB_ENV"
               echo "BUILD_CONTEXT=hypernode-server" >> "$GITHUB_ENV"
               echo "IS_FRONTEND=false" >> "$GITHUB_ENV"
               echo "IS_EXPORT=false" >> "$GITHUB_ENV"
@@ -485,6 +505,14 @@ jobs:
               ;;
             coretrust)
               echo "IMAGE_NAME=artecoglobalcompany/usee_coretrust" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            integration)
+              echo "IMAGE_NAME=artecoglobalcompany/usee_integration_manager" >> "$GITHUB_ENV"
+              echo "IS_DATABASE=false" >> "$GITHUB_ENV"
+              ;;
+            automation)
+              echo "IMAGE_NAME=artecoglobalcompany/usee_automation_service" >> "$GITHUB_ENV"
               echo "IS_DATABASE=false" >> "$GITHUB_ENV"
               ;;
             watchdog)

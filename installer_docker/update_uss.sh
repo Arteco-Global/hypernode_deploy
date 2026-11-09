@@ -346,6 +346,8 @@ restart_stack_in_dependency_order() {
     services=(
       gateway
       camera
+      integration
+      automation
       coretrust
       storage
       recording
@@ -506,6 +508,8 @@ if [[ ${#HYPERNODE_CONTAINERS[@]} -eq 0 ]]; then
     messagebroker
     gateway
     camera
+    integration
+    automation
     coretrust
     storage
     recording

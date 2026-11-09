@@ -135,7 +135,7 @@ Usage: native_update.sh [options]
 Options:
   --env-file <path>       Path to env file (default: ./.hypernode-install-env.log)
   --deploy-branch <name>  Deploy branch for compose files (default: main)
-  --service <name>        Service to update (server|camera|auth|event|storage|snapshot|recording|metadata)
+  --service <name>        Service to update (server|camera|auth|event|storage|snapshot|recording|metadata|integration|automation)
   --ignoreValidation      Skip env validation against compose variables
   -h, --help              Show this help
 EOF
@@ -502,6 +502,8 @@ update_server_suite() {
         messagebroker
         gateway
         camera
+        integration
+        automation
         metadata
         coretrust
         event
@@ -733,6 +735,8 @@ detect_compose_project() {
             messagebroker
             gateway
             camera
+            integration
+            automation
             metadata
             coretrust
             event

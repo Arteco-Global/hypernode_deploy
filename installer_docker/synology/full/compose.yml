@@ -280,6 +280,48 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  automation:
+    image: artecoglobalcompany/usee_automation_service:legacy
+    container_name: automation
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
+      - DATABASE_URI=mongodb://hypernode_synology:HypernodeSynology2026!@host.docker.internal:27017/automation-db?authSource=admin
+      - MACHINE=synology
+    restart: unless-stopped
+    depends_on:
+      webserver:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  integration:
+    image: artecoglobalcompany/usee_integration_manager:legacy
+    container_name: integration
+    networks:
+      - hypernode-net
+    environment:
+      - RABBITMQ_URI=amqp://hypernode:hypernode@messagebroker:5672
+      - DATABASE_URI=mongodb://hypernode_synology:HypernodeSynology2026!@host.docker.internal:27017/integration-db?authSource=admin
+      - MACHINE=synology
+    restart: unless-stopped
+    depends_on:
+      webserver:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   snapshot:
     image: artecoglobalcompany/usee_snapshot_recorder:legacy
     container_name: snapshot

@@ -281,6 +281,8 @@ print_compose_failure_diagnostics() {
         messagebroker
         gateway
         camera
+        integration
+        automation
         metadata
         coretrust
         recording
@@ -702,6 +704,8 @@ if [ "$mode" == "install" ]; then
     # echo -e "  ${CYAN}  │${NC} 10. ${BLUE}Storage service${NC}"
     echo -e "  ${CYAN}  │${NC} 11. ${BLUE}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  │${NC} 16. ${BLUE}Metadata Manager${NC}"
+    echo " 17. Install Integration Manager | 18. Update Integration Manager"
+    echo " 19. Install Automation Service | 20. Update Automation Service"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -740,6 +744,8 @@ else
     echo -e "  ${CYAN}  │${NC} 13. ${BLUE}Thumbnail Engine${NC}"
     echo -e "  ${CYAN}  │${NC} 14. ${BLUE}Recording${NC}"
     echo -e "  ${CYAN}  │${NC} 16. ${BLUE}Metadata Manager${NC}"
+    echo " 17. Install Integration Manager | 18. Update Integration Manager"
+    echo " 19. Install Automation Service | 20. Update Automation Service"
     echo -e "  ${CYAN}  └─────────────────────────────────────────────────────┘${NC}"
     echo ""
     echo -e "  ${YELLOW}UTILITY OPTIONS:${NC}"
@@ -848,7 +854,7 @@ get_config() {
         export RMQ
 
         ;;
-    2 | 3 | 4 | 5 | 6 | 7 | 15)
+    2 | 3 | 4 | 5 | 6 | 7 | 15 | 17 | 19)
        
 
         if [ "$FORCE_INSTALL" == "false" ]; then
@@ -877,7 +883,7 @@ get_config() {
         fi
         ;;
 
-      8 | 9 | 10 | 11 | 12 | 16)
+      8 | 9 | 10 | 11 | 12 | 16 | 18 | 20)
 
         # Update single services (Runner Mode)
         read -p "Type the service name to update: " PROCESS_NAME
@@ -1332,6 +1338,14 @@ elif [ "$INSTALL_OPTION" -eq 15 ]; then
     additionalServiceInstall "metadata" && end_with_message "Metadata service installation" 0 || end_with_message "Metadata service installation" 1
 elif [ "$INSTALL_OPTION" -eq 16 ]; then
     additionalServiceInstall "metadata" "update" && end_with_message "Metadata service update" 0 || end_with_message "Metadata service update" 1
+elif [ "$INSTALL_OPTION" -eq 17 ]; then
+    additionalServiceInstall "integration" && end_with_message "integration service" 0 || end_with_message "integration service" 1
+elif [ "$INSTALL_OPTION" -eq 18 ]; then
+    additionalServiceInstall "integration" "update" && end_with_message "integration service" 0 || end_with_message "integration service" 1
+elif [ "$INSTALL_OPTION" -eq 19 ]; then
+    additionalServiceInstall "automation" && end_with_message "automation service" 0 || end_with_message "automation service" 1
+elif [ "$INSTALL_OPTION" -eq 20 ]; then
+    additionalServiceInstall "automation" "update" && end_with_message "automation service" 0 || end_with_message "automation service" 1
 elif [ "$INSTALL_OPTION" -eq 99 ]; then
     dockerNuke && end_with_message "Cleanup" 0 || end_with_message "Cleanup" 1
 elif [ "$INSTALL_OPTION" -eq 666 ]; then
