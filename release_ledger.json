@@ -798,6 +798,88 @@
           }
         ]
       }
+    },
+    {
+      "run_id": 42790734894,
+      "run_number": 398,
+      "run_attempt": 1,
+      "run_url": "https://github.com/Arteco-Global/hypernode_deploy/actions/runs/42790734894",
+      "workflow_name": "Push USee Images",
+      "workflow_path": ".github/workflows/push_on_demand_split_native.yml",
+      "created_at": "2026-11-10T09:26:31Z",
+      "updated_at": "2026-11-10T09:30:47Z",
+      "conclusion": null,
+      "tag": "latest",
+      "requested_services": [
+        "all"
+      ],
+      "resolution_mode": "strict",
+      "resolution_status": "exact",
+      "baseline_run_number": 388,
+      "backend": {
+        "repository": "Arteco-Global/hypernode-server",
+        "branch": "main",
+        "sha": "8215d7d",
+        "previous_sha": "b980bab",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 239,
+            "title": "Feature/ast 6904 ptz",
+            "branch": "feature/AST-6904_PTZ",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/239",
+            "merged_at": "2026-11-04T14:38:49Z"
+          },
+          {
+            "number": 240,
+            "title": "Fix importante per AST-7215",
+            "branch": "AST-7215_fix_ptz_check_offline",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/240",
+            "merged_at": "2026-11-09T14:05:37Z"
+          },
+          {
+            "number": 241,
+            "title": "RC -> Main (Caracas)",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/241",
+            "merged_at": "2026-11-10T08:03:11Z"
+          }
+        ]
+      },
+      "configurator": {
+        "repository": "Arteco-Global/hypernode_server_gui",
+        "branch": "main",
+        "sha": "8d2d5d7",
+        "previous_sha": "48c7941",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 297,
+            "title": "Feature/ast 6904 ptz",
+            "branch": "feature/AST-6904_PTZ",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/297",
+            "merged_at": "2026-11-04T14:01:09Z"
+          },
+          {
+            "number": 298,
+            "title": "RC -> Main (Caracas)",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode_server_gui/pull/298",
+            "merged_at": "2026-11-10T07:59:07Z"
+          }
+        ]
+      },
+      "export": {
+        "repository": "Arteco-Global/arteco-export-service",
+        "branch": "main",
+        "sha": "a4b500e",
+        "previous_sha": "a4b500e",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": []
+      }
     }
   ]
 }
