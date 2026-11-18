@@ -880,6 +880,88 @@
         "comparison_status": "ok",
         "prs": []
       }
+    },
+    {
+      "run_id": 44265587348,
+      "run_number": 420,
+      "run_attempt": 1,
+      "run_url": "https://github.com/Arteco-Global/hypernode_deploy/actions/runs/44265587348",
+      "workflow_name": "Push USee Images",
+      "workflow_path": ".github/workflows/push_on_demand_split_native.yml",
+      "created_at": "2026-11-18T08:16:33Z",
+      "updated_at": "2026-11-18T08:25:30Z",
+      "conclusion": null,
+      "tag": "latest",
+      "requested_services": [
+        "all"
+      ],
+      "resolution_mode": "strict",
+      "resolution_status": "exact",
+      "baseline_run_number": 398,
+      "backend": {
+        "repository": "Arteco-Global/hypernode-server",
+        "branch": "main",
+        "sha": "e094ab0",
+        "previous_sha": "8215d7d",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 242,
+            "title": "fix regressione ptz",
+            "branch": "fix_regressione_ptz",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/242",
+            "merged_at": "2026-11-17T13:42:54Z"
+          },
+          {
+            "number": 243,
+            "title": "Audit fix CVE 17-11",
+            "branch": "AST-7252_CVE_17_11",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/243",
+            "merged_at": "2026-11-17T14:04:16Z"
+          },
+          {
+            "number": 244,
+            "title": "RC -> Main (Caracas 17-11-26)",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/hypernode-server/pull/244",
+            "merged_at": "2026-11-17T14:10:57Z"
+          }
+        ]
+      },
+      "configurator": {
+        "repository": "Arteco-Global/hypernode_server_gui",
+        "branch": "main",
+        "sha": "8d2d5d7",
+        "previous_sha": "8d2d5d7",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": []
+      },
+      "export": {
+        "repository": "Arteco-Global/arteco-export-service",
+        "branch": "main",
+        "sha": "4ef694f",
+        "previous_sha": "a4b500e",
+        "tracked_in_run": true,
+        "comparison_status": "ok",
+        "prs": [
+          {
+            "number": 28,
+            "title": "update mongoose - override minimatch",
+            "branch": "AST-7230",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/28",
+            "merged_at": "2026-11-12T07:42:27Z"
+          },
+          {
+            "number": 29,
+            "title": "Release candidate",
+            "branch": "release_candidate",
+            "url": "https://github.com/Arteco-Global/arteco-export-service/pull/29",
+            "merged_at": "2026-11-12T07:48:35Z"
+          }
+        ]
+      }
     }
   ]
 }
