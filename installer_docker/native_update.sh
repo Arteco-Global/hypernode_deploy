@@ -9,6 +9,10 @@ COMPOSE_CMD="docker compose"
 SERVICE_NAME="server"
 TMP_DB_COMPOSE=""
 TMP_SERVICE_COMPOSE=""
+TMP_BREAKING_CHANGES=""
+TMP_BREAKING_CHANGES_INSTALLED=""
+BREAKING_CHANGES_INSTALLED_FILE="${PWD}/breaking_changes_installed.json"
+SUITE_UPDATE_COMPLETE="true"
 COMPOSE_PROJECT_NAME=""
 IGNORE_ENV_VALIDATION="false"
 SYSTEM_ENV_DIR="/etc/.hypernode"
@@ -19,6 +23,80 @@ MACHINE_JSON_NAME="machine.json"
 MACHINE_FILE_LOCAL="${PWD}/${MACHINE_JSON_NAME}"
 MACHINE_FILE_SYSTEM="${SYSTEM_ENV_DIR}/${MACHINE_JSON_NAME}"
 MACHINE_FILE=""
+
+prepare_breaking_changes() {
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "❌ python3 is required to validate breaking change manifests." >&2
+        return 1
+    fi
+
+    TMP_BREAKING_CHANGES=$(mktemp)
+    # Stage beside the destination so the final rename is atomic.
+    TMP_BREAKING_CHANGES_INSTALLED=$(mktemp "${BREAKING_CHANGES_INSTALLED_FILE}.tmp.XXXXXX")
+    curl -fsSL "${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/breaking_changes_manifest.json" -o "$TMP_BREAKING_CHANGES"
+
+    python3 - "$TMP_BREAKING_CHANGES" "$BREAKING_CHANGES_INSTALLED_FILE" "$TMP_BREAKING_CHANGES_INSTALLED" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+
+def read_manifest(path):
+    with path.open(encoding="utf-8") as source:
+        manifest = json.load(source)
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("breaking_changes"), list):
+        raise ValueError(f"{path}: expected a breaking_changes array")
+    entries = {}
+    for entry in manifest["breaking_changes"]:
+        if not isinstance(entry, dict):
+            raise ValueError(f"{path}: each breaking change must be an object")
+        identifier = entry.get("id")
+        if type(identifier) is not int or identifier <= 0 or identifier in entries:
+            raise ValueError(f"{path}: IDs must be unique positive integers")
+        translations = entry.get("translations")
+        if not isinstance(translations, dict):
+            raise ValueError(f"{path}: missing translations for ID {identifier}")
+        for language in ("it", "en", "es", "pt"):
+            translation = translations.get(language)
+            if not isinstance(translation, dict) or any(
+                not isinstance(translation.get(field), str) or not translation[field].strip()
+                for field in ("title", "description")
+            ):
+                raise ValueError(f"{path}: ID {identifier} requires title and description in {language}")
+        entries[identifier] = entry
+    return entries
+
+
+try:
+    remote_path, installed_path, staged_path = map(Path, sys.argv[1:])
+    remote = read_manifest(remote_path)
+    try:
+        installed = read_manifest(installed_path)
+    except FileNotFoundError:
+        installed = {}
+    pending = [remote[identifier] for identifier in sorted(remote.keys() - installed.keys())]
+    print(f"ℹ️  New breaking changes: {len(pending)}", flush=True)
+    # Keep the complete translated entries available in logs for future consumers.
+    print("BREAKING_CHANGES_PENDING=" + json.dumps({"breaking_changes": pending}, ensure_ascii=False), flush=True)
+    merged = {**installed, **remote}
+    staged_path.write_text(
+        json.dumps({"breaking_changes": [merged[key] for key in sorted(merged)]}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+except (OSError, ValueError) as error:
+    print(f"❌ Cannot prepare breaking changes: {error}", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
+save_installed_breaking_changes() {
+    if [[ "$SERVICE_NAME" != "server" || "$SUITE_UPDATE_COMPLETE" != "true" ]]; then
+        echo "⚠️  Partial suite update: installed breaking changes left unchanged."
+        return 0
+    fi
+    mv -f -- "$TMP_BREAKING_CHANGES_INSTALLED" "$BREAKING_CHANGES_INSTALLED_FILE"
+    echo "✅ Installed breaking changes saved to $BREAKING_CHANGES_INSTALLED_FILE"
+}
 
 generate_machine_id() {
     if command -v uuidgen >/dev/null 2>&1; then
@@ -533,12 +611,14 @@ update_server_suite() {
     if [[ "${#media_services[@]}" -gt 0 ]]; then
         echo "▶️  Recreate optional media services: ${media_services[*]}"
         if ! $COMPOSE_CMD "${SERVICE_COMPOSE_ARGS[@]}" -f "$TMP_SERVICE_COMPOSE" up -d --force-recreate "${media_services[@]}"; then
+            SUITE_UPDATE_COMPLETE="false"
             echo "⚠️  Optional media services failed to start: ${media_services[*]}"
             echo "   Fix RECORDING_PATH/SNAPSHOT_PATH in $ENV_FILE and rerun the update for those services."
         fi
     fi
 
     if [[ "${#skipped_services[@]}" -gt 0 ]]; then
+        SUITE_UPDATE_COMPLETE="false"
         echo "⚠️  Suite update completed without: ${skipped_services[*]}"
         echo "   Fix the related mount path variables in $ENV_FILE before retrying those services."
     fi
@@ -759,9 +839,11 @@ detect_compose_project() {
 }
 
 cleanup_tmp() {
-    rm -f "$TMP_DB_COMPOSE" "$TMP_SERVICE_COMPOSE"
+    rm -f "$TMP_DB_COMPOSE" "$TMP_SERVICE_COMPOSE" "$TMP_BREAKING_CHANGES" "$TMP_BREAKING_CHANGES_INSTALLED"
 }
 trap cleanup_tmp EXIT
+
+prepare_breaking_changes
 
 TMP_DB_COMPOSE=$(mktemp)
 TMP_SERVICE_COMPOSE=$(mktemp)
@@ -873,5 +955,7 @@ else
 fi
 
 deploy_agent_k
+
+save_installed_breaking_changes
 
 echo "✅ Update completed for $SERVICE_NAME."

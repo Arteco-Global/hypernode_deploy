@@ -1,2 +1,4 @@
 .env
 *.env
+breaking_changes_installed.json
+breaking_changes_installed.json.tmp.*
