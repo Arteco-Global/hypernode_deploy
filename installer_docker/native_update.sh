@@ -13,6 +13,7 @@ TMP_BREAKING_CHANGES=""
 TMP_BREAKING_CHANGES_INSTALLED=""
 BREAKING_CHANGES_INSTALLED_FILE="${PWD}/breaking_changes_installed.json"
 SUITE_UPDATE_COMPLETE="true"
+EXPECTED_BREAKING_CHANGES_SHA256=""
 COMPOSE_PROJECT_NAME=""
 IGNORE_ENV_VALIDATION="false"
 SYSTEM_ENV_DIR="/etc/.hypernode"
@@ -35,7 +36,8 @@ prepare_breaking_changes() {
     TMP_BREAKING_CHANGES_INSTALLED=$(mktemp "${BREAKING_CHANGES_INSTALLED_FILE}.tmp.XXXXXX")
     curl -fsSL "${ABSOLUTE_PATH_BASE}/${DEPLOY_BRANCH}/breaking_changes_manifest.json" -o "$TMP_BREAKING_CHANGES"
 
-    python3 - "$TMP_BREAKING_CHANGES" "$BREAKING_CHANGES_INSTALLED_FILE" "$TMP_BREAKING_CHANGES_INSTALLED" <<'PY'
+    python3 - "$TMP_BREAKING_CHANGES" "$BREAKING_CHANGES_INSTALLED_FILE" "$TMP_BREAKING_CHANGES_INSTALLED" "$EXPECTED_BREAKING_CHANGES_SHA256" <<'PY'
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -68,7 +70,10 @@ def read_manifest(path):
 
 
 try:
-    remote_path, installed_path, staged_path = map(Path, sys.argv[1:])
+    remote_path, installed_path, staged_path = map(Path, sys.argv[1:4])
+    expected_digest = sys.argv[4]
+    if expected_digest and hashlib.sha256(remote_path.read_bytes()).hexdigest() != expected_digest:
+        raise ValueError("Breaking change manifest changed after confirmation. Restart the update to review it again.")
     remote = read_manifest(remote_path)
     try:
         installed = read_manifest(installed_path)
@@ -215,6 +220,7 @@ Options:
   --deploy-branch <name>  Deploy branch for compose files (default: main)
   --service <name>        Service to update (server|camera|auth|event|storage|snapshot|recording|metadata)
   --ignoreValidation      Skip env validation against compose variables
+  --breaking-changes-sha256 <hash>  Require the manifest reviewed by the installer
   -h, --help              Show this help
 EOF
 }
@@ -689,6 +695,10 @@ while [[ "$#" -gt 0 ]]; do
         --ignoreValidation)
             IGNORE_ENV_VALIDATION="true"
             shift
+            ;;
+        --breaking-changes-sha256)
+            EXPECTED_BREAKING_CHANGES_SHA256="$2"
+            shift 2
             ;;
         -h|--help)
             usage
