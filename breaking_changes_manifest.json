@@ -20,6 +20,27 @@
           "description": "Esta versão do servidor introduz um novo formato de gravação. Se continuar com a atualização, todas as gravações atualmente armazenadas no servidor serão eliminadas permanentemente. Antes de continuar, exporte as gravações que pretende conservar. Deseja continuar com a atualização?"
         }
       }
+    },
+    {
+      "id": 2,
+      "translations": {
+        "it": {
+          "title": "Lorem ipsum dolor sit amet",
+          "description": "Questa versione del server introduce un nuovo formato delle registrazioni. Proseguendo con l'aggiornamento, tutte le registrazioni attualmente presenti sul server verranno eliminate definitivamente. Prima di procedere, esporta le registrazioni che desideri conservare. Vuoi proseguire con l'aggiornamento?"
+        },
+        "en": {
+          "title": "Lorem ipsum dolor sit amet",
+          "description": "This server version introduces a new recording format. If you continue with the update, all recordings currently stored on the server will be permanently deleted. Before proceeding, export any recordings you want to keep. Do you want to continue with the update?"
+        },
+        "es": {
+          "title": "Lorem ipsum dolor sit amet",
+          "description": "Esta versión del servidor introduce un nuevo formato de grabación. Si continúas con la actualización, todas las grabaciones almacenadas actualmente en el servidor se eliminarán de forma permanente. Antes de continuar, exporta las grabaciones que quieras conservar. ¿Quieres continuar con la actualización?"
+        },
+        "pt": {
+          "title": "Lorem ipsum dolor sit amet",
+          "description": "Esta versão do servidor introduz um novo formato de gravação. Se continuar com a atualização, todas as gravações atualmente armazenadas no servidor serão eliminadas permanentemente. Antes de continuar, exporte as gravações que pretende conservar. Deseja continuar com a atualização?"
+        }
+      }
     }
   ]
 }
